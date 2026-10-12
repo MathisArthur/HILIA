@@ -552,6 +552,15 @@
   @media (max-width:900px){.settings-btn{padding:9px 10px;}.topnav-inner{flex-wrap:wrap;}.nav-search{order:4;flex-basis:100%;max-width:none;}}
   @media (max-width:760px){.settings-btn{font-size:.72rem;}.settings-panel{padding-left:16px;padding-right:16px;}.password-wrap{grid-template-columns:1fr;}}
 
+
+  /* ---------------- Description audio d'un lieu ---------------- */
+  .audio-desc{margin:14px 0 6px;padding:12px 14px;background:var(--cream);border:1.5px solid var(--line-strong);border-radius:var(--radius);}
+  .audio-desc-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+  .audio-btn{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:.9rem;}
+  .audio-btn[hidden]{display:none;}
+  .audio-btn svg{flex:none;}
+  .audio-btn:focus-visible{outline:3px solid var(--focus);outline-offset:3px;box-shadow:0 0 0 2px #fff;}
+  .audio-note{margin:8px 0 0;font-size:.82rem;line-height:1.45;color:var(--muted);max-width:62ch;}
 </style>
 </head>
 <body>
@@ -1713,7 +1722,145 @@
   }
   function refreshReviewMinis(){ document.querySelectorAll('[data-review-mini-index]').forEach(function(el){ el.innerHTML=reviewSummaryHtml(parseInt(el.dataset.reviewMiniIndex,10),'mini'); }); }
 
+
+  // ---------- Description audio d'un lieu (synthèse vocale du navigateur) ----------
+  // Le texte est généré à partir des champs de la fiche : aucun enregistrement à faire par lieu.
+  // Pour passer plus tard à une voix neuronale (API), remplacer uniquement la lecture (speakFrom).
+  function buildAudioText(r){
+    var parts=[];
+    var activite=ACTIVITES[r[F.ACT]]||'';
+    var commune=COMMUNES[r[F.COM]]||'';
+    parts.push(r[F.NOM]+'.');
+    if(activite) parts.push('Type de lieu : '+activite+'.');
+    if(r[F.ADR]||commune) parts.push('Adresse : '+[r[F.ADR],[r[F.CP],commune].filter(Boolean).join(' ')].filter(Boolean).join(', ')+'.');
+    var SECTIONS=[
+      ['Stationnement et abords',[
+        [F.TRANSPORT,'Un transport en commun est signalé à proximité.','Aucun transport en commun n’est signalé à proximité.','transport en commun'],
+        [F.STATIONNEMENT,'Un stationnement est disponible.','Il n’y a pas de stationnement disponible.','stationnement'],
+        [F.STATIONNEMENT_PMR,'Des places de stationnement PMR sont prévues.','Il n’y a pas de place de stationnement PMR.','places PMR'],
+        [F.STATIONNEMENT_EXT,'Un stationnement extérieur est disponible.','Il n’y a pas de stationnement extérieur.','stationnement extérieur'],
+        [F.STATIONNEMENT_EXT_PMR,'Des places PMR existent sur le stationnement extérieur.','Il n’y a pas de place PMR sur le stationnement extérieur.','places PMR extérieures']
+      ]],
+      ['Cheminement extérieur',[
+        [F.CHEMIN_PLAIN_PIED,'Le cheminement extérieur est de plain-pied.','Le cheminement extérieur n’est pas de plain-pied.','plain-pied'],
+        [F.CHEMIN_TERRAIN_STABLE,'Le terrain est stable.','Le terrain n’est pas stable.','terrain stable'],
+        [F.CHEMIN_REPERAGE,'Les marches sont repérables.','Les marches ne sont pas repérées.','repérage des marches'],
+        [F.CHEMIN_MAIN_COURANTE,'Une main courante est présente.','Il n’y a pas de main courante.','main courante'],
+        [F.CHEMIN_RAMPE,'Une rampe d’accès est présente.','Il n’y a pas de rampe d’accès.','rampe d’accès'],
+        [F.CHEMIN_BANDE_GUIDAGE,'Une bande de guidage est présente pour les personnes malvoyantes.','Il n’y a pas de bande de guidage.','bande de guidage']
+      ]],
+      ['Entrée',[
+        [F.ENTREE_REPERABLE,'L’entrée est facilement repérable.','L’entrée n’est pas facilement repérable.','entrée repérable'],
+        [F.ENTREE_PLAIN_PIED,'L’entrée est de plain-pied.','L’entrée n’est pas de plain-pied.','entrée de plain-pied'],
+        [F.ENTREE_ASCENSEUR,'Un ascenseur est disponible.','Il n’y a pas d’ascenseur.','ascenseur'],
+        [F.ENTREE_RAMPE,'Une rampe d’accès est présente à l’entrée.','Il n’y a pas de rampe d’accès à l’entrée.','rampe à l’entrée'],
+        [F.ENTREE_DISPOSITIF_APPEL,'Un dispositif d’appel est présent.','Il n’y a pas de dispositif d’appel.','dispositif d’appel'],
+        [F.ENTREE_BALISE_SONORE,'Une balise sonore guide vers l’entrée.','Il n’y a pas de balise sonore.','balise sonore'],
+        [F.ENTREE_AIDE_HUMAINE,'Une aide humaine est possible sur demande.','Aucune aide humaine n’est signalée.','aide humaine'],
+        [F.ENTREE_SPECIFIQUE_PMR,'Une entrée spécifique PMR existe.','Il n’y a pas d’entrée spécifique PMR.','entrée PMR']
+      ],function(){
+        var x=[];
+        var m=r[F.ENTREE_MARCHES];
+        if(m!=null && m!==''){ var n=Number(m); x.push(n===0?'Il n’y a aucune marche à l’entrée.':('Il y a '+n+(n>1?' marches':' marche')+' à l’entrée.')); }
+        if(r[F.ENTREE_LARGEUR]) x.push('La largeur minimale de l’entrée est de '+r[F.ENTREE_LARGEUR]+' centimètres.');
+        return x;
+      }],
+      ['Accueil',[
+        [F.ACCUEIL_PERSONNEL,'Du personnel est présent à l’accueil.','Il n’y a pas de personnel à l’accueil.','personnel à l’accueil'],
+        [F.ACCUEIL_AUDIODESCR,'Une audiodescription est proposée par le lieu.','Le lieu ne propose pas d’audiodescription.','audiodescription proposée par le lieu'],
+        [F.ACCUEIL_EQUIP_MALENT,'Des équipements pour les personnes malentendantes sont disponibles.','Il n’y a pas d’équipement pour les personnes malentendantes.','équipements pour malentendants'],
+        [F.ACCUEIL_PLAIN_PIED,'Le cheminement jusqu’à l’accueil est de plain-pied.','Le cheminement jusqu’à l’accueil n’est pas de plain-pied.','accueil de plain-pied'],
+        [F.ACCUEIL_SIGNALETIQUE,'La signalétique intérieure est adaptée.','La signalétique intérieure n’est pas adaptée.','signalétique intérieure']
+      ]],
+      ['Sanitaires',[
+        [F.SANITAIRES_DISPO,'Des sanitaires sont disponibles pour le public.','Il n’y a pas de sanitaires pour le public.','sanitaires'],
+        [F.SANITAIRES_PMR,'Des sanitaires adaptés PMR sont disponibles.','Il n’y a pas de sanitaires adaptés PMR.','sanitaires adaptés PMR']
+      ]]
+    ];
+    SECTIONS.forEach(function(sec){
+      var out=[], unknown=[];
+      sec[1].forEach(function(it){
+        var v=r[it[0]];
+        if(isTrue(v)) out.push(it[1]); else if(isFalse(v)) out.push(it[2]); else unknown.push(it[3]);
+      });
+      if(sec[2]) out=out.concat(sec[2]());
+      var txt=sec[0]+'.';
+      if(!out.length && unknown.length===sec[1].length) txt+=' Aucune information n’est renseignée pour cette rubrique.';
+      else {
+        if(out.length) txt+=' '+out.join(' ');
+        if(unknown.length) txt+=' Non renseigné : '+unknown.join(', ')+'.';
+      }
+      parts.push(txt);
+    });
+    var labels=parseListField(r[F.LABELS]);
+    var familles=parseListField(r[F.FAMILLES]).map(function(f){ return FAMILLE_LABELS[f]||f; });
+    var all=labels.concat(familles);
+    if(all.length) parts.push('Labels et reconnaissance : '+all.join(', ')+'.');
+    if(r[F.CONFORMITE]!=null) parts.push('Conformité réglementaire déclarée par l’établissement : '+(isTrue(r[F.CONFORMITE])?'oui':'non')+'.');
+    parts.push('Ces informations sont déclarées et peuvent être incomplètes. Pensez à les vérifier auprès du lieu avant de vous déplacer.');
+    return parts;
+  }
+
+  var AudioDesc = (function(){
+    var supported = ('speechSynthesis' in window) && ('SpeechSynthesisUtterance' in window);
+    var chunks=[], idx=0, status='idle', token=0, ui=null;
+    function frVoice(){
+      var vs=(window.speechSynthesis.getVoices&&window.speechSynthesis.getVoices())||[];
+      var fr=vs.filter(function(v){ return /^fr([-_]|$)/i.test(v.lang); });
+      return fr.find(function(v){ return /^fr[-_]FR/i.test(v.lang) && v.localService; }) || fr.find(function(v){ return /^fr[-_]FR/i.test(v.lang); }) || fr[0] || null;
+    }
+    function render(){
+      if(!ui) return;
+      var label = status==='playing' ? 'Mettre en pause la description' : (status==='paused' ? 'Reprendre la description' : 'Écouter la description du lieu');
+      ui.label.textContent = label;
+      ui.play.setAttribute('aria-label', label);
+      ui.stop.hidden = (status==='idle');
+    }
+    function speakFrom(i){
+      var my=++token; window.speechSynthesis.cancel(); idx=i;
+      (function next(){
+        if(my!==token) return;
+        if(idx>=chunks.length){ status='idle'; idx=0; render(); announce('Description terminée.',200); return; }
+        var u=new SpeechSynthesisUtterance(chunks[idx]);
+        u.lang='fr-FR'; u.rate=0.95;
+        var v=frVoice(); if(v) u.voice=v;
+        u.onend=function(){ if(my!==token) return; idx++; next(); };
+        u.onerror=function(e){ if(my!==token) return; if(e && (e.error==='canceled'||e.error==='interrupted')) return; status='idle'; render(); announce('La lecture audio a échoué.',200); };
+        window.speechSynthesis.speak(u);
+      })();
+    }
+    function stop(silent){
+      if(!supported) return;
+      token++; window.speechSynthesis.cancel();
+      var was=status; status='idle'; idx=0; chunks=[]; render();
+      if(!silent && was!=='idle') announce('Lecture arrêtée.',100);
+    }
+    return {
+      supported:supported,
+      bind:function(di){
+        stop(true);
+        ui=null;
+        var root=detailContent.querySelector('#audioDesc'); if(!root) return;
+        if(!supported){
+          root.innerHTML='<p class="audio-note">La lecture audio n’est pas disponible sur ce navigateur. Les informations de la fiche ci-dessous restent lisibles avec un lecteur d’écran.</p>';
+          return;
+        }
+        ui={ play:root.querySelector('#audioPlayBtn'), stop:root.querySelector('#audioStopBtn'), label:root.querySelector('#audioPlayLabel') };
+        ui.play.addEventListener('click',function(){
+          if(status==='idle'){ chunks=buildAudioText(DATA[di]); status='playing'; render(); speakFrom(0); }
+          else if(status==='playing'){ token++; window.speechSynthesis.cancel(); status='paused'; render(); announce('Lecture en pause.',100); }
+          else { status='playing'; render(); speakFrom(idx); }
+        });
+        ui.stop.addEventListener('click',function(){ stop(false); ui.play.focus(); });
+        render();
+      },
+      stop:stop
+    };
+  })();
+  window.addEventListener('pagehide',function(){ AudioDesc.stop(true); });
+
   function openDetail(di, keepOpen){
+    AudioDesc.stop(true);
     var trigger = document.activeElement;
     closeDrawer();
     if(leafletMap) leafletMap.closePopup();
@@ -1724,6 +1871,10 @@
     html += '<div class="d-illus">'+illustrationSVG(tmpl)+'</div>';
     html += '<h2 id="detailDialogTitle">'+escapeHtml(r[F.NOM])+'</h2>';
     html += '<div class="d-addr">'+escapeHtml(r[F.ADR])+', '+r[F.CP]+' '+escapeHtml(COMMUNES[r[F.COM]])+'</div>';
+    html += '<div class="audio-desc" id="audioDesc" role="group" aria-label="Description audio du lieu"><div class="audio-desc-actions">'
+      + '<button type="button" class="primary-btn audio-btn" id="audioPlayBtn" aria-label="Écouter la description du lieu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg><span id="audioPlayLabel" aria-hidden="true">Écouter la description du lieu</span></button>'
+      + '<button type="button" class="secondary-btn audio-btn" id="audioStopBtn" hidden>Arrêter la lecture</button></div>'
+      + '<p class="audio-note">Lecture à voix de synthèse, générée à partir des informations de cette fiche.</p></div>';
     html += '<span class="d-tag" style="background:'+color+';color:'+contrastText(color)+'">'+escapeHtml(ACTIVITES[r[F.ACT]])+'</span><br>';
     if(r[F.SITE]) html += '<a class="d-link" href="'+escapeAttr(safeExternalUrl(r[F.SITE]))+'" target="_blank" rel="noopener noreferrer" title="Voir le site de '+escapeAttr(r[F.NOM])+' (nouvelle fenêtre)">'+icon('link')+' Voir le site du lieu<span class="sr-only"> '+escapeHtml(r[F.NOM])+' (s’ouvre dans une nouvelle fenêtre)</span></a>';
 
@@ -1781,10 +1932,11 @@
     if(!wasOpen){ modalFocusReturn = trigger; detailPanel.scrollTop = 0; }
     overlayBg.classList.add('open'); detailPanel.classList.add('open');
     bindReviewActions(di);
+    AudioDesc.bind(di);
     if(keepOpen && wasOpen){ var rh = detailContent.querySelector('#reviewsHeading'); if(rh) rh.focus(); }
     else activateModal(detailPanel);
   }
-  function closeDetail(){ overlayBg.classList.remove('open'); detailPanel.classList.remove('open'); if(!drawer.classList.contains('open')) syncModalLock(); }
+  function closeDetail(){ if(typeof AudioDesc!=='undefined') AudioDesc.stop(true); overlayBg.classList.remove('open'); detailPanel.classList.remove('open'); if(!drawer.classList.contains('open')) syncModalLock(); }
   document.getElementById('detailClose').addEventListener('click', closeDetail);
   overlayBg.addEventListener('click', closeDetail);
   document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeDetail(); closeDrawer(); } });
