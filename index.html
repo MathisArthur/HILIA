@@ -83,6 +83,14 @@
   .subbar-inner{max-width:1280px; margin:0 auto; padding:11px 20px; display:flex; align-items:center; gap:12px;}
   .pills{display:flex; gap:8px; overflow-x:auto; flex:1; padding-bottom:2px; scrollbar-width:thin;}
   .pills::-webkit-scrollbar{height:5px;} .pills::-webkit-scrollbar-thumb{background:var(--line-strong); border-radius:3px;}
+.act-select{flex:none;border:1.5px solid var(--line-strong);background:var(--paper);color:var(--teal);border-radius:22px;padding:7px 12px;font-size:.82rem;font-weight:650;max-width:230px;cursor:pointer;}
+  .access-fieldset{border:1.5px solid var(--line-strong);border-radius:14px;padding:10px 12px;margin:4px 0;background:var(--paper);}
+  .access-fieldset summary{font-weight:800;color:var(--teal);cursor:pointer;font-size:.88rem;}
+  .access-group{margin-top:12px;}
+  .access-group strong{display:block;font-size:.8rem;color:var(--teal);}
+  .access-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:6px;}
+  .access-row label{font-size:.8rem;flex:1;line-height:1.35;}
+  .access-row select,.access-row input{flex:none;width:150px;margin:0;}
   .pill{flex:none; border:1.5px solid var(--line-strong); background:var(--paper); color:var(--teal); border-radius:22px; padding:7px 14px; font-size:.82rem; font-weight:650; cursor:pointer; white-space:nowrap;}
   .pill.active{background:var(--teal); border-color:var(--teal); color:#fff;}
   .filter-btn{flex:none; display:flex; align-items:center; gap:7px; background:var(--teal); color:#fff; border:none; border-radius:22px; padding:9px 16px; font-size:.82rem; font-weight:700; cursor:pointer;}
@@ -959,6 +967,7 @@
       var row=new Array(40).fill(null);
       row[F.NOM]=p.name||'Lieu sans nom'; row[F.ADR]=p.address||''; row[F.CP]=p.cp||''; row[F.COM]=comIdx; row[F.ACT]=actIdx; row[F.SITE]=p.site||'';
       row[F.LAT]=p.lat!=='' && p.lat!=null ? Number(p.lat) : null; row[F.LON]=p.lon!=='' && p.lon!=null ? Number(p.lon) : null;
+      if(p.access && typeof p.access==='object') Object.keys(p.access).forEach(function(k){ var ki=Number(k); if(ki>=8 && ki<=36) row[ki]=p.access[k]; });
       out.push(row);
     });
     return out;
@@ -974,6 +983,7 @@
       if(e.cp!=null) row[F.CP]=e.cp;
       if(e.activity){ var ai=ACTIVITES.indexOf(e.activity); if(ai>=0) row[F.ACT]=ai; }
       if(e.site!=null) row[F.SITE]=e.site;
+      if(e.access && typeof e.access==='object') Object.keys(e.access).forEach(function(k){ var ki=Number(k); if(ki>=8 && ki<=36) row[ki]=e.access[k]; });
       if(e.commune){ var ci=COMMUNES.indexOf(e.commune); if(ci<0){COMMUNES.push(e.commune);ci=COMMUNES.length-1;} row[F.COM]=ci; }
     });
   }
@@ -1097,6 +1107,7 @@
   }
   document.getElementById('statTotal').textContent = DATA.length.toLocaleString('fr-FR');
   document.getElementById('statCommunes').textContent = COMMUNES.length.toLocaleString('fr-FR');
+  document.getElementById('statCats').textContent = ACTIVITES.length;
 
   // ---------- Category pills ----------
   var order = ACTIVITES.map(function(n,idx){ return idx; }).sort(function(a,b){ return actCounts[b]-actCounts[a]; });
@@ -1109,8 +1120,17 @@
     p.type='button'; p.className='pill'; p.textContent=ACTIVITES[idx]; p.dataset.act=idx; p.setAttribute('aria-pressed','false');
     pillsRow.appendChild(p);
   });
+  var actSelect = document.createElement('select');
+  actSelect.className='act-select'; actSelect.setAttribute('aria-label','Filtrer par activité (liste complète)');
+  actSelect.innerHTML = '<option value="">Toutes les activités (liste)</option>' + ACTIVITES.map(function(n,idx){ return idx; }).sort(function(a,b){ return ACTIVITES[a].localeCompare(ACTIVITES[b],'fr'); }).map(function(idx){ return '<option value="'+idx+'">'+escapeHtml(ACTIVITES[idx])+' ('+actCounts[idx]+')</option>'; }).join('');
+  pillsRow.insertBefore(actSelect, allPill.nextSibling);
+  actSelect.addEventListener('change', function(){
+    pillsRow.querySelectorAll('.pill').forEach(function(b){ b.classList.remove('active'); b.setAttribute('aria-pressed','false'); });
+    if(!actSelect.value){ allPill.classList.add('active'); allPill.setAttribute('aria-pressed','true'); }
+    state.activity = actSelect.value; refresh();
+  });
   pillsRow.addEventListener('click', function(e){
-    var btn = e.target.closest('.pill'); if(!btn) return;
+    var btn = e.target.closest('.pill'); if(!btn) return; actSelect.value='';
     pillsRow.querySelectorAll('.pill').forEach(function(b){ b.classList.remove('active'); b.setAttribute('aria-pressed','false'); });
     btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); state.activity = btn.dataset.act; refresh();
   });
@@ -1168,6 +1188,33 @@
     g.appendChild(cl); filterGroupsEl.appendChild(g);
   });
   var allCheckboxes = filterGroupsEl.querySelectorAll('input[type=checkbox]');
+
+  // ---------- Formulaire d'accessibilité (création / modification de lieux) ----------
+  var ACCESS_NUM_FIELDS = [[F.CHEMIN_MARCHES,'Nombre de marches sur le cheminement'],[F.ENTREE_MARCHES,'Nombre de marches à l’entrée'],[F.ENTREE_LARGEUR,'Largeur minimale de l’entrée (cm)']];
+  function accessFormHtml(prefix,row){
+    var h='<details class="access-fieldset full"><summary>Informations d’accessibilité (facultatif)</summary><p class="auth-note" style="margin:8px 0 0">Laissez « Non renseigné » si vous ne savez pas.</p>';
+    FILTER_GROUPS.forEach(function(g){
+      h+='<div class="access-group"><strong>'+escapeHtml(g.title)+'</strong>';
+      g.items.forEach(function(it){
+        var v=row?(isTrue(row[it[0]])?'1':isFalse(row[it[0]])?'0':''):'', id=prefix+'Acc'+it[0];
+        h+='<div class="access-row"><label for="'+id+'">'+escapeHtml(it[1])+'</label><select id="'+id+'" name="acc_'+it[0]+'"><option value=""'+(v===''?' selected':'')+'>Non renseigné</option><option value="1"'+(v==='1'?' selected':'')+'>Oui</option><option value="0"'+(v==='0'?' selected':'')+'>Non</option></select></div>';
+      });
+      h+='</div>';
+    });
+    h+='<div class="access-group"><strong>Marches et largeur</strong>';
+    ACCESS_NUM_FIELDS.forEach(function(n){
+      var cur=row&&row[n[0]]!=null&&isFinite(Number(row[n[0]]))?Number(row[n[0]]):'', id=prefix+'Acc'+n[0];
+      h+='<div class="access-row"><label for="'+id+'">'+escapeHtml(n[1])+'</label><input id="'+id+'" name="acc_'+n[0]+'" type="number" min="0" max="1000" inputmode="numeric" value="'+cur+'"></div>';
+    });
+    return h+'</div></details>';
+  }
+  function readAccess(fd){
+    var out={};
+    FILTER_GROUPS.forEach(function(g){ g.items.forEach(function(it){ var v=fd.get('acc_'+it[0]); out[it[0]]=(v==='1'||v==='0')?Number(v):null; }); });
+    ACCESS_NUM_FIELDS.forEach(function(n){ var v=(fd.get('acc_'+n[0])||'').toString().trim(); out[n[0]]=(v!==''&&isFinite(Number(v))&&Number(v)>=0)?Number(v):null; });
+    return out;
+  }
+  function accSummary(p){ if(!p||!p.access) return ''; var n=Object.keys(p.access).filter(function(k){return p.access[k]!=null;}).length; return n?'<br><small>'+n+' information(s) d’accessibilité renseignée(s)</small>':''; }
 
   // ---------- Icons ----------
   function icon(name){
@@ -1593,15 +1640,18 @@
     if(!supabaseClient) return false;
     try{
       var p=getProfile(), isAdm=!!p && roleOf(p)==='admin';
+      var selP='id,name,activity,address,cp,commune,site,lat,lon,reason,author,author_name,status,created_at,approved_at', selE='place_id,name,address,cp,commune,activity,site';
       var res=await Promise.all([
-        supabaseClient.from('hilia_places').select('id,name,activity,address,cp,commune,site,lat,lon,reason,author,author_name,status,created_at,approved_at'),
-        supabaseClient.from('hilia_place_edits').select('place_id,name,address,cp,commune,activity,site').order('place_id'),
+        supabaseClient.from('hilia_places').select(selP+',access'),
+        supabaseClient.from('hilia_place_edits').select(selE+',access').order('place_id'),
         supabaseClient.from('hilia_activities').select('name,created_at').order('created_at',{ascending:true})
       ]);
+      if(res[0].error && /access/i.test(res[0].error.message)) res[0]=await supabaseClient.from('hilia_places').select(selP);
+      if(res[1].error && /access/i.test(res[1].error.message)) res[1]=await supabaseClient.from('hilia_place_edits').select(selE).order('place_id');
       var changed=false;
       function put(key,val){ var s=JSON.stringify(val); if(localStorage.getItem(key)!==s){ localStorage.setItem(key,s); return true; } return false; }
       function ts(r){ var t=Date.parse(r.approved_at||r.created_at); return isNaN(t)?0:t; }
-      function toLocal(r){ return {id:r.id,name:r.name,activity:r.activity,address:r.address,cp:r.cp,commune:r.commune,site:r.site||'',lat:r.lat==null?'':String(r.lat),lon:r.lon==null?'':String(r.lon),reason:r.reason||'',author:r.author||'',authorName:r.author_name,date:r.created_at}; }
+      function toLocal(r){ return {id:r.id,name:r.name,activity:r.activity,address:r.address,cp:r.cp,commune:r.commune,site:r.site||'',lat:r.lat==null?'':String(r.lat),lon:r.lon==null?'':String(r.lon),reason:r.reason||'',author:r.author||'',authorName:r.author_name,date:r.created_at,access:(r.access&&typeof r.access==='object')?r.access:null}; }
       if(!res[0].error){
         var rows=res[0].data||[];
         var approved=rows.filter(function(r){return r.status==='approved';}).sort(function(a,b){ return ts(a)-ts(b) || String(a.id).localeCompare(String(b.id)); }).map(toLocal);
@@ -1610,7 +1660,7 @@
         put(PENDING_PLACES_KEY,pending);
       } else console.warn('Chargement des lieux impossible',res[0].error.message);
       if(!res[1].error){
-        var edits={}; (res[1].data||[]).forEach(function(r){ edits[r.place_id]={name:r.name,address:r.address,cp:r.cp,commune:r.commune,activity:r.activity,site:r.site}; });
+        var edits={}; (res[1].data||[]).forEach(function(r){ edits[r.place_id]={name:r.name,address:r.address,cp:r.cp,commune:r.commune,activity:r.activity,site:r.site,access:(r.access&&typeof r.access==='object')?r.access:null}; });
         if(put(EDITS_KEY,edits)) changed=true;
       } else console.warn('Chargement des modifications impossible',res[1].error.message);
       if(!res[2].error){
@@ -1811,14 +1861,14 @@
     var html='';
     if(rr==='certified' || rr==='admin'){
       var isAdmin=rr==='admin';
-      html+='<div class="contrib-panel"><h2>'+(isAdmin?'Ajouter un nouveau lieu':'Proposer un nouveau lieu')+'</h2><p style="margin:0;color:var(--muted);font-size:.83rem;line-height:1.5">'+(isAdmin?'Le lieu sera ajouté directement à l’annuaire.':'Votre proposition sera placée en attente de validation Admin avant d’apparaître dans l’annuaire.')+'</p><form id="newPlaceForm" class="inline-form"><div class="inline-form-grid"><div class="field"><label for="newPlaceName">Nom du lieu</label><input id="newPlaceName" name="name" required placeholder="Ex. Médiathèque HILIA"></div><div class="field"><label for="newPlaceActivity">Activité</label><select id="newPlaceActivity" name="activity" required><option value="">Choisir…</option>'+ACTIVITES.map(function(a){return '<option>'+escapeHtml(a)+'</option>';}).join('')+'</select></div><div class="field"><label for="newPlaceAddress">Adresse</label><input id="newPlaceAddress" name="address" required></div><div class="field"><label for="newPlaceCp">Code postal</label><input id="newPlaceCp" name="cp" required inputmode="numeric"></div><div class="field"><label for="newPlaceCommune">Commune</label><input id="newPlaceCommune" name="commune" required></div><div class="field"><label for="newPlaceSite">Site internet</label><input id="newPlaceSite" name="site" type="url" placeholder="https://…"></div><div class="field"><label for="newPlaceLat">Latitude (optionnel)</label><input id="newPlaceLat" name="lat" inputmode="decimal"></div><div class="field"><label for="newPlaceLon">Longitude (optionnel)</label><input id="newPlaceLon" name="lon" inputmode="decimal"></div><div class="field full"><label for="newPlaceReason">Pourquoi ajouter ce lieu ?</label><textarea id="newPlaceReason" name="reason" maxlength="1000" placeholder="Quelques mots pour aider l’Admin à vérifier votre proposition…"></textarea></div></div><button class="primary-btn" type="submit" style="margin-top:10px">Soumettre le lieu</button><div class="auth-note" id="newPlaceStatus"></div></form></div>';
+      html+='<div class="contrib-panel"><h2>'+(isAdmin?'Ajouter un nouveau lieu':'Proposer un nouveau lieu')+'</h2><p style="margin:0;color:var(--muted);font-size:.83rem;line-height:1.5">'+(isAdmin?'Le lieu sera ajouté directement à l’annuaire.':'Votre proposition sera placée en attente de validation Admin avant d’apparaître dans l’annuaire.')+'</p><form id="newPlaceForm" class="inline-form"><div class="inline-form-grid"><div class="field"><label for="newPlaceName">Nom du lieu</label><input id="newPlaceName" name="name" required placeholder="Ex. Médiathèque HILIA"></div><div class="field"><label for="newPlaceActivity">Activité</label><select id="newPlaceActivity" name="activity" required><option value="">Choisir…</option>'+ACTIVITES.map(function(a){return '<option>'+escapeHtml(a)+'</option>';}).join('')+'</select></div><div class="field"><label for="newPlaceAddress">Adresse</label><input id="newPlaceAddress" name="address" required></div><div class="field"><label for="newPlaceCp">Code postal</label><input id="newPlaceCp" name="cp" required inputmode="numeric"></div><div class="field"><label for="newPlaceCommune">Commune</label><input id="newPlaceCommune" name="commune" required></div><div class="field"><label for="newPlaceSite">Site internet</label><input id="newPlaceSite" name="site" type="url" placeholder="https://…"></div><div class="field"><label for="newPlaceLat">Latitude (optionnel)</label><input id="newPlaceLat" name="lat" inputmode="decimal"></div><div class="field"><label for="newPlaceLon">Longitude (optionnel)</label><input id="newPlaceLon" name="lon" inputmode="decimal"></div>'+accessFormHtml('new',null)+'<div class="field full"><label for="newPlaceReason">Pourquoi ajouter ce lieu ?</label><textarea id="newPlaceReason" name="reason" maxlength="1000" placeholder="Quelques mots pour aider l’Admin à vérifier votre proposition…"></textarea></div></div><button class="primary-btn" type="submit" style="margin-top:10px">Soumettre le lieu</button><div class="auth-note" id="newPlaceStatus"></div></form></div>';
     }
     html+='<div class="contrib-panel"><h2>Suggérer une correction</h2><p style="margin:0;color:var(--muted);font-size:.83rem;line-height:1.5">Les suggestions restent en attente et doivent être vérifiées avant modification de la fiche.</p></div>';
     box.innerHTML=html;
     var form=document.getElementById('newPlaceForm');
     if(form) form.addEventListener('submit',async function(e){
       e.preventDefault(); var fd=new FormData(form); var latValue=fd.get('lat').trim(), lonValue=fd.get('lon').trim(); if(latValue!=='' && (!isFinite(Number(latValue)) || Number(latValue)<-90 || Number(latValue)>90)){document.getElementById('newPlaceStatus').textContent='Latitude invalide.';return;} if(lonValue!=='' && (!isFinite(Number(lonValue)) || Number(lonValue)<-180 || Number(lonValue)>180)){document.getElementById('newPlaceStatus').textContent='Longitude invalide.';return;} var payload={id:'place_'+Date.now(),name:fd.get('name').trim(),activity:fd.get('activity'),address:fd.get('address').trim(),cp:fd.get('cp').trim(),commune:fd.get('commune').trim(),site:safeExternalUrl(fd.get('site')),lat:fd.get('lat').trim(),lon:fd.get('lon').trim(),reason:fd.get('reason').trim(),author:p.email,authorName:p.name,date:new Date().toISOString()}; var isAdm=roleOf(p)==='admin', stEl=document.getElementById('newPlaceStatus'), rnd=Date.now()+'_'+Math.random().toString(16).slice(2);
-      var row={id:(isAdm?'place_':'pending_')+rnd,name:payload.name,activity:payload.activity,address:payload.address,cp:payload.cp,commune:payload.commune,site:payload.site||null,lat:payload.lat===''?null:Number(payload.lat),lon:payload.lon===''?null:Number(payload.lon),reason:payload.reason||null,author:isAdm?null:p.email,author_name:p.name||String(p.email||'').split('@')[0],status:isAdm?'approved':'pending',approved_at:isAdm?new Date().toISOString():null};
+      var row={id:(isAdm?'place_':'pending_')+rnd,name:payload.name,activity:payload.activity,address:payload.address,cp:payload.cp,commune:payload.commune,site:payload.site||null,lat:payload.lat===''?null:Number(payload.lat),lon:payload.lon===''?null:Number(payload.lon),reason:payload.reason||null,author:isAdm?null:p.email,author_name:p.name||String(p.email||'').split('@')[0],status:isAdm?'approved':'pending',approved_at:isAdm?new Date().toISOString():null,access:readAccess(fd)};
       var ins=await supabaseClient.from('hilia_places').insert(row);
       if(ins.error){ console.error('Enregistrement du lieu impossible',ins.error); stEl.textContent='Impossible d’enregistrer le lieu : '+ins.error.message; return; }
       if(isAdm){ stEl.textContent='Lieu ajouté à l’annuaire.'; await loadRemoteContent(); location.reload(); }
@@ -1831,7 +1881,7 @@
     var html='<div class="admin-panel"><h2>Administration</h2><p style="margin:0;color:var(--muted);font-size:.83rem">Zone réservée aux administrateurs : les actions ci-dessous sont enregistrées dans la base de données.</p>';
     html+='<h3>Propositions de nouveaux lieux ('+pending.length+')</h3><div class="admin-list">';
     if(!pending.length) html+='<div class="admin-item"><div class="admin-item-main"><strong>Aucune proposition en attente</strong><p>Les nouveaux lieux proposés par les utilisateurs certifiés apparaîtront ici.</p></div></div>';
-    pending.forEach(function(p){ html+='<div class="admin-item"><div class="admin-item-main"><strong>'+escapeHtml(p.name)+' · '+escapeHtml(p.activity)+'</strong><p>'+escapeHtml(p.address)+', '+escapeHtml(p.cp)+' '+escapeHtml(p.commune)+'<br>'+escapeHtml(p.reason||'Aucune précision.')+'<br><small>'+escapeHtml(p.authorName||p.author||'Utilisateur')+' · '+formatDate(p.date)+'</small></p></div><div class="admin-item-actions"><button class="small-btn primary" type="button" aria-label="Valider la proposition « '+escapeAttr(p.name)+' »" data-approve-place="'+p.id+'">Valider</button><button class="small-btn danger" type="button" aria-label="Refuser la proposition « '+escapeAttr(p.name)+' »" data-reject-place="'+p.id+'">Refuser</button></div></div>'; });
+    pending.forEach(function(p){ html+='<div class="admin-item"><div class="admin-item-main"><strong>'+escapeHtml(p.name)+' · '+escapeHtml(p.activity)+'</strong><p>'+escapeHtml(p.address)+', '+escapeHtml(p.cp)+' '+escapeHtml(p.commune)+'<br>'+escapeHtml(p.reason||'Aucune précision.')+accSummary(p)+'<br><small>'+escapeHtml(p.authorName||p.author||'Utilisateur')+' · '+formatDate(p.date)+'</small></p></div><div class="admin-item-actions"><button class="small-btn primary" type="button" aria-label="Valider la proposition « '+escapeAttr(p.name)+' »" data-approve-place="'+p.id+'">Valider</button><button class="small-btn danger" type="button" aria-label="Refuser la proposition « '+escapeAttr(p.name)+' »" data-reject-place="'+p.id+'">Refuser</button></div></div>'; });
     html+='</div>';
     html+='<h3>Suggestions de modifications ('+suggestions.filter(function(s){return s.status!=="done";}).length+')</h3><div class="admin-list">';
     var openSug=suggestions.filter(function(s){return s.status!=="done";});
@@ -1913,9 +1963,9 @@
     });
     var editBtn=detailContent.querySelector('[data-open-edit]'); if(editBtn) editBtn.addEventListener('click',function(){
       var r=DATA[di], holder=document.getElementById('detailEditForm'); if(!holder) return;
-      holder.innerHTML='<form class="inline-form edit-form"><div class="inline-form-grid"><div class="field"><label for="editName'+di+'">Nom</label><input id="editName'+di+'" name="name" required value="'+escapeAttr(r[F.NOM])+'"></div><div class="field"><label for="editActivity'+di+'">Activité</label><select id="editActivity'+di+'" name="activity">'+ACTIVITES.map(function(a){return '<option '+(a===ACTIVITES[r[F.ACT]]?'selected':'')+'>'+escapeHtml(a)+'</option>';}).join('')+'</select></div><div class="field"><label for="editAddress'+di+'">Adresse</label><input id="editAddress'+di+'" name="address" value="'+escapeAttr(r[F.ADR])+'"></div><div class="field"><label for="editCp'+di+'">Code postal</label><input id="editCp'+di+'" name="cp" value="'+escapeAttr(r[F.CP])+'"></div><div class="field"><label for="editCommune'+di+'">Commune</label><input id="editCommune'+di+'" name="commune" value="'+escapeAttr(COMMUNES[r[F.COM]])+'"></div><div class="field"><label for="editSite'+di+'">Site internet</label><input id="editSite'+di+'" name="site" value="'+escapeAttr(r[F.SITE]||'')+'"></div></div><button class="small-btn primary" type="submit">Enregistrer les modifications</button></form>';
+      holder.innerHTML='<form class="inline-form edit-form"><div class="inline-form-grid"><div class="field"><label for="editName'+di+'">Nom</label><input id="editName'+di+'" name="name" required value="'+escapeAttr(r[F.NOM])+'"></div><div class="field"><label for="editActivity'+di+'">Activité</label><select id="editActivity'+di+'" name="activity">'+ACTIVITES.map(function(a){return '<option '+(a===ACTIVITES[r[F.ACT]]?'selected':'')+'>'+escapeHtml(a)+'</option>';}).join('')+'</select></div><div class="field"><label for="editAddress'+di+'">Adresse</label><input id="editAddress'+di+'" name="address" value="'+escapeAttr(r[F.ADR])+'"></div><div class="field"><label for="editCp'+di+'">Code postal</label><input id="editCp'+di+'" name="cp" value="'+escapeAttr(r[F.CP])+'"></div><div class="field"><label for="editCommune'+di+'">Commune</label><input id="editCommune'+di+'" name="commune" value="'+escapeAttr(COMMUNES[r[F.COM]])+'"></div><div class="field"><label for="editSite'+di+'">Site internet</label><input id="editSite'+di+'" name="site" value="'+escapeAttr(r[F.SITE]||'')+'"></div>'+accessFormHtml('edit'+di,r)+'</div><button class="small-btn primary" type="submit">Enregistrer les modifications</button></form>';
       var ef=holder.querySelector('form'); ef.addEventListener('submit',async function(e){e.preventDefault();var fd=new FormData(ef);
-        var row={place_id:String(di),name:fd.get('name').trim(),address:fd.get('address').trim(),cp:fd.get('cp').trim(),commune:fd.get('commune').trim(),activity:fd.get('activity'),site:safeExternalUrl(fd.get('site')),updated_at:new Date().toISOString()};
+        var row={place_id:String(di),name:fd.get('name').trim(),address:fd.get('address').trim(),cp:fd.get('cp').trim(),commune:fd.get('commune').trim(),activity:fd.get('activity'),site:safeExternalUrl(fd.get('site')),access:readAccess(fd),updated_at:new Date().toISOString()};
         var r=await supabaseClient.from('hilia_place_edits').upsert(row,{onConflict:'place_id'});
         if(r.error){ console.error('Modification impossible',r.error); announce('Impossible d’enregistrer la modification : '+r.error.message,0); return; }
         await loadRemoteContent(); location.reload();});
