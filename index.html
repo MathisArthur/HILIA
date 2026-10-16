@@ -1617,6 +1617,29 @@
     ['profileName','profileEmail','profilePassword'].forEach(function(id){ var el=document.getElementById(id); if(el) el.removeAttribute('aria-invalid'); });
     if(field){ field.setAttribute('aria-invalid','true'); field.focus(); }
   }
+  // Récupère le rôle enregistré dans Supabase. La politique RLS doit limiter
+  // cette lecture au rôle du compte actuellement connecté.
+  async function fetchSupabaseRole(userId){
+    if(!supabaseClient || !userId) return 'user';
+    try{
+      var result = await supabaseClient
+        .from('hilia_user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if(result.error){
+        console.warn('Lecture du rôle Supabase impossible', result.error.message);
+        return 'user';
+      }
+      return result.data && ['user','admin','certified'].includes(result.data.role)
+        ? result.data.role
+        : 'user';
+    }catch(err){
+      console.warn('Lecture du rôle Supabase impossible', err);
+      return 'user';
+    }
+  }
+
   // Activation du sélecteur connexion / création de compte.
   document.querySelectorAll('[data-auth-mode]').forEach(function(button){
     button.addEventListener('click', function(){
@@ -1655,7 +1678,8 @@
           result=await supabaseClient.auth.signInWithPassword({email:email,password:password});
           if(result.error) throw result.error;
           var user=result.data.user, meta=(user.user_metadata||{});
-          profileState={id:user.id,name:meta.display_name||email.split('@')[0],email:user.email,role:'user'};
+          var assignedRole = await fetchSupabaseRole(user.id);
+          profileState={id:user.id,name:meta.display_name||email.split('@')[0],email:user.email,role:assignedRole};
           localStorage.setItem(PROFILE_KEY,JSON.stringify(profileState));
           if(status) status.textContent='Connexion réussie.';
         }
@@ -1688,7 +1712,8 @@
       var session=result.data.session;
       if(session && session.user){
         var u=session.user, meta=u.user_metadata||{};
-        profileState={id:u.id,name:meta.display_name||u.email.split('@')[0],email:u.email,role:'user'};
+        var assignedRole = await fetchSupabaseRole(u.id);
+        profileState={id:u.id,name:meta.display_name||(u.email||'').split('@')[0],email:u.email,role:assignedRole};
         localStorage.setItem(PROFILE_KEY,JSON.stringify(profileState));
       }else{
         profileState=null; localStorage.removeItem(PROFILE_KEY);
