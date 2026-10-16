@@ -1617,6 +1617,14 @@
     ['profileName','profileEmail','profilePassword'].forEach(function(id){ var el=document.getElementById(id); if(el) el.removeAttribute('aria-invalid'); });
     if(field){ field.setAttribute('aria-invalid','true'); field.focus(); }
   }
+  // Activation du sélecteur connexion / création de compte.
+  document.querySelectorAll('[data-auth-mode]').forEach(function(button){
+    button.addEventListener('click', function(){
+      setProfileMode(button.dataset.authMode);
+    });
+  });
+  setProfileMode('login', true);
+
   var profileForm=document.getElementById('profileForm');
   if(profileForm) profileForm.addEventListener('input', function(e){ if(e.target && e.target.removeAttribute) e.target.removeAttribute('aria-invalid'); });
   if(profileForm){
