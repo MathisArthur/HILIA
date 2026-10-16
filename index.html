@@ -1587,6 +1587,15 @@
   function getPendingPlaces(){ try{ var v=JSON.parse(localStorage.getItem(PENDING_PLACES_KEY)||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
   function getApprovedPlaces(){ try{ var v=JSON.parse(localStorage.getItem(APPROVED_PLACES_KEY)||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
   function getEdits(){ try{ var v=JSON.parse(localStorage.getItem(EDITS_KEY)||'{}'); return v && typeof v==='object'?v:{}; }catch(e){ return {}; } }
+  async function loadRemoteSuggestions(){
+    if(!supabaseClient) return;
+    var p=getProfile();
+    if(!p || roleOf(p)!=='admin'){ localStorage.removeItem(SUGGESTIONS_KEY); return; }
+    var result=await supabaseClient.from('hilia_suggestions').select('id,place_id,suggestion_text,author_email,author_name,status,created_at').order('created_at',{ascending:false});
+    if(result.error){ console.warn('Chargement des suggestions impossible',result.error.message); return; }
+    var list=(result.data||[]).map(function(row){ return {id:row.id,di:parseInt(row.place_id,10),text:row.suggestion_text,author:row.author_email,authorName:row.author_name,date:row.created_at,status:row.status}; });
+    localStorage.setItem(SUGGESTIONS_KEY,JSON.stringify(list));
+  }
   function getSuggestions(){ try{ var v=JSON.parse(localStorage.getItem(SUGGESTIONS_KEY)||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
   function reviewListFor(di){ var all=getReviews(); return Array.isArray(all[String(di)]) ? all[String(di)] : []; }
   function reviewSummary(di){ var list=reviewListFor(di), sum=0; list.forEach(function(x){ sum += Number(x.rating)||0; }); return {count:list.length, avg:list.length ? sum/list.length : 0}; }
@@ -1683,7 +1692,7 @@
           localStorage.setItem(PROFILE_KEY,JSON.stringify(profileState));
           if(status) status.textContent='Connexion réussie.';
         }
-        if(profileState){ renderProfilePage(); await loadRemoteReviews(); refreshReviewMinis(); }
+        if(profileState){ await loadRemoteSuggestions(); renderProfilePage(); await loadRemoteReviews(); refreshReviewMinis(); }
       }catch(err){
         var msg=(err && err.message)||'Une erreur est survenue.';
         if(/already registered|already exists/i.test(msg)) msg='Un compte existe déjà avec cette adresse. Essayez de vous connecter.';
@@ -1719,6 +1728,7 @@
         profileState=null; localStorage.removeItem(PROFILE_KEY);
       }
       await loadRemoteReviews();
+      await loadRemoteSuggestions();
       renderProfilePage(); refreshReviewMinis();
     }catch(err){ console.warn('Initialisation Supabase impossible',err); }
   }
@@ -1800,7 +1810,12 @@
     });
     box.querySelectorAll('[data-approve-place]').forEach(function(btn){ btn.addEventListener('click',function(){ var id=btn.dataset.approvePlace, list=getPendingPlaces(), idx=list.findIndex(function(p){return p.id===id;}); if(idx<0) return; var p=list[idx], approved=getApprovedPlaces(); approved.push(p); localStorage.setItem(APPROVED_PLACES_KEY,JSON.stringify(approved)); list.splice(idx,1); localStorage.setItem(PENDING_PLACES_KEY,JSON.stringify(list)); location.reload(); }); });
     box.querySelectorAll('[data-reject-place]').forEach(function(btn){ btn.addEventListener('click',function(){ var id=btn.dataset.rejectPlace, list=getPendingPlaces().filter(function(p){return p.id!==id;}); localStorage.setItem(PENDING_PLACES_KEY,JSON.stringify(list)); renderAdminArea(); }); });
-    box.querySelectorAll('[data-done-suggestion]').forEach(function(btn){ btn.addEventListener('click',function(){ var id=btn.dataset.doneSuggestion, list=getSuggestions(); list.forEach(function(s){if(s.id===id)s.status='done';}); localStorage.setItem(SUGGESTIONS_KEY,JSON.stringify(list)); renderAdminArea(); }); });
+    box.querySelectorAll('[data-done-suggestion]').forEach(function(btn){ btn.addEventListener('click',async function(){
+      var id=btn.dataset.doneSuggestion; btn.disabled=true;
+      var result=await supabaseClient.from('hilia_suggestions').update({status:'done'}).eq('id',id);
+      if(result.error){ console.error('Mise à jour impossible',result.error); announce('Impossible de modifier le statut : '+result.error.message,0); btn.disabled=false; return; }
+      await loadRemoteSuggestions(); renderAdminArea();
+    }); });
     box.querySelectorAll('[data-edit-from-suggestion]').forEach(function(btn){ btn.addEventListener('click',function(){ navigatePage('explore'); setListTab(); openDetail(parseInt(btn.dataset.editFromSuggestion,10)); }); });
   }
   document.getElementById('prototypeRoleSelect').addEventListener('change',function(){ this.value='user'; if(profileState){profileState.role='user'; localStorage.setItem(PROFILE_KEY,JSON.stringify(profileState)); renderProfilePage();} });
@@ -1820,7 +1835,14 @@
     if(result.error){ console.error('Suppression de l’avis impossible',result.error); announce('Impossible de supprimer cet avis.',0); return false; }
     await loadRemoteReviews(); return true;
   }
-  function saveSuggestion(di,textValue){ var p=getProfile(); if(!p || !textValue.trim()) return false; var list=getSuggestions(); list.unshift({id:'suggestion_'+Date.now()+'_'+Math.random().toString(16).slice(2),di:di,text:textValue.trim(),author:p.email,authorName:p.name,date:new Date().toISOString(),status:'open'}); localStorage.setItem(SUGGESTIONS_KEY,JSON.stringify(list)); return true; }
+  async function saveSuggestion(di,textValue){
+    var p=getProfile(); if(!p || !supabaseClient || !textValue.trim()) return false;
+    var payload={id:'suggestion_'+Date.now()+'_'+Math.random().toString(16).slice(2),place_id:String(di),suggestion_text:textValue.trim().slice(0,1200),author_email:p.email,author_name:p.name||String(p.email||'').split('@')[0],status:'open'};
+    var result=await supabaseClient.from('hilia_suggestions').insert(payload);
+    if(result.error){ console.error('Envoi de la suggestion impossible',result.error); announce('Impossible d’envoyer la suggestion : '+result.error.message,0); return false; }
+    if(roleOf(p)==='admin') await loadRemoteSuggestions();
+    return true;
+  }
   function formatDate(v){ try{ return new Date(v).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}); }catch(e){ return ''; } }
   function reviewsHtml(di){
     var list=reviewListFor(di), p=getProfile(), html='<div class="review-block"><div class="review-head"><h3 id="reviewsHeading" tabindex="-1">Avis</h3><div class="review-score">'+reviewSummaryHtml(di,'full')+'</div></div>';
@@ -1834,7 +1856,7 @@
     detailContent.querySelectorAll('[data-delete-review]').forEach(function(btn){ btn.addEventListener('click',async function(){ btn.disabled=true; try{ if(await removeReview(parseInt(btn.dataset.deleteReview,10),btn.dataset.reviewEmail,btn.dataset.reviewDate)){ openDetail(di,true); renderProfilePage(); refreshReviewMinis(); announce('Avis retiré.',150); } }finally{btn.disabled=false;} }); });
     var loginBtn=detailContent.querySelector('[data-review-login]'); if(loginBtn) loginBtn.addEventListener('click',function(){ closeDetail(); navigatePage('profile'); });
     var suggestBtn=detailContent.querySelector('[data-open-suggestion]'); if(suggestBtn) suggestBtn.addEventListener('click',function(){
-      var holder=document.getElementById('detailSuggestionForm'); if(!holder) return; holder.innerHTML='<form class="inline-form"><div class="field" style="margin-bottom:9px"><label for="suggestionText'+di+'">Votre suggestion</label><textarea id="suggestionText'+di+'" name="text" required maxlength="1200" placeholder="Ex. L’adresse est incorrecte, une rampe a été ajoutée, les sanitaires ne sont plus accessibles…"></textarea></div><button class="small-btn primary" type="submit">Envoyer la suggestion</button><span class="auth-note" style="margin-left:8px">Elle sera revue par un Admin.</span></form>'; var f=holder.querySelector('form'); f.addEventListener('submit',function(e){e.preventDefault();var v=f.querySelector('textarea').value;if(saveSuggestion(di,v)){holder.innerHTML='<div class="auth-note" role="status">Merci ! Votre suggestion a été transmise à la modération.</div>';renderAdminArea();}});
+      var holder=document.getElementById('detailSuggestionForm'); if(!holder) return; holder.innerHTML='<form class="inline-form"><div class="field" style="margin-bottom:9px"><label for="suggestionText'+di+'">Votre suggestion</label><textarea id="suggestionText'+di+'" name="text" required maxlength="1200" placeholder="Ex. L’adresse est incorrecte, une rampe a été ajoutée, les sanitaires ne sont plus accessibles…"></textarea></div><button class="small-btn primary" type="submit">Envoyer la suggestion</button><span class="auth-note" style="margin-left:8px">Elle sera revue par un Admin.</span></form>'; var f=holder.querySelector('form'); f.addEventListener('submit',async function(e){e.preventDefault();var v=f.querySelector('textarea').value;if(await saveSuggestion(di,v)){holder.innerHTML='<div class="auth-note" role="status">Merci ! Votre suggestion a été transmise à la modération.</div>';renderAdminArea();}});
     });
     var editBtn=detailContent.querySelector('[data-open-edit]'); if(editBtn) editBtn.addEventListener('click',function(){
       var r=DATA[di], holder=document.getElementById('detailEditForm'); if(!holder) return;
