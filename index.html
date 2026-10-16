@@ -672,7 +672,7 @@
     <details class="faq-item"><summary>Pourquoi certaines informations sont-elles inconnues ?</summary><div class="faq-answer">Lorsqu’un critère n’est pas renseigné dans les données disponibles, HILIA masque ce critère plutôt que de supposer qu’il est accessible ou non accessible.</div></details>
     <details class="faq-item"><summary>Comment trouver un lieu précis ?</summary><div class="faq-answer">Utilisez la recherche en haut de l’écran avec le nom du lieu, la commune ou le code postal. Vous pouvez ensuite filtrer par activité ou par critères d’accessibilité.</div></details>
     <details class="faq-item"><summary>À quoi sert la carte ?</summary><div class="faq-answer">La carte permet de visualiser les lieux géolocalisés, de zoomer sur une zone et d’ouvrir directement la fiche d’un établissement.</div></details>
-    <details class="faq-item"><summary>Comment laisser un avis ?</summary><div class="faq-answer">Ouvrez la fiche d’un lieu, puis la rubrique « Avis ». Une connexion est nécessaire pour publier un avis. Dans cette version de démonstration, le compte et les avis sont enregistrés uniquement dans le navigateur.</div></details>
+    <details class="faq-item"><summary>Comment laisser un avis ?</summary><div class="faq-answer">Ouvrez la fiche d’un lieu, puis la rubrique « Avis ». Une connexion est nécessaire pour publier un avis. Les comptes et les avis sont enregistrés dans Supabase et peuvent être retrouvés depuis différents appareils.</div></details>
     <details class="faq-item"><summary>HILIA permet-elle déjà de réserver une activité ?</summary><div class="faq-answer">La version actuelle présentée ici est un annuaire de lieux avec recherche, carte, filtres, informations d’accessibilité et avis. La réservation n’est pas incluse dans cette version du prototype.</div></details>
   </div>
 </section>
@@ -687,18 +687,18 @@
         <button class="auth-mode-btn" type="button" aria-pressed="false" data-auth-mode="register">Créer un profil</button>
       </div>
       <h2 id="profileFormTitle" style="color:var(--teal);margin:0 0 6px;font-family:'RocaOne','Archivo',sans-serif">Se connecter</h2>
-      <p id="profileFormIntro" style="margin:0 0 16px;color:var(--muted);font-size:.84rem;line-height:1.5">Connectez-vous sur ce navigateur pour publier et retrouver vos avis.</p>
+      <p id="profileFormIntro" style="margin:0 0 16px;color:var(--muted);font-size:.84rem;line-height:1.5">Connectez-vous à votre compte HILIA pour publier et retrouver vos avis.</p>
       <div class="field" id="profileNameField"><label for="profileName">Prénom ou nom affiché</label><input id="profileName" autocomplete="name" placeholder="Votre prénom" aria-describedby="profileFormStatus"></div>
       <div class="field"><label for="profileEmail">E-mail</label><input id="profileEmail" required aria-required="true" type="email" autocomplete="email" placeholder="vous@exemple.fr" aria-describedby="profileFormStatus"></div>
       <div class="field"><label for="profilePassword">Mot de passe</label><div class="password-wrap"><input id="profilePassword" required aria-required="true" type="password" minlength="6" autocomplete="current-password" aria-describedby="profilePwHint profileFormStatus"><button type="button" class="password-toggle" id="profilePasswordToggle" aria-controls="profilePassword" aria-pressed="false">Afficher le mot de passe</button></div><span class="hint" id="profilePwHint">6 caractères minimum.</span></div>
       <button class="primary-btn" id="profileSubmitBtn" type="submit">Se connecter</button>
-      <p class="auth-note">Prototype uniquement : le profil, les contributions et les avis sont stockés dans le navigateur. Une mise en production nécessitera une authentification serveur et une gestion des droits côté serveur.</p>
+      <p class="auth-note">Les comptes et les avis sont enregistrés dans Supabase. Les autres contributions de cette version restent enregistrées dans ce navigateur.</p>
       <div id="profileFormStatus" class="auth-note" role="status" aria-live="polite"></div>
     </form>
     <aside class="profile-summary" aria-label="Résumé du profil">
       <div id="profileRolePill" class="role-pill"><span class="role-dot"></span><span>Utilisateur</span></div>
       <h2 id="profileSummaryTitle" style="margin-top:12px">Pas encore connecté</h2>
-      <p id="profileSummaryText">Créez un profil local pour publier des avis sur les lieux.</p>
+      <p id="profileSummaryText">Créez un compte HILIA pour publier des avis sur les lieux.</p>
       <div class="profile-stat"><strong id="profileReviewCount">0</strong><span>avis publiés</span></div>
       <div class="profile-actions"><button class="secondary-btn" id="profileLogoutBtn" type="button" style="display:none">Se déconnecter</button></div>
       <div id="prototypeRoleBox" class="prototype-role" style="display:none">
@@ -907,9 +907,15 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
 <script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
 <script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet/leaflet-maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
   "use strict";
+  // Supabase : clé publique uniquement. Les autorisations restent contrôlées par les politiques RLS.
+  var SUPABASE_URL = 'https://lokplzdkvzilsuuqflsk.supabase.co';
+  var SUPABASE_ANON_KEY = 'sb_publishable_86IcrAhzRoOkZZn-KGKe6A_6-_FO0B0';
+  var supabaseClient = window.supabase && window.supabase.createClient ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+  var remoteReviewsReady = false;
   var raw = JSON.parse(document.getElementById('dataset').textContent);
   var ACTIVITES = raw.activites.slice();
   var COMMUNES = raw.communes;
@@ -1567,6 +1573,17 @@
   function roleDef(p){ return ROLE_DEFS[roleOf(p)]; }
   function getProfile(){ try{ var p=JSON.parse(localStorage.getItem(PROFILE_KEY)||'null'); if(p) { p.role=roleOf(p); } return p; }catch(e){ return null; } }
   function getReviews(){ try{ var v=JSON.parse(localStorage.getItem(REVIEWS_KEY)||'{}'); return v && typeof v==='object' ? v : {}; }catch(e){ return {}; } }
+  async function loadRemoteReviews(){
+    if(!supabaseClient) return;
+    var result=await supabaseClient.from('hilia_reviews').select('id,place_id,user_id,author_name,rating,comment,created_at,updated_at').order('created_at',{ascending:false});
+    if(result.error){ console.warn('Chargement des avis impossible',result.error.message); return; }
+    var all={};
+    (result.data||[]).forEach(function(row){
+      var key=String(row.place_id), list=all[key]||(all[key]=[]);
+      list.push({id:row.id,user_id:row.user_id,name:row.author_name,email:'',rating:row.rating,comment:row.comment,date:row.created_at});
+    });
+    localStorage.setItem(REVIEWS_KEY,JSON.stringify(all)); remoteReviewsReady=true;
+  }
   function getPendingPlaces(){ try{ var v=JSON.parse(localStorage.getItem(PENDING_PLACES_KEY)||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
   function getApprovedPlaces(){ try{ var v=JSON.parse(localStorage.getItem(APPROVED_PLACES_KEY)||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
   function getEdits(){ try{ var v=JSON.parse(localStorage.getItem(EDITS_KEY)||'{}'); return v && typeof v==='object'?v:{}; }catch(e){ return {}; } }
@@ -1584,12 +1601,12 @@
     var logged=!!getProfile();
     if(profileAuthMode==='register'){
       title.textContent='Créer votre profil';
-      intro.textContent='Créez un profil local pour publier et retrouver vos avis sur ce navigateur.';
+      intro.textContent='Créez un compte HILIA pour publier et retrouver vos avis.';
       nameField.style.display=''; nameEl.required=true; nameEl.disabled=false;
       submit.textContent='Créer mon profil';
     }else{
       title.textContent='Se connecter';
-      intro.textContent=logged ? 'Connectez-vous avec les identifiants enregistrés dans ce navigateur.' : 'Aucun profil local n’existe encore. Vous pourrez en créer un en quelques secondes.';
+      intro.textContent=logged ? 'Connectez-vous avec votre compte HILIA.' : 'Vous pouvez créer un compte HILIA en quelques secondes.';
       nameField.style.display=logged ? 'none' : 'none'; nameEl.required=false; nameEl.disabled=true;
       submit.textContent='Se connecter';
     }
@@ -1609,23 +1626,68 @@
       var email=(document.getElementById('profileEmail')?.value||'').trim().toLowerCase();
       var password=document.getElementById('profilePassword')?.value||'';
       var status=document.getElementById('profileFormStatus');
+      if(!supabaseClient){ profileFormError('Le service de compte ne se charge pas. Vérifiez votre connexion puis rechargez la page.'); return; }
       if(!email||!password){ profileFormError('Renseignez votre adresse e-mail et votre mot de passe.', !email ? document.getElementById('profileEmail') : document.getElementById('profilePassword')); return; }
+      if(profileAuthMode==='register' && name.length<2){ profileFormError('Indiquez un nom affiché de 2 caractères minimum.', document.getElementById('profileName')); return; }
+      if(profileAuthMode==='register' && password.length<6){ profileFormError('Le mot de passe doit contenir au moins 6 caractères.', document.getElementById('profilePassword')); return; }
+      var submit=document.getElementById('profileSubmitBtn'); submit.disabled=true;
       try{
-        var hash=await hashPassword(password);
+        var result;
         if(profileAuthMode==='register'){
-          profileState={name:name,email:email,role:'user',passwordHash:hash,createdAt:Date.now()};
-          localStorage.setItem(PROFILE_KEY,JSON.stringify(profileState));
-          if(status)status.textContent='Profil créé sur ce navigateur.';
+          result=await supabaseClient.auth.signUp({email:email,password:password,options:{data:{display_name:name}}});
+          if(result.error) throw result.error;
+          if(result.data.session){
+            profileState={id:result.data.user.id,name:name,email:email,role:'user'};
+            localStorage.setItem(PROFILE_KEY,JSON.stringify(profileState));
+            if(status) status.textContent='Compte créé et connecté. Vous pouvez maintenant publier des avis.';
+          }else{
+            if(status) status.textContent='Compte créé. Consultez votre boîte e-mail pour confirmer votre adresse, puis connectez-vous.';
+          }
         }else{
-          var existing=JSON.parse(localStorage.getItem(PROFILE_KEY)||'null');
-          if(!existing||String(existing.email||'').toLowerCase()!==email){ profileFormError('Aucun profil correspondant sur ce navigateur.', document.getElementById('profileEmail')); return; }
-          if(existing.passwordHash&&existing.passwordHash!==hash){ profileFormError('Mot de passe incorrect.', document.getElementById('profilePassword')); return; }
-          existing.passwordHash=hash; profileState=existing; localStorage.setItem(PROFILE_KEY,JSON.stringify(profileState));
-          if(status)status.textContent='Connexion réussie.';
+          result=await supabaseClient.auth.signInWithPassword({email:email,password:password});
+          if(result.error) throw result.error;
+          var user=result.data.user, meta=(user.user_metadata||{});
+          profileState={id:user.id,name:meta.display_name||email.split('@')[0],email:user.email,role:'user'};
+          localStorage.setItem(PROFILE_KEY,JSON.stringify(profileState));
+          if(status) status.textContent='Connexion réussie.';
         }
-        renderProfilePage();
-      }catch(err){if(status)status.textContent='La connexion locale nécessite HTTPS dans le navigateur.';}
+        if(profileState){ renderProfilePage(); await loadRemoteReviews(); refreshReviewMinis(); }
+      }catch(err){
+        var msg=(err && err.message)||'Une erreur est survenue.';
+        if(/already registered|already exists/i.test(msg)) msg='Un compte existe déjà avec cette adresse. Essayez de vous connecter.';
+        else if(/invalid login credentials/i.test(msg)) msg='Adresse e-mail ou mot de passe incorrect.';
+        else if(/email not confirmed/i.test(msg)) msg='Confirmez votre adresse e-mail avant de vous connecter.';
+        if(status) status.textContent=msg;
+      }finally{ submit.disabled=false; }
     });
+  }
+
+  var logoutBtn=document.getElementById('profileLogoutBtn');
+  if(logoutBtn) logoutBtn.addEventListener('click',async function(){
+    if(!supabaseClient) return;
+    var status=document.getElementById('profileFormStatus');
+    try{ var result=await supabaseClient.auth.signOut(); if(result.error) throw result.error; }
+    catch(err){ if(status) status.textContent='Impossible de se déconnecter pour le moment.'; return; }
+    profileState=null; localStorage.removeItem(PROFILE_KEY); renderProfilePage();
+    if(status) status.textContent='Vous êtes déconnecté.';
+  });
+
+  async function restoreSupabaseSession(){
+    if(!supabaseClient) return;
+    try{
+      var result=await supabaseClient.auth.getSession();
+      if(result.error) throw result.error;
+      var session=result.data.session;
+      if(session && session.user){
+        var u=session.user, meta=u.user_metadata||{};
+        profileState={id:u.id,name:meta.display_name||u.email.split('@')[0],email:u.email,role:'user'};
+        localStorage.setItem(PROFILE_KEY,JSON.stringify(profileState));
+      }else{
+        profileState=null; localStorage.removeItem(PROFILE_KEY);
+      }
+      await loadRemoteReviews();
+      renderProfilePage(); refreshReviewMinis();
+    }catch(err){ console.warn('Initialisation Supabase impossible',err); }
   }
 
   function rolePillHtml(role){ var d=ROLE_DEFS[role]||ROLE_DEFS.user; return '<span class="role-pill '+(role==='admin'?'admin':role==='certified'?'certified':'')+'"><span class="role-dot"></span><span>'+d.label+'</span></span>'; }
@@ -1638,14 +1700,14 @@
     if(profileState){
       nameEl.value=profileState.name||''; emailEl.value=profileState.email||''; passEl.value='';
       var rr=roleOf(profileState); rolePill.innerHTML=rolePillHtml(rr); summaryTitle.textContent='Bonjour '+(profileState.name||''); summaryText.textContent=profileState.email||''; logout.style.display='inline-flex';
-      roleSelect.value=rr; prototypeBox.style.display='block'; setProfileMode('login', true);
+      roleSelect.value='user'; prototypeBox.style.display='none'; setProfileMode('login', true);
       document.getElementById('profilePermissions').innerHTML=rolePermissionsHtml(rr);
     } else {
-      nameEl.value=''; emailEl.value=''; passEl.value=''; rolePill.innerHTML=rolePillHtml('user'); summaryTitle.textContent='Pas encore connecté'; summaryText.textContent='Créez un profil local pour publier des avis sur les lieux.'; logout.style.display='none'; prototypeBox.style.display='none'; setProfileMode('login', true);
+      nameEl.value=''; emailEl.value=''; passEl.value=''; rolePill.innerHTML=rolePillHtml('user'); summaryTitle.textContent='Pas encore connecté'; summaryText.textContent='Créez un compte HILIA pour publier des avis sur les lieux.'; logout.style.display='none'; prototypeBox.style.display='none'; setProfileMode('login', true);
       document.getElementById('profilePermissions').innerHTML=rolePermissionsHtml('user');
     }
     var total=0, all=getReviews(), mine=[];
-    if(profileState) Object.keys(all).forEach(function(k){ if(Array.isArray(all[k])) all[k].forEach(function(rv){ if(rv.email===profileState.email){ total++; mine.push({di:parseInt(k,10), review:rv}); } }); });
+    if(profileState) Object.keys(all).forEach(function(k){ if(Array.isArray(all[k])) all[k].forEach(function(rv){ if((rv.user_id && rv.user_id===profileState.id) || (!rv.user_id && rv.email===profileState.email)){ total++; mine.push({di:parseInt(k,10), review:rv}); } }); });
     document.getElementById('profileReviewCount').textContent=total.toLocaleString('fr-FR');
     var holder=document.getElementById('profileMyReviews');
     if(holder){
@@ -1708,21 +1770,35 @@
     box.querySelectorAll('[data-done-suggestion]').forEach(function(btn){ btn.addEventListener('click',function(){ var id=btn.dataset.doneSuggestion, list=getSuggestions(); list.forEach(function(s){if(s.id===id)s.status='done';}); localStorage.setItem(SUGGESTIONS_KEY,JSON.stringify(list)); renderAdminArea(); }); });
     box.querySelectorAll('[data-edit-from-suggestion]').forEach(function(btn){ btn.addEventListener('click',function(){ navigatePage('explore'); setListTab(); openDetail(parseInt(btn.dataset.editFromSuggestion,10)); }); });
   }
-  document.getElementById('prototypeRoleSelect').addEventListener('change',function(){ if(!profileState) return; profileState.role=this.value; localStorage.setItem(PROFILE_KEY,JSON.stringify(profileState)); renderProfilePage(); });
-  function saveReview(di, rating, comment){ var p=getProfile(); if(!p) return false; var all=getReviews(), key=String(di), list=Array.isArray(all[key])?all[key]:[]; list=list.filter(function(r){ return r.email!==p.email; }); list.unshift({name:p.name,email:p.email,rating:Number(rating),comment:comment.trim(),date:new Date().toISOString()}); all[key]=list; localStorage.setItem(REVIEWS_KEY,JSON.stringify(all)); return true; }
-  function removeReview(di,email,date){ var p=getProfile(); if(!p || roleOf(p)!=='admin') return false; var all=getReviews(), key=String(di), list=Array.isArray(all[key])?all[key]:[]; all[key]=list.filter(function(r){ return !(r.email===email && r.date===date); }); localStorage.setItem(REVIEWS_KEY,JSON.stringify(all)); return true; }
+  document.getElementById('prototypeRoleSelect').addEventListener('change',function(){ this.value='user'; if(profileState){profileState.role='user'; localStorage.setItem(PROFILE_KEY,JSON.stringify(profileState)); renderProfilePage();} });
+  async function saveReview(di, rating, comment){
+    var p=getProfile(); if(!p || !supabaseClient || !p.id) return false;
+    var payload={place_id:String(di),user_id:p.id,author_name:p.name||p.email.split('@')[0],rating:Number(rating),comment:comment.trim()};
+    var result=await supabaseClient.from('hilia_reviews').upsert(payload,{onConflict:'place_id,user_id'});
+    if(result.error){ console.error('Publication de l’avis impossible',result.error); announce('Impossible de publier l’avis : '+result.error.message,0); return false; }
+    await loadRemoteReviews(); return true;
+  }
+  async function removeReview(di,email,date){
+    var p=getProfile(); if(!p || !supabaseClient || !p.id) return false;
+    var all=getReviews(), list=Array.isArray(all[String(di)])?all[String(di)]:[];
+    var target=list.find(function(r){return r.date===date && r.user_id===p.id;});
+    if(!target) return false;
+    var result=await supabaseClient.from('hilia_reviews').delete().eq('id',target.id);
+    if(result.error){ console.error('Suppression de l’avis impossible',result.error); announce('Impossible de supprimer cet avis.',0); return false; }
+    await loadRemoteReviews(); return true;
+  }
   function saveSuggestion(di,textValue){ var p=getProfile(); if(!p || !textValue.trim()) return false; var list=getSuggestions(); list.unshift({id:'suggestion_'+Date.now()+'_'+Math.random().toString(16).slice(2),di:di,text:textValue.trim(),author:p.email,authorName:p.name,date:new Date().toISOString(),status:'open'}); localStorage.setItem(SUGGESTIONS_KEY,JSON.stringify(list)); return true; }
   function formatDate(v){ try{ return new Date(v).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}); }catch(e){ return ''; } }
   function reviewsHtml(di){
     var list=reviewListFor(di), p=getProfile(), html='<div class="review-block"><div class="review-head"><h3 id="reviewsHeading" tabindex="-1">Avis</h3><div class="review-score">'+reviewSummaryHtml(di,'full')+'</div></div>';
     if(list.length){ html+='<div class="review-list">'; list.forEach(function(rv){ html+='<article class="review-item"><div class="review-item-top"><strong>'+escapeHtml(rv.name||'Utilisateur')+'</strong><span class="review-date">'+formatDate(rv.date)+'</span></div><div>'+starsHtml(rv.rating)+'</div><div class="review-comment">'+escapeHtml(rv.comment||'')+'</div>'; if(p && roleOf(p)==='admin') html+='<div style="margin-top:8px"><button type="button" class="small-btn danger" aria-label="Retirer l’avis de '+escapeAttr(rv.name||'Utilisateur')+'" data-delete-review="'+di+'" data-review-email="'+escapeAttr(rv.email)+'" data-review-date="'+escapeAttr(rv.date)+'">Retirer cet avis</button></div>'; html+='</article>'; }); html+='</div>'; }
-    if(p){ html+='<form class="review-form" data-review-form="'+di+'"><div class="review-form-grid"><div class="field" style="margin:0"><label for="reviewRating'+di+'">Note</label><select id="reviewRating'+di+'" name="rating" required><option value="5">5/5</option><option value="4">4/5</option><option value="3">3/5</option><option value="2">2/5</option><option value="1">1/5</option></select></div><div class="field" style="margin:0"><label for="reviewComment'+di+'">Votre avis</label><textarea id="reviewComment'+di+'" name="comment" maxlength="1200" required placeholder="Décrivez votre expérience, l’accueil ou les conditions d’accès…"></textarea></div></div><button class="primary-btn" type="submit" style="margin-top:10px">Publier mon avis</button><p class="auth-note" style="margin-bottom:0">Un avis par compte et par lieu dans cette version de démonstration.</p></form>'; html+='<div class="detail-contrib-actions"><button class="detail-action-btn" type="button" data-open-suggestion="'+di+'">Suggérer une modification</button>'; if(roleOf(p)==='admin') html+='<button class="detail-action-btn primary" type="button" data-open-edit="'+di+'">Modifier les informations</button>'; html+='</div><div id="detailSuggestionForm"></div><div id="detailEditForm"></div>'; }
+    if(p){ html+='<form class="review-form" data-review-form="'+di+'"><div class="review-form-grid"><div class="field" style="margin:0"><label for="reviewRating'+di+'">Note</label><select id="reviewRating'+di+'" name="rating" required><option value="5">5/5</option><option value="4">4/5</option><option value="3">3/5</option><option value="2">2/5</option><option value="1">1/5</option></select></div><div class="field" style="margin:0"><label for="reviewComment'+di+'">Votre avis</label><textarea id="reviewComment'+di+'" name="comment" maxlength="1200" required placeholder="Décrivez votre expérience, l’accueil ou les conditions d’accès…"></textarea></div></div><button class="primary-btn" type="submit" style="margin-top:10px">Publier mon avis</button><p class="auth-note" style="margin-bottom:0">Un avis par compte et par lieu. Vous pouvez le mettre à jour en publiant un nouvel avis.</p></form>'; html+='<div class="detail-contrib-actions"><button class="detail-action-btn" type="button" data-open-suggestion="'+di+'">Suggérer une modification</button>'; if(roleOf(p)==='admin') html+='<button class="detail-action-btn primary" type="button" data-open-edit="'+di+'">Modifier les informations</button>'; html+='</div><div id="detailSuggestionForm"></div><div id="detailEditForm"></div>'; }
     else { html+='<div class="review-login-prompt"><p>Connectez-vous pour laisser un avis, suggérer une correction ou contribuer à une fiche.</p><button class="secondary-btn" type="button" data-review-login="1">Se connecter</button></div>'; }
     return html+'</div>';
   }
   function bindReviewActions(di){
-    var form=detailContent.querySelector('[data-review-form="'+di+'"]'); if(form) form.addEventListener('submit',function(e){ e.preventDefault(); var rating=form.querySelector('[name="rating"]').value, comment=form.querySelector('[name="comment"]').value; if(comment.trim().length<3){ announce('Votre avis est trop court : 3 caractères minimum.',0); form.querySelector('[name="comment"]').setAttribute('aria-invalid','true'); form.querySelector('[name="comment"]').focus(); return; } if(saveReview(di,rating,comment)){ openDetail(di,true); renderProfilePage(); refreshReviewMinis(); announce('Votre avis a été publié.',150); } });
-    detailContent.querySelectorAll('[data-delete-review]').forEach(function(btn){ btn.addEventListener('click',function(){ if(removeReview(parseInt(btn.dataset.deleteReview,10),btn.dataset.reviewEmail,btn.dataset.reviewDate)){ openDetail(di,true); renderProfilePage(); refreshReviewMinis(); announce('Avis retiré.',150); } }); });
+    var form=detailContent.querySelector('[data-review-form="'+di+'"]'); if(form) form.addEventListener('submit',async function(e){ e.preventDefault(); var rating=form.querySelector('[name="rating"]').value, comment=form.querySelector('[name="comment"]').value; if(comment.trim().length<3){ announce('Votre avis est trop court : 3 caractères minimum.',0); form.querySelector('[name="comment"]').setAttribute('aria-invalid','true'); form.querySelector('[name="comment"]').focus(); return; } var btn=form.querySelector('[type="submit"]'); btn.disabled=true; try{ if(await saveReview(di,rating,comment)){ openDetail(di,true); renderProfilePage(); refreshReviewMinis(); announce('Votre avis a été publié.',150); } }finally{btn.disabled=false;} });
+    detailContent.querySelectorAll('[data-delete-review]').forEach(function(btn){ btn.addEventListener('click',async function(){ btn.disabled=true; try{ if(await removeReview(parseInt(btn.dataset.deleteReview,10),btn.dataset.reviewEmail,btn.dataset.reviewDate)){ openDetail(di,true); renderProfilePage(); refreshReviewMinis(); announce('Avis retiré.',150); } }finally{btn.disabled=false;} }); });
     var loginBtn=detailContent.querySelector('[data-review-login]'); if(loginBtn) loginBtn.addEventListener('click',function(){ closeDetail(); navigatePage('profile'); });
     var suggestBtn=detailContent.querySelector('[data-open-suggestion]'); if(suggestBtn) suggestBtn.addEventListener('click',function(){
       var holder=document.getElementById('detailSuggestionForm'); if(!holder) return; holder.innerHTML='<form class="inline-form"><div class="field" style="margin-bottom:9px"><label for="suggestionText'+di+'">Votre suggestion</label><textarea id="suggestionText'+di+'" name="text" required maxlength="1200" placeholder="Ex. L’adresse est incorrecte, une rampe a été ajoutée, les sanitaires ne sont plus accessibles…"></textarea></div><button class="small-btn primary" type="submit">Envoyer la suggestion</button><span class="auth-note" style="margin-left:8px">Elle sera revue par un Admin.</span></form>'; var f=holder.querySelector('form'); f.addEventListener('submit',function(e){e.preventDefault();var v=f.querySelector('textarea').value;if(saveSuggestion(di,v)){holder.innerHTML='<div class="auth-note" role="status">Merci ! Votre suggestion a été transmise à la modération.</div>';renderAdminArea();}});
@@ -2056,6 +2132,7 @@
   updateTabIndex();
   refresh();
   initialized = true;
+  restoreSupabaseSession();
   var initialPage=(location.hash||'').replace('#',''); if(['about','faq','profile','legal','privacy','cgu','cookies','contact','accessibility','sitemap'].indexOf(initialPage)!==-1) navigatePage(initialPage,false);
 })();
 </script>
