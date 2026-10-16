@@ -692,7 +692,7 @@
       <div class="field"><label for="profileEmail">E-mail</label><input id="profileEmail" required aria-required="true" type="email" autocomplete="email" placeholder="vous@exemple.fr" aria-describedby="profileFormStatus"></div>
       <div class="field"><label for="profilePassword">Mot de passe</label><div class="password-wrap"><input id="profilePassword" required aria-required="true" type="password" minlength="6" autocomplete="current-password" aria-describedby="profilePwHint profileFormStatus"><button type="button" class="password-toggle" id="profilePasswordToggle" aria-controls="profilePassword" aria-pressed="false">Afficher le mot de passe</button></div><span class="hint" id="profilePwHint">6 caractères minimum.</span></div>
       <button class="primary-btn" id="profileSubmitBtn" type="submit">Se connecter</button>
-      <p class="auth-note">Les comptes et les avis sont enregistrés dans Supabase. Les autres contributions de cette version restent enregistrées dans ce navigateur.</p>
+      <p class="auth-note">Les comptes, les avis et les contributions sont enregistrés dans Supabase.</p>
       <div id="profileFormStatus" class="auth-note" role="status" aria-live="polite"></div>
     </form>
     <aside class="profile-summary" aria-label="Résumé du profil">
@@ -1587,6 +1587,44 @@
   function getPendingPlaces(){ try{ var v=JSON.parse(localStorage.getItem(PENDING_PLACES_KEY)||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
   function getApprovedPlaces(){ try{ var v=JSON.parse(localStorage.getItem(APPROVED_PLACES_KEY)||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
   function getEdits(){ try{ var v=JSON.parse(localStorage.getItem(EDITS_KEY)||'{}'); return v && typeof v==='object'?v:{}; }catch(e){ return {}; } }
+  // Synchronise lieux validés, propositions (admin), modifications de fiches et activités depuis Supabase.
+  // Les données sont mises en cache dans le navigateur ; la page se recharge une fois si elles ont changé.
+  async function loadRemoteContent(){
+    if(!supabaseClient) return false;
+    try{
+      var p=getProfile(), isAdm=!!p && roleOf(p)==='admin';
+      var res=await Promise.all([
+        supabaseClient.from('hilia_places').select('id,name,activity,address,cp,commune,site,lat,lon,reason,author,author_name,status,created_at,approved_at'),
+        supabaseClient.from('hilia_place_edits').select('place_id,name,address,cp,commune,activity,site').order('place_id'),
+        supabaseClient.from('hilia_activities').select('name,created_at').order('created_at',{ascending:true})
+      ]);
+      var changed=false;
+      function put(key,val){ var s=JSON.stringify(val); if(localStorage.getItem(key)!==s){ localStorage.setItem(key,s); return true; } return false; }
+      function ts(r){ var t=Date.parse(r.approved_at||r.created_at); return isNaN(t)?0:t; }
+      function toLocal(r){ return {id:r.id,name:r.name,activity:r.activity,address:r.address,cp:r.cp,commune:r.commune,site:r.site||'',lat:r.lat==null?'':String(r.lat),lon:r.lon==null?'':String(r.lon),reason:r.reason||'',author:r.author||'',authorName:r.author_name,date:r.created_at}; }
+      if(!res[0].error){
+        var rows=res[0].data||[];
+        var approved=rows.filter(function(r){return r.status==='approved';}).sort(function(a,b){ return ts(a)-ts(b) || String(a.id).localeCompare(String(b.id)); }).map(toLocal);
+        var pending=isAdm ? rows.filter(function(r){return r.status==='pending';}).sort(function(a,b){return Date.parse(b.created_at)-Date.parse(a.created_at);}).map(toLocal) : [];
+        if(put(APPROVED_PLACES_KEY,approved)) changed=true;
+        put(PENDING_PLACES_KEY,pending);
+      } else console.warn('Chargement des lieux impossible',res[0].error.message);
+      if(!res[1].error){
+        var edits={}; (res[1].data||[]).forEach(function(r){ edits[r.place_id]={name:r.name,address:r.address,cp:r.cp,commune:r.commune,activity:r.activity,site:r.site}; });
+        if(put(EDITS_KEY,edits)) changed=true;
+      } else console.warn('Chargement des modifications impossible',res[1].error.message);
+      if(!res[2].error){
+        var acts=(res[2].data||[]).map(function(r){return r.name;});
+        getCustomActivitiesEarly().forEach(function(a){ if(acts.indexOf(a)<0) acts.push(a); });
+        if(put(CUSTOM_ACTIVITIES_KEY,acts)) changed=true;
+      } else console.warn('Chargement des activités impossible',res[2].error.message);
+      if(changed){
+        var n=Number(sessionStorage.getItem('hilia_sync_n')||0);
+        if(n<2){ sessionStorage.setItem('hilia_sync_n',String(n+1)); location.reload(); return true; }
+      } else sessionStorage.removeItem('hilia_sync_n');
+    }catch(err){ console.warn('Synchronisation impossible',err); }
+    return false;
+  }
   async function loadRemoteSuggestions(){
     if(!supabaseClient) return;
     var p=getProfile();
@@ -1692,7 +1730,7 @@
           localStorage.setItem(PROFILE_KEY,JSON.stringify(profileState));
           if(status) status.textContent='Connexion réussie.';
         }
-        if(profileState){ await loadRemoteSuggestions(); renderProfilePage(); await loadRemoteReviews(); refreshReviewMinis(); }
+        if(profileState){ if(await loadRemoteContent()) return; await loadRemoteSuggestions(); renderProfilePage(); await loadRemoteReviews(); refreshReviewMinis(); }
       }catch(err){
         var msg=(err && err.message)||'Une erreur est survenue.';
         if(/already registered|already exists/i.test(msg)) msg='Un compte existe déjà avec cette adresse. Essayez de vous connecter.';
@@ -1709,7 +1747,7 @@
     var status=document.getElementById('profileFormStatus');
     try{ var result=await supabaseClient.auth.signOut(); if(result.error) throw result.error; }
     catch(err){ if(status) status.textContent='Impossible de se déconnecter pour le moment.'; return; }
-    profileState=null; localStorage.removeItem(PROFILE_KEY); renderProfilePage();
+    profileState=null; localStorage.removeItem(PROFILE_KEY); localStorage.removeItem(PENDING_PLACES_KEY); localStorage.removeItem(SUGGESTIONS_KEY); renderProfilePage();
     if(status) status.textContent='Vous êtes déconnecté.';
   });
 
@@ -1727,6 +1765,7 @@
       }else{
         profileState=null; localStorage.removeItem(PROFILE_KEY);
       }
+      if(await loadRemoteContent()) return;
       await loadRemoteReviews();
       await loadRemoteSuggestions();
       renderProfilePage(); refreshReviewMinis();
@@ -1777,14 +1816,19 @@
     html+='<div class="contrib-panel"><h2>Suggérer une correction</h2><p style="margin:0;color:var(--muted);font-size:.83rem;line-height:1.5">Les suggestions restent en attente et doivent être vérifiées avant modification de la fiche.</p></div>';
     box.innerHTML=html;
     var form=document.getElementById('newPlaceForm');
-    if(form) form.addEventListener('submit',function(e){
-      e.preventDefault(); var fd=new FormData(form); var latValue=fd.get('lat').trim(), lonValue=fd.get('lon').trim(); if(latValue!=='' && (!isFinite(Number(latValue)) || Number(latValue)<-90 || Number(latValue)>90)){document.getElementById('newPlaceStatus').textContent='Latitude invalide.';return;} if(lonValue!=='' && (!isFinite(Number(lonValue)) || Number(lonValue)<-180 || Number(lonValue)>180)){document.getElementById('newPlaceStatus').textContent='Longitude invalide.';return;} var payload={id:'place_'+Date.now(),name:fd.get('name').trim(),activity:fd.get('activity'),address:fd.get('address').trim(),cp:fd.get('cp').trim(),commune:fd.get('commune').trim(),site:safeExternalUrl(fd.get('site')),lat:fd.get('lat').trim(),lon:fd.get('lon').trim(),reason:fd.get('reason').trim(),author:p.email,authorName:p.name,date:new Date().toISOString()}; if(roleOf(p)==='admin'){ var approved=getApprovedPlaces(); approved.push(payload); localStorage.setItem(APPROVED_PLACES_KEY,JSON.stringify(approved)); document.getElementById('newPlaceStatus').textContent='Lieu ajouté à l’annuaire.'; setTimeout(function(){location.reload();},150); } else { var pending=getPendingPlaces(); payload.id='pending_'+Date.now(); pending.unshift(payload); localStorage.setItem(PENDING_PLACES_KEY,JSON.stringify(pending)); document.getElementById('newPlaceStatus').textContent='Proposition enregistrée et mise en attente de validation Admin.'; form.reset(); }
+    if(form) form.addEventListener('submit',async function(e){
+      e.preventDefault(); var fd=new FormData(form); var latValue=fd.get('lat').trim(), lonValue=fd.get('lon').trim(); if(latValue!=='' && (!isFinite(Number(latValue)) || Number(latValue)<-90 || Number(latValue)>90)){document.getElementById('newPlaceStatus').textContent='Latitude invalide.';return;} if(lonValue!=='' && (!isFinite(Number(lonValue)) || Number(lonValue)<-180 || Number(lonValue)>180)){document.getElementById('newPlaceStatus').textContent='Longitude invalide.';return;} var payload={id:'place_'+Date.now(),name:fd.get('name').trim(),activity:fd.get('activity'),address:fd.get('address').trim(),cp:fd.get('cp').trim(),commune:fd.get('commune').trim(),site:safeExternalUrl(fd.get('site')),lat:fd.get('lat').trim(),lon:fd.get('lon').trim(),reason:fd.get('reason').trim(),author:p.email,authorName:p.name,date:new Date().toISOString()}; var isAdm=roleOf(p)==='admin', stEl=document.getElementById('newPlaceStatus'), rnd=Date.now()+'_'+Math.random().toString(16).slice(2);
+      var row={id:(isAdm?'place_':'pending_')+rnd,name:payload.name,activity:payload.activity,address:payload.address,cp:payload.cp,commune:payload.commune,site:payload.site||null,lat:payload.lat===''?null:Number(payload.lat),lon:payload.lon===''?null:Number(payload.lon),reason:payload.reason||null,author:isAdm?null:p.email,author_name:p.name||String(p.email||'').split('@')[0],status:isAdm?'approved':'pending',approved_at:isAdm?new Date().toISOString():null};
+      var ins=await supabaseClient.from('hilia_places').insert(row);
+      if(ins.error){ console.error('Enregistrement du lieu impossible',ins.error); stEl.textContent='Impossible d’enregistrer le lieu : '+ins.error.message; return; }
+      if(isAdm){ stEl.textContent='Lieu ajouté à l’annuaire.'; await loadRemoteContent(); location.reload(); }
+      else { stEl.textContent='Proposition enregistrée et mise en attente de validation Admin.'; form.reset(); }
     });
   }
   function renderAdminArea(){
     var box=document.getElementById('profileAdminArea'); if(!box) return; if(!profileState || roleOf(profileState)!=='admin'){ box.innerHTML=''; return; }
     var pending=getPendingPlaces(), suggestions=getSuggestions();
-    var html='<div class="admin-panel"><h2>Administration</h2><p style="margin:0;color:var(--muted);font-size:.83rem">Zone de démonstration : ces actions modifient uniquement les données locales de ce navigateur.</p>';
+    var html='<div class="admin-panel"><h2>Administration</h2><p style="margin:0;color:var(--muted);font-size:.83rem">Zone réservée aux administrateurs : les actions ci-dessous sont enregistrées dans la base de données.</p>';
     html+='<h3>Propositions de nouveaux lieux ('+pending.length+')</h3><div class="admin-list">';
     if(!pending.length) html+='<div class="admin-item"><div class="admin-item-main"><strong>Aucune proposition en attente</strong><p>Les nouveaux lieux proposés par les utilisateurs certifiés apparaîtront ici.</p></div></div>';
     pending.forEach(function(p){ html+='<div class="admin-item"><div class="admin-item-main"><strong>'+escapeHtml(p.name)+' · '+escapeHtml(p.activity)+'</strong><p>'+escapeHtml(p.address)+', '+escapeHtml(p.cp)+' '+escapeHtml(p.commune)+'<br>'+escapeHtml(p.reason||'Aucune précision.')+'<br><small>'+escapeHtml(p.authorName||p.author||'Utilisateur')+' · '+formatDate(p.date)+'</small></p></div><div class="admin-item-actions"><button class="small-btn primary" type="button" aria-label="Valider la proposition « '+escapeAttr(p.name)+' »" data-approve-place="'+p.id+'">Valider</button><button class="small-btn danger" type="button" aria-label="Refuser la proposition « '+escapeAttr(p.name)+' »" data-reject-place="'+p.id+'">Refuser</button></div></div>'; });
@@ -1798,18 +1842,27 @@
     html+='</div></div>';
     box.innerHTML=html;
     var activityForm=box.querySelector('#newActivityForm');
-    if(activityForm) activityForm.addEventListener('submit',function(e){
+    if(activityForm) activityForm.addEventListener('submit',async function(e){
       e.preventDefault();
       var name=(new FormData(activityForm).get('name')||'').toString().trim();
       if(!name) return;
       if(ACTIVITES.some(function(a){return normalize(a)===normalize(name);})) { var st=box.querySelector('#newActivityStatus'); if(st) st.textContent='Cette activité existe déjà.'; return; }
-      var saved=getCustomActivitiesEarly();
-      if(saved.indexOf(name)<0) saved.push(name);
-      localStorage.setItem(CUSTOM_ACTIVITIES_KEY,JSON.stringify(saved));
-      location.reload();
+      var ra=await supabaseClient.from('hilia_activities').insert({name:name});
+      if(ra.error){ var st2=box.querySelector('#newActivityStatus'); if(st2) st2.textContent='Impossible d’ajouter l’activité : '+ra.error.message; return; }
+      await loadRemoteContent(); location.reload();
     });
-    box.querySelectorAll('[data-approve-place]').forEach(function(btn){ btn.addEventListener('click',function(){ var id=btn.dataset.approvePlace, list=getPendingPlaces(), idx=list.findIndex(function(p){return p.id===id;}); if(idx<0) return; var p=list[idx], approved=getApprovedPlaces(); approved.push(p); localStorage.setItem(APPROVED_PLACES_KEY,JSON.stringify(approved)); list.splice(idx,1); localStorage.setItem(PENDING_PLACES_KEY,JSON.stringify(list)); location.reload(); }); });
-    box.querySelectorAll('[data-reject-place]').forEach(function(btn){ btn.addEventListener('click',function(){ var id=btn.dataset.rejectPlace, list=getPendingPlaces().filter(function(p){return p.id!==id;}); localStorage.setItem(PENDING_PLACES_KEY,JSON.stringify(list)); renderAdminArea(); }); });
+    box.querySelectorAll('[data-approve-place]').forEach(function(btn){ btn.addEventListener('click',async function(){
+      var id=btn.dataset.approvePlace; btn.disabled=true;
+      var r=await supabaseClient.from('hilia_places').update({status:'approved',approved_at:new Date().toISOString(),author:null}).eq('id',id);
+      if(r.error){ console.error('Validation impossible',r.error); announce('Impossible de valider ce lieu : '+r.error.message,0); btn.disabled=false; return; }
+      await loadRemoteContent(); location.reload();
+    }); });
+    box.querySelectorAll('[data-reject-place]').forEach(function(btn){ btn.addEventListener('click',async function(){
+      var id=btn.dataset.rejectPlace; btn.disabled=true;
+      var r=await supabaseClient.from('hilia_places').update({status:'rejected'}).eq('id',id);
+      if(r.error){ console.error('Refus impossible',r.error); announce('Impossible de refuser ce lieu : '+r.error.message,0); btn.disabled=false; return; }
+      await loadRemoteContent(); renderAdminArea();
+    }); });
     box.querySelectorAll('[data-done-suggestion]').forEach(function(btn){ btn.addEventListener('click',async function(){
       var id=btn.dataset.doneSuggestion; btn.disabled=true;
       var result=await supabaseClient.from('hilia_suggestions').update({status:'done'}).eq('id',id);
@@ -1861,7 +1914,11 @@
     var editBtn=detailContent.querySelector('[data-open-edit]'); if(editBtn) editBtn.addEventListener('click',function(){
       var r=DATA[di], holder=document.getElementById('detailEditForm'); if(!holder) return;
       holder.innerHTML='<form class="inline-form edit-form"><div class="inline-form-grid"><div class="field"><label for="editName'+di+'">Nom</label><input id="editName'+di+'" name="name" required value="'+escapeAttr(r[F.NOM])+'"></div><div class="field"><label for="editActivity'+di+'">Activité</label><select id="editActivity'+di+'" name="activity">'+ACTIVITES.map(function(a){return '<option '+(a===ACTIVITES[r[F.ACT]]?'selected':'')+'>'+escapeHtml(a)+'</option>';}).join('')+'</select></div><div class="field"><label for="editAddress'+di+'">Adresse</label><input id="editAddress'+di+'" name="address" value="'+escapeAttr(r[F.ADR])+'"></div><div class="field"><label for="editCp'+di+'">Code postal</label><input id="editCp'+di+'" name="cp" value="'+escapeAttr(r[F.CP])+'"></div><div class="field"><label for="editCommune'+di+'">Commune</label><input id="editCommune'+di+'" name="commune" value="'+escapeAttr(COMMUNES[r[F.COM]])+'"></div><div class="field"><label for="editSite'+di+'">Site internet</label><input id="editSite'+di+'" name="site" value="'+escapeAttr(r[F.SITE]||'')+'"></div></div><button class="small-btn primary" type="submit">Enregistrer les modifications</button></form>';
-      var ef=holder.querySelector('form'); ef.addEventListener('submit',function(e){e.preventDefault();var fd=new FormData(ef), edits=getEdits(); edits[String(di)]={name:fd.get('name').trim(),address:fd.get('address').trim(),cp:fd.get('cp').trim(),commune:fd.get('commune').trim(),activity:fd.get('activity'),site:safeExternalUrl(fd.get('site'))}; localStorage.setItem(EDITS_KEY,JSON.stringify(edits)); location.reload();});
+      var ef=holder.querySelector('form'); ef.addEventListener('submit',async function(e){e.preventDefault();var fd=new FormData(ef);
+        var row={place_id:String(di),name:fd.get('name').trim(),address:fd.get('address').trim(),cp:fd.get('cp').trim(),commune:fd.get('commune').trim(),activity:fd.get('activity'),site:safeExternalUrl(fd.get('site')),updated_at:new Date().toISOString()};
+        var r=await supabaseClient.from('hilia_place_edits').upsert(row,{onConflict:'place_id'});
+        if(r.error){ console.error('Modification impossible',r.error); announce('Impossible d’enregistrer la modification : '+r.error.message,0); return; }
+        await loadRemoteContent(); location.reload();});
     });
   }
   function refreshReviewMinis(){ document.querySelectorAll('[data-review-mini-index]').forEach(function(el){ el.innerHTML=reviewSummaryHtml(parseInt(el.dataset.reviewMiniIndex,10),'mini'); }); }
