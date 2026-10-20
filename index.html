@@ -574,6 +574,27 @@
   .audio-btn svg{flex:none;}
   .audio-btn:focus-visible{outline:3px solid var(--focus);outline-offset:3px;box-shadow:0 0 0 2px #fff;}
   .audio-note{margin:8px 0 0;font-size:.82rem;line-height:1.45;color:var(--muted);max-width:62ch;}
+
+  /* ---- Page prestataires + fiches qualifiées ---- */
+  #prestatairesPage .pf-fs{background:var(--paper);border:1.5px solid var(--line-strong);border-radius:16px;padding:16px 18px 6px;margin:0 0 18px;min-width:0}
+  #prestatairesPage .pf-fs>legend{font-weight:800;color:var(--teal);padding:0 8px;font-size:1.05rem}
+  #prestatairesPage .pf-q{margin:0 0 18px}
+  #prestatairesPage .pf-q>label{display:block;font-weight:650;margin-bottom:6px}
+  #prestatairesPage .pf-hint{display:block;font-weight:400;color:var(--muted);font-size:.88rem;margin-bottom:4px}
+  #prestatairesPage input[type=text],#prestatairesPage input[type=email],#prestatairesPage input[type=tel],#prestatairesPage input[type=url],#prestatairesPage input[type=number],#prestatairesPage select,#prestatairesPage textarea{width:100%;font:inherit;padding:10px 12px;border:1.5px solid #6f8080;border-radius:10px;background:var(--paper);color:var(--ink)}
+  #prestatairesPage textarea{min-height:90px}
+  #prestatairesPage .pf-opt{display:flex;gap:10px;align-items:flex-start;padding:5px 0}
+  #prestatairesPage .pf-opt input{width:22px;height:22px;margin-top:3px;accent-color:var(--teal);flex:none}
+  #prestatairesPage .pf-opt label{font-weight:400}
+  #prestatairesPage .pf-err{color:#A31515;font-weight:650;font-size:.9rem;margin-top:4px}
+  #prestatairesPage .pf-req{color:#A31515}
+  #prestatairesPage #provSummary{border:2px solid #A31515;background:var(--paper);border-radius:12px;padding:12px 16px;margin-bottom:18px}
+  #prestatairesPage .pf-submit{background:var(--teal);color:#fff;border:0;border-radius:24px;padding:14px 28px;font-weight:800;font-size:1rem;cursor:pointer}
+  #prestatairesPage .pf-submit:disabled{opacity:.6;cursor:wait}
+  #prestatairesPage .pf-done{background:var(--paper);border:2px solid #0B6B3A;border-radius:16px;padding:22px}
+  .admin-item .prov-extra{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+  .admin-item .prov-extra label{font-size:.78rem;font-weight:650;display:flex;flex-direction:column;gap:2px}
+  .admin-item .prov-extra select,.admin-item .prov-extra input{padding:6px 8px;border:1.5px solid var(--line-strong);border-radius:8px;background:var(--paper);color:var(--ink);font:inherit;font-size:.82rem}
 </style>
 </head>
 <body>
@@ -596,6 +617,7 @@
       <a class="topnav-link active" href="#explore" data-nav-page="explore" aria-current="page">Explorer</a>
       <a class="topnav-link" href="#about" data-nav-page="about">À propos</a>
       <a class="topnav-link" href="#faq" data-nav-page="faq">FAQ</a>
+      <a class="topnav-link" href="#prestataires" data-nav-page="prestataires">Référencer mon activité</a>
     </nav>
     <a class="nav-cta" id="profileNavBtn" href="#profile">Mon profil</a>
     <button class="settings-btn" id="accessibilitySettingsBtn" type="button" aria-haspopup="dialog" aria-controls="accessibilitySettings" aria-expanded="false">Accessibilité</button>
@@ -660,6 +682,14 @@
   </section>
 
 <!-- Additional site pages -->
+<section class="site-page" id="prestatairesPage" data-page="prestataires">
+  <a class="page-back" href="#explore" data-nav-page="explore">← Retour à l’exploration</a>
+  <div class="page-hero"><h1>Référencer mon activité</h1><p>Prestataires de loisirs : renseignez l’accessibilité de votre lieu et de votre activité. Une trentaine de questions, environ 10 minutes. Cochez uniquement ce qui est vrai : une information fausse est pire qu’une information absente. Les champs marqués d’un astérisque (*) sont obligatoires.</p></div>
+  <div id="provSummary" role="alert" tabindex="-1" hidden></div>
+  <form id="provForm" novalidate></form>
+  <div id="provStatus" aria-live="polite"></div>
+</section>
+
 <section class="site-page" id="aboutPage" data-page="about">
   <a class="page-back" href="#explore" data-nav-page="explore">← Retour à l’exploration</a>
   <div class="page-hero"><h1>À propos de HILIA</h1><p>HILIA a pour objectif de rendre le loisir accessible à tous en permettant de trouver plus facilement des lieux de sortie et de comprendre leurs conditions d’accès avant de se déplacer.</p></div>
@@ -814,6 +844,7 @@
   <nav class="page-card" aria-label="Plan du site"><ul class="sitemap-list">
     <li><a href="#explore" data-nav-page="explore">Explorer les lieux (liste, carte, filtres)</a></li>
     <li><a href="#about" data-nav-page="about">À propos</a></li>
+    <li><a href="#prestataires" data-nav-page="prestataires">Référencer mon activité (prestataires)</a></li>
     <li><a href="#faq" data-nav-page="faq">Questions fréquentes</a></li>
     <li><a href="#profile" data-nav-page="profile">Mon profil</a></li>
     <li><a href="#contact" data-nav-page="contact">Contact</a></li>
@@ -833,7 +864,7 @@
       <div><div class="footer-brand">HILIA</div><p class="footer-text">Rendre le loisir accessible à tous. Trouver un lieu, comprendre ses conditions d’accès et partager son expérience.</p><div class="socials" style="margin-top:14px"><span class="social"><span aria-hidden="true">IG</span><span class="sr-only">Instagram : lien à venir</span></span><span class="social"><span aria-hidden="true">in</span><span class="sr-only">LinkedIn : lien à venir</span></span><span class="social"><span aria-hidden="true">TT</span><span class="sr-only">TikTok : lien à venir</span></span><span class="social"><span aria-hidden="true">f</span><span class="sr-only">Facebook : lien à venir</span></span></div></div>
       <div><h2 class="footer-h">HILIA</h2><nav class="footer-links" aria-label="À propos de HILIA"><a class="footer-link" href="#about" data-nav-page="about">À propos</a><a class="footer-link" href="#faq" data-nav-page="faq">FAQ</a><a class="footer-link" href="#contact" data-nav-page="contact">Contact</a></nav></div>
       <div><h2 class="footer-h">Informations</h2><nav class="footer-links" aria-label="Informations légales et accessibilité"><a class="footer-link" href="#legal" data-nav-page="legal">Mentions légales</a><a class="footer-link" href="#privacy" data-nav-page="privacy">Politique de confidentialité</a><a class="footer-link" href="#cgu" data-nav-page="cgu">Conditions d’utilisation</a><a class="footer-link" href="#cookies" data-nav-page="cookies">Cookies &amp; traceurs</a><a class="footer-link" href="#accessibility" data-nav-page="accessibility">Accessibilité</a><a class="footer-link" href="#sitemap" data-nav-page="sitemap">Plan du site</a></nav></div>
-      <div><h2 class="footer-h">Contributions</h2><nav class="footer-links" aria-label="Contributions"><a class="footer-link" href="#profile" data-nav-page="profile">Mon profil</a><a class="footer-link" href="#faq" data-nav-page="faq">Comment fonctionnent les avis ?</a><a class="footer-link" href="#faq" data-nav-page="faq">Comment corriger une fiche ?</a><a class="footer-link" href="#cgu" data-nav-page="cgu">Règles de publication</a></nav></div>
+      <div><h2 class="footer-h">Contributions</h2><nav class="footer-links" aria-label="Contributions"><a class="footer-link" href="#profile" data-nav-page="profile">Mon profil</a><a class="footer-link" href="#prestataires" data-nav-page="prestataires">Référencer mon activité</a><a class="footer-link" href="#faq" data-nav-page="faq">Comment fonctionnent les avis ?</a><a class="footer-link" href="#faq" data-nav-page="faq">Comment corriger une fiche ?</a><a class="footer-link" href="#cgu" data-nav-page="cgu">Règles de publication</a></nav></div>
     </div>
     <div class="footer-bottom"><span>© 2026 HILIA · Prototype en cours de développement</span><span><a href="#accessibility" data-nav-page="accessibility">Accessibilité : non évaluée — mise en conformité en cours</a></span><span>Données déclaratives · Vérifiez les conditions d’accueil avant votre visite.</span></div>
   </div>
@@ -1010,7 +1041,8 @@
     ENTREE_RAMPE:24, ENTREE_DISPOSITIF_APPEL:25, ENTREE_BALISE_SONORE:26, ENTREE_AIDE_HUMAINE:27,
     ENTREE_LARGEUR:28, ENTREE_SPECIFIQUE_PMR:29,
     ACCUEIL_PERSONNEL:30, ACCUEIL_AUDIODESCR:31, ACCUEIL_EQUIP_MALENT:32, ACCUEIL_PLAIN_PIED:33, ACCUEIL_SIGNALETIQUE:34,
-    SANITAIRES_DISPO:35, SANITAIRES_PMR:36, LABELS:37, FAMILLES:38, CONFORMITE:39
+    SANITAIRES_DISPO:35, SANITAIRES_PMR:36, LABELS:37, FAMILLES:38, CONFORMITE:39,
+    QUALIF:40, Q_FAUTEUIL:41, Q_FAUT_AUTONOME:42, Q_EFFORT_FAIBLE:43, Q_SIEGES:44, Q_ESPACE_CALME:45, Q_PAS_FLASH:46, Q_PAUSE:47, Q_CRENEAUX:48, Q_FALC:49, Q_RESA_SANS_APPEL:50, Q_BIM:51, Q_AUDIODESC:52, Q_TARIF_AVANT:53, Q_GRATUIT_ACCOMP:54
   };
 
   function buildCustomRows(){
@@ -1023,6 +1055,7 @@
       row[F.NOM]=p.name||'Lieu sans nom'; row[F.ADR]=p.address||''; row[F.CP]=p.cp||''; row[F.COM]=comIdx; row[F.ACT]=actIdx; row[F.SITE]=p.site||'';
       row[F.LAT]=p.lat!=='' && p.lat!=null ? Number(p.lat) : null; row[F.LON]=p.lon!=='' && p.lon!=null ? Number(p.lon) : null;
       if(p.access && typeof p.access==='object') Object.keys(p.access).forEach(function(k){ var ki=Number(k); if(ki>=8 && ki<=36) row[ki]=p.access[k]; });
+      if(p.qualif && typeof p.qualif==='object') applyQualif(row,p.qualif);
       out.push(row);
     });
     return out;
@@ -1229,8 +1262,32 @@
       [F.SANITAIRES_PMR,"Sanitaires adaptés PMR"]
     ]}
   ];
+  var FILTER_GROUPS_EXTRA = [
+    {title:"Pratique de l’activité (lieux qualifiés par le prestataire)", items:[
+      [F.Q_FAUTEUIL,"Activité réalisable en fauteuil"],
+      [F.Q_FAUT_AUTONOME,"Réalisable en fauteuil, de manière autonome"],
+      [F.Q_EFFORT_FAIBLE,"Courte durée, effort très faible"],
+      [F.Q_SIEGES,"Sièges disponibles tout au long"]
+    ]},
+    {title:"Confort sensoriel & compréhension", items:[
+      [F.Q_ESPACE_CALME,"Espace calme ou zone de repli"],
+      [F.Q_PAS_FLASH,"Pas d’effets lumineux brutaux"],
+      [F.Q_PAUSE,"Pause possible pendant l’activité"],
+      [F.Q_CRENEAUX,"Créneaux à faible affluence conseillés"],
+      [F.Q_FALC,"Supports en FALC"]
+    ]},
+    {title:"Communication", items:[
+      [F.Q_RESA_SANS_APPEL,"Réservation sans appel téléphonique"],
+      [F.Q_BIM,"Boucle à induction magnétique"],
+      [F.Q_AUDIODESC,"Audiodescription / visite adaptée"]
+    ]},
+    {title:"Tarifs", items:[
+      [F.Q_TARIF_AVANT,"Gratuit ou tarif réduit pour l’usager"],
+      [F.Q_GRATUIT_ACCOMP,"Accompagnateur gratuit"]
+    ]}
+  ];
   var filterGroupsEl = document.getElementById('filterGroups');
-  FILTER_GROUPS.forEach(function(group){
+  FILTER_GROUPS.concat(FILTER_GROUPS_EXTRA).forEach(function(group){
     var g = document.createElement('fieldset'); g.className='fgroup';
     var h = document.createElement('legend'); h.textContent = group.title; g.appendChild(h);
     var cl = document.createElement('div'); cl.className='check-list';
@@ -1697,16 +1754,16 @@
       var p=getProfile(), isAdm=!!p && roleOf(p)==='admin';
       var selP='id,name,activity,address,cp,commune,site,lat,lon,reason,author,author_name,status,created_at,approved_at', selE='place_id,name,address,cp,commune,activity,site';
       var res=await Promise.all([
-        supabaseClient.from('hilia_places').select(selP+',access'),
+        supabaseClient.from('hilia_places').select(selP+',access,qualif'),
         supabaseClient.from('hilia_place_edits').select(selE+',access').order('place_id'),
         supabaseClient.from('hilia_activities').select('name,created_at').order('created_at',{ascending:true})
       ]);
-      if(res[0].error && /access/i.test(res[0].error.message)) res[0]=await supabaseClient.from('hilia_places').select(selP);
+      if(res[0].error && /access|qualif/i.test(res[0].error.message)) res[0]=await supabaseClient.from('hilia_places').select(selP);
       if(res[1].error && /access/i.test(res[1].error.message)) res[1]=await supabaseClient.from('hilia_place_edits').select(selE).order('place_id');
       var changed=false;
       function put(key,val){ var s=JSON.stringify(val); if(localStorage.getItem(key)!==s){ localStorage.setItem(key,s); return true; } return false; }
       function ts(r){ var t=Date.parse(r.approved_at||r.created_at); return isNaN(t)?0:t; }
-      function toLocal(r){ return {id:r.id,name:r.name,activity:r.activity,address:r.address,cp:r.cp,commune:r.commune,site:r.site||'',lat:r.lat==null?'':String(r.lat),lon:r.lon==null?'':String(r.lon),reason:r.reason||'',author:r.author||'',authorName:r.author_name,date:r.created_at,access:(r.access&&typeof r.access==='object')?r.access:null}; }
+      function toLocal(r){ return {id:r.id,name:r.name,activity:r.activity,address:r.address,cp:r.cp,commune:r.commune,site:r.site||'',lat:r.lat==null?'':String(r.lat),lon:r.lon==null?'':String(r.lon),reason:r.reason||'',author:r.author||'',authorName:r.author_name,date:r.created_at,access:(r.access&&typeof r.access==='object')?r.access:null,qualif:(r.qualif&&typeof r.qualif==='object')?r.qualif:null}; }
       if(!res[0].error){
         var rows=res[0].data||[];
         var approved=rows.filter(function(r){return r.status==='approved';}).sort(function(a,b){ return ts(a)-ts(b) || String(a.id).localeCompare(String(b.id)); }).map(toLocal);
@@ -1943,9 +2000,11 @@
     if(!openSug.length) html+='<div class="admin-item"><div class="admin-item-main"><strong>Aucune suggestion en attente</strong><p>Les suggestions envoyées depuis les fiches apparaîtront ici.</p></div></div>';
     openSug.slice(0,50).forEach(function(s){ var rr=DATA[s.di]; html+='<div class="admin-item"><div class="admin-item-main"><strong>'+escapeHtml(rr?rr[F.NOM]:'Lieu')+'</strong><p>'+escapeHtml(s.text)+'<br><small>'+escapeHtml(s.authorName||s.author||'Utilisateur')+' · '+formatDate(s.date)+'</small></p></div><div class="admin-item-actions"><button class="small-btn primary" type="button" aria-label="Marquer la suggestion sur « '+escapeAttr(rr?rr[F.NOM]:'Lieu')+' » comme traitée" data-done-suggestion="'+s.id+'">Marquer traitée</button><button class="small-btn" type="button" aria-label="Modifier la fiche « '+escapeAttr(rr?rr[F.NOM]:'Lieu')+' »" data-edit-from-suggestion="'+s.di+'">Modifier la fiche</button></div></div>'; });
     html+='</div>';
+    html+='<h3>Qualifications prestataires</h3><div class="admin-list" id="provSubList"><div class="admin-item"><div class="admin-item-main"><p>Chargement…</p></div></div></div>';
     html+='<h3>Familles d’activités</h3><div class="admin-item"><div class="admin-item-main"><strong>Ajouter une activité</strong><p>Une nouvelle famille sera disponible dans les filtres et dans les formulaires de contribution.</p><form id="newActivityForm" class="inline-form" style="margin-top:9px"><div class="field"><label for="newActivityName">Nom de l’activité</label><input id="newActivityName" name="name" required maxlength=80 placeholder="Ex. Escape game accessible"></div><button class="small-btn primary" type="submit">Ajouter l’activité</button><div class="auth-note" id="newActivityStatus"></div></form></div></div>';
     html+='</div></div>';
     box.innerHTML=html;
+    loadProvSubs(box);
     var activityForm=box.querySelector('#newActivityForm');
     if(activityForm) activityForm.addEventListener('submit',async function(e){
       e.preventDefault();
@@ -2227,6 +2286,7 @@
     html += dItem(r[F.SANITAIRES_PMR],'Sanitaires adaptés PMR');
     html += '</div></div>';
     if(r[F.CONFORMITE]!=null) html += `<div class="disclaimer">Conformité réglementaire déclarée par l'établissement&nbsp;: ${isTrue(r[F.CONFORMITE])?'oui':'non'}.</div>`;
+    html += qualifHtml(r[F.QUALIF]);
     html += reviewsHtml(di);
 
     detailContent.innerHTML = html;
@@ -2243,6 +2303,298 @@
   overlayBg.addEventListener('click', closeDetail);
   document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeDetail(); closeDrawer(); } });
 
+  // =====================================================================
+  // ---------- Qualification prestataires (formulaire, fiche, filtres, admin) ----------
+  // =====================================================================
+  var PROV_SECTIONS=[
+{t:'1. Informations générales et contact',q:[
+ {n:1,id:'structure_name',k:'text',l:'Nom de la structure / enseigne',r:1},
+ {n:2,id:'activity_name',k:'text',l:'Nom de l’activité ou prestation qualifiée',r:1},
+ {n:3,id:'address',k:'text',l:'Adresse exacte de l’activité (Île-de-France)',r:1,ac:'street-address'},
+ {n:4,id:'website',k:'url',l:'Site web / page d’information',h:'Commençant par https://'},
+ {n:5,id:'contact_name',k:'text',l:'Contact référent (nom, prénom, fonction)',r:1,ac:'name'},
+ {n:6,id:'contact_email',k:'email',l:'Adresse e-mail de contact',r:1,ac:'email'},
+ {n:7,id:'contact_phone',k:'tel',l:'Numéro de téléphone',ac:'tel'},
+ {n:8,id:'category',k:'select',l:'Catégorie principale de l’activité',r:1,o:[['sport_aventure','Sport & Aventure'],['culture_patrimoine','Culture & Patrimoine'],['ateliers_creatifs','Ateliers & Loisirs créatifs'],['plein_air_nature','Plein air & Nature'],['bien_etre','Bien-être & Relaxation'],['spectacle_divertissement','Spectacle & Divertissement'],['autre','Autre']]}]},
+{t:'2. Stationnement, abords et cheminement extérieur',q:[
+ {n:9,id:'transport',k:'check',l:'Accès et transports en commun',o:[['tc_accessibles_200m','Transports en commun accessibles à proximité (< 200 m)'],['arret_non_garanti','Arrêt de bus / métro / RER à proximité (accessibilité non garantie)']]},
+ {n:10,id:'parking',k:'check',l:'Stationnement et abords',o:[['parking_proche','Stationnement disponible à proximité'],['parking_pmr_50m','Places de stationnement PMR réservées (< 50 m)'],['parking_ext','Stationnement extérieur disponible'],['parking_ext_pmr','Places de stationnement extérieur PMR'],['depose_minute','Dépose-minute possible juste devant l’entrée']]},
+ {n:11,id:'exterieur',k:'check',l:'Cheminement extérieur et sol',o:[['chemin_plain_pied','Cheminement de plain-pied (extérieur)'],['terrain_stable','Terrain stable et roulant'],['marches_reperees','Repérage visuel des marches'],['main_courante','Main courante présente'],['rampe_ext','Rampe d’accès extérieur'],['bande_guidage','Bande de guidage au sol pour malvoyants']]}]},
+{t:'3. Entrée, accueil et données physiques',q:[
+ {n:12,id:'entree',k:'check',l:'Accès à l’entrée principale',o:[['entree_reperable','Entrée facilement repérable'],['entree_plain_pied','Entrée de plain-pied'],['entree_pmr','Entrée spécifique PMR'],['entree_rampe','Rampe d’accès entrée'],['ascenseur','Ascenseur ou élévateur adapté'],['appel','Dispositif d’appel à l’entrée'],['balise_sonore','Balise sonore à l’entrée'],['aide_humaine','Aide humaine possible à l’entrée']]},
+ {n:13,id:'marches_entree',k:'number',l:'Nombre de marches à l’entrée',h:'Indiquez 0 s’il n’y en a pas',min:0,max:200},
+ {n:14,id:'marches_interieur',k:'number',l:'Nombre de marches sur le cheminement intérieur',h:'Indiquez 0 s’il n’y en a pas',min:0,max:500},
+ {n:15,id:'largeur_min_cm',k:'number',l:'Largeur minimale de l’entrée et des portes (en cm)',h:'Un fauteuil roulant a besoin d’au moins 80 cm',min:20,max:500},
+ {n:16,id:'accueil',k:'check',l:'Accueil et équipements du bâtiment',o:[['personnel_accueil','Personnel présent à l’accueil'],['accueil_plain_pied','Cheminement de plain-pied à l’accueil'],['signaletique','Signalétique intérieure adaptée et lisible'],['audiodescription','Audiodescription disponible'],['bim_accueil','Équipements pour malentendants (boucle à induction magnétique)']]},
+ {n:17,id:'sanitaires',k:'radio',l:'Sanitaires',o:[['publics_pmr','Sanitaires disponibles au public ET adaptés PMR'],['publics_non_pmr','Sanitaires disponibles au public mais NON adaptés PMR'],['pmr_proximite','Sanitaires publics adaptés à proximité immédiate (< 50 m)'],['aucun','Pas de sanitaires disponibles']]}]},
+{t:'4. Pratique de l’activité',q:[
+ {n:18,id:'participation',k:'radio',l:'Participation effective à l’activité de loisir',o:[['fauteuil_autonome','Activité réalisable en fauteuil roulant de manière autonome'],['fauteuil_accompagne','Réalisable en fauteuil avec accompagnateur ou équipement adapté'],['transfert','Nécessite un transfert autonome ou assisté'],['debout_obligatoire','L’activité elle-même nécessite d’être debout / mobile']]}]},
+{t:'5. Vision, audition et communication',q:[
+ {n:19,id:'visuel',k:'check',l:'Accessibilité visuelle et communication',o:[['contrastes','Signalétique lisible à forts contrastes'],['obstacles_balises','Obstacles et changements de niveau clairement balisés au sol'],['eclairage','Éclairage homogène sans zones d’ombre brutales'],['tactile_braille','Supports tactiles, braille ou maquettes disponibles'],['audiodesc_visite','Audiodescription ou visite guidée adaptée disponible']]},
+ {n:20,id:'auditif',k:'check',l:'Accessibilité auditive et consignes',o:[['consignes_ecrites','Consignes de sécurité disponibles par écrit ou visuels'],['resa_sans_appel','Réservation et demandes d’informations possibles sans appel téléphonique'],['bim','Boucle à induction magnétique (BIM) installée'],['sous_titres','Supports sous-titrés ou retranscrits par écrit'],['personnel_lsf','Personnel formé / sensibilisé à la LSF ou à la communication bienveillante']]}]},
+{t:'6. Compréhension et confort sensoriel',q:[
+ {n:21,id:'cognitif',k:'check',l:'Compréhension et repérage',o:[['deroulement_clair','Déroulement et règles de l’activité présentés clairement avant le début'],['langage_clair','Consignes rédigées en langage clair (sans jargon technique)'],['falc','Supports en FALC (Facile À Lire et à Comprendre) disponibles'],['plan_simple','Plan ou repères visuels simples pour s’orienter sur place']]},
+ {n:22,id:'sensoriel',k:'check',l:'Confort sensoriel et neurodiversité',o:[['son_modere','Ambiance sonore modérée ou contrôlée'],['pas_flash','Pas d’effets lumineux brutaux (stroboscopes, flashs) non signalés'],['espace_calme','Espace calme ou zone de repli accessible en cas de besoin'],['pause_possible','Possibilité de faire une pause pendant l’activité'],['creneaux_calmes','Recommandation de créneaux horaires à faible affluence']]}]},
+{t:'7. Effort, durée et conditions tarifaires',q:[
+ {n:23,id:'effort',k:'radio',l:'Durée totale et niveau d’effort',o:[['moins_45min_tres_faible','Moins de 45 minutes / effort très faible'],['45min_1h30_modere','45 min à 1 h 30 / effort modéré'],['plus_1h30_continu','Plus de 1 h 30 / effort continu']]},
+ {n:24,id:'assises',k:'check',l:'Assises et gestion de l’attente',o:[['sieges_parcours','Sièges ou bancs disponibles tout au long du parcours / de l’activité'],['file_prioritaire','File d’attente prioritaire ou gestion du temps d’attente'],['sieges_pliants','Prêt de sièges pliants ou cannes-sièges sur place']]},
+ {n:25,id:'tarif_usager',k:'radio',l:'Conditions pour l’usager en situation de handicap',o:[['gratuit','Gratuité totale pour l’usager'],['reduit','Tarif réduit pour l’usager'],['plein','Plein tarif pour l’usager'],['non_applicable','Non applicable']]},
+ {n:'25b',id:'tarif_usager_precisions',k:'textarea',l:'Précisions tarifaires et justificatifs demandés',h:'Facultatif. Ex. : carte mobilité inclusion, notification MDPH…'},
+ {n:26,id:'tarif_accompagnateur',k:'radio',l:'Conditions pour l’accompagnateur',o:[['gratuit','Gratuité totale pour l’accompagnateur'],['reduit','Tarif réduit pour l’accompagnateur'],['plein','Plein tarif pour l’accompagnateur'],['non_applicable','Non applicable']]}]},
+{t:'8. Pièces justificatives et engagement',q:[
+ {n:27,id:'visuels',k:'file',l:'Photos de l’entrée, des sanitaires, du cheminement…',h:'Facultatif. 5 photos maximum, JPG, PNG ou WebP, 5 Mo chacune.'},
+ {n:28,id:'remarques',k:'textarea',l:'Précisions complémentaires / remarques'},
+ {n:'28b',id:'engagement_honneur',k:'honor',l:'Je certifie sur l’honneur que les informations fournies sont exactes et je m’engage à signaler tout changement.',r:1}]}
+];
+
+  function qHas(q,g,c){ return !!(q && q.checks && Array.isArray(q.checks[g]) && q.checks[g].indexOf(c)>-1); }
+  function applyQualif(row,q){
+    row[F.QUALIF]=q;
+    row[F.Q_FAUTEUIL]=(q.participation==='fauteuil_autonome'||q.participation==='fauteuil_accompagne')?1:null;
+    row[F.Q_FAUT_AUTONOME]=q.participation==='fauteuil_autonome'?1:null;
+    row[F.Q_EFFORT_FAIBLE]=q.effort==='moins_45min_tres_faible'?1:null;
+    row[F.Q_SIEGES]=qHas(q,'assises','sieges_parcours')?1:null;
+    row[F.Q_ESPACE_CALME]=qHas(q,'sensoriel','espace_calme')?1:null;
+    row[F.Q_PAS_FLASH]=qHas(q,'sensoriel','pas_flash')?1:null;
+    row[F.Q_PAUSE]=qHas(q,'sensoriel','pause_possible')?1:null;
+    row[F.Q_CRENEAUX]=qHas(q,'sensoriel','creneaux_calmes')?1:null;
+    row[F.Q_FALC]=qHas(q,'cognitif','falc')?1:null;
+    row[F.Q_RESA_SANS_APPEL]=qHas(q,'auditif','resa_sans_appel')?1:null;
+    row[F.Q_BIM]=(qHas(q,'auditif','bim')||qHas(q,'accueil','bim_accueil'))?1:null;
+    row[F.Q_AUDIODESC]=(qHas(q,'visuel','audiodesc_visite')||qHas(q,'accueil','audiodescription'))?1:null;
+    row[F.Q_TARIF_AVANT]=(q.tarif_usager==='gratuit'||q.tarif_usager==='reduit')?1:null;
+    row[F.Q_GRATUIT_ACCOMP]=q.tarif_accompagnateur==='gratuit'?1:null;
+  }
+  function provLabel(id,code){
+    for(var s=0;s<PROV_SECTIONS.length;s++) for(var i=0;i<PROV_SECTIONS[s].q.length;i++){
+      var q=PROV_SECTIONS[s].q[i]; if(q.id!==id||!q.o) continue;
+      for(var j=0;j<q.o.length;j++) if(q.o[j][0]===code) return q.o[j][1];
+    }
+    return code;
+  }
+  function qualifHtml(q){
+    if(!q) return '';
+    function sec(title,inner){ return inner ? '<div class="d-section"><h3>'+title+'</h3><div class="d-grid" role="list">'+inner+'</div></div>' : ''; }
+    function chk(g){
+      var arr=(q.checks&&Array.isArray(q.checks[g]))?q.checks[g]:[], out='';
+      arr.forEach(function(c){ out+=dItem(1,escapeHtml(provLabel(g,c))); });
+      return out;
+    }
+    var h='';
+    h+=sec('Pratique de l’activité',
+      (q.participation?dNum('Participation à l’activité',provLabel('participation',q.participation)):'')+
+      (q.marches_interieur!=null?dNum('Marches sur le cheminement intérieur',q.marches_interieur):''));
+    h+=sec('Vision & communication',chk('visuel'));
+    h+=sec('Audition & consignes',chk('auditif'));
+    h+=sec('Compréhension & repérage',chk('cognitif'));
+    h+=sec('Confort sensoriel',chk('sensoriel'));
+    h+=sec('Durée, effort & assises',
+      (q.effort?dNum('Durée et niveau d’effort',provLabel('effort',q.effort)):'')+chk('assises'));
+    h+=sec('Tarifs & conditions',
+      (q.tarif_usager?dNum('Usager',provLabel('tarif_usager',q.tarif_usager)):'')+
+      (q.tarif_usager_precisions?dNum('Précisions',q.tarif_usager_precisions):'')+
+      (q.tarif_accompagnateur?dNum('Accompagnateur',provLabel('tarif_accompagnateur',q.tarif_accompagnateur)):''));
+    if(h) h+='<div class="disclaimer">Informations déclarées par le prestataire et relues par HILIA avant publication.</div>';
+    return h;
+  }
+
+  // ---------- Formulaire prestataire ----------
+  var PROV_BUILT=false;
+  var PROV_CHECK_GROUPS=['transport','parking','exterieur','entree','accueil','visuel','auditif','cognitif','sensoriel','assises'];
+  function initProviderForm(){
+    if(PROV_BUILT) return; PROV_BUILT=true;
+    var form=document.getElementById('provForm'), sum=document.getElementById('provSummary'), st=document.getElementById('provStatus');
+    function req(q){ return q.r?' <span class="pf-req" aria-hidden="true">*</span>':''; }
+    function hint(q){ return q.h?'<span class="pf-hint" id="pfh_'+q.id+'">'+escapeHtml(q.h)+'</span>':''; }
+    var h='<div style="position:absolute;left:-9999px" aria-hidden="true"><label>Ne pas remplir<input type="text" name="pf_hp" tabindex="-1" autocomplete="off"></label></div>';
+    PROV_SECTIONS.forEach(function(s){
+      h+='<fieldset class="pf-fs"><legend>'+escapeHtml(s.t)+'</legend>';
+      s.q.forEach(function(q){
+        var i=q.id, fid='pf_'+i, d=q.h?' aria-describedby="pfh_'+i+'"':'', rq=q.r?' required aria-required="true"':'';
+        h+='<div class="pf-q">';
+        if(q.k==='check'||q.k==='radio'){
+          h+='<fieldset style="border:0;padding:0;margin:0;min-width:0"><legend class="pf-lbl" style="font-weight:650;padding:0;margin-bottom:6px">'+escapeHtml(q.l)+req(q)+'</legend>'+hint(q);
+          q.o.forEach(function(o,j){ var id=fid+'_'+j;
+            h+='<div class="pf-opt"><input type="'+(q.k==='check'?'checkbox':'radio')+'" name="'+i+'" id="'+id+'" value="'+o[0]+'"><label for="'+id+'">'+escapeHtml(o[1])+'</label></div>'; });
+          h+='</fieldset>';
+        } else if(q.k==='honor'){
+          h+='<div class="pf-opt"><input type="checkbox" id="'+fid+'" name="'+i+'" required aria-required="true"><label for="'+fid+'">'+escapeHtml(q.l)+req(q)+'</label></div>';
+        } else {
+          h+='<label for="'+fid+'">'+escapeHtml(q.l)+req(q)+'</label>'+hint(q);
+          if(q.k==='select') h+='<select id="'+fid+'" name="'+i+'"'+rq+'><option value="">Choisir…</option>'+q.o.map(function(o){return '<option value="'+o[0]+'">'+escapeHtml(o[1])+'</option>';}).join('')+'</select>';
+          else if(q.k==='textarea') h+='<textarea id="'+fid+'" name="'+i+'"'+d+'></textarea>';
+          else if(q.k==='file') h+='<input type="file" id="'+fid+'" name="'+i+'" accept="image/jpeg,image/png,image/webp" multiple'+d+'>';
+          else if(q.k==='number') h+='<input type="number" inputmode="numeric" id="'+fid+'" name="'+i+'" min="'+q.min+'" max="'+q.max+'"'+d+'>';
+          else h+='<input type="'+q.k+'" id="'+fid+'" name="'+i+'"'+(q.ac?' autocomplete="'+q.ac+'"':'')+rq+d+'>';
+        }
+        h+='<div class="pf-err" id="pfe_'+i+'" hidden></div></div>';
+      });
+      h+='</fieldset>';
+    });
+    h+='<button type="submit" class="pf-submit" id="pfSend">Envoyer mon formulaire</button>';
+    form.innerHTML=h;
+
+    function val(id){ var e=form.elements[id]; return e && e.value && e.value.trim() ? e.value.trim() : null; }
+    function num(id){ var v=val(id); return v===null?null:parseInt(v,10); }
+    function checked(id){ return Array.prototype.map.call(form.querySelectorAll('input[name="'+id+'"]:checked'),function(e){return e.value;}); }
+    function uuid(){ return (window.crypto&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,function(c){var r=Math.random()*16|0;return (c==='x'?r:(r&3|8)).toString(16);}); }
+
+    function validate(){
+      var errs=[];
+      PROV_SECTIONS.forEach(function(s){ s.q.forEach(function(q){
+        var box=document.getElementById('pfe_'+q.id), m='';
+        if(q.r && (q.k==='honor' ? !form.elements[q.id].checked : !val(q.id))) m='Ce champ est obligatoire.';
+        else if(q.k==='email' && val(q.id) && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val(q.id))) m='Adresse e-mail invalide.';
+        else if(q.k==='url' && val(q.id) && !/^https?:\/\/.+\..+/.test(val(q.id))) m='Adresse invalide : elle doit commencer par https://';
+        else if(q.k==='number' && val(q.id)){ var n=num(q.id); if(isNaN(n)||n<q.min||n>q.max) m='Entrez un nombre entre '+q.min+' et '+q.max+'.'; }
+        else if(q.k==='file' && form.elements[q.id].files.length){
+          var f=form.elements[q.id].files;
+          if(f.length>5) m='5 photos maximum.';
+          for(var i=0;i<f.length;i++) if(f[i].size>5242880) m='« '+f[i].name+' » dépasse 5 Mo.';
+        }
+        box.hidden=!m; box.textContent=m;
+        if(m) errs.push({id:q.id,l:q.l,m:m,kind:q.k});
+      }); });
+      return errs;
+    }
+    sum.addEventListener('click',function(e){
+      var a=e.target.closest('[data-pf-go]'); if(!a) return; e.preventDefault();
+      var t=document.getElementById(a.dataset.pfGo); if(t){ t.scrollIntoView({block:'center'}); t.focus(); }
+    });
+
+    form.addEventListener('submit',async function(ev){
+      ev.preventDefault();
+      var errs=validate();
+      if(errs.length){
+        sum.hidden=false;
+        sum.innerHTML='<strong>'+errs.length+' erreur'+(errs.length>1?'s':'')+' à corriger :</strong><ul>'+errs.map(function(e){
+          var target='pf_'+e.id+((e.kind==='radio'||e.kind==='check')?'_0':'');
+          return '<li><a href="#" data-pf-go="'+target+'">'+escapeHtml(e.l)+'</a> — '+escapeHtml(e.m)+'</li>'; }).join('')+'</ul>';
+        sum.focus(); return;
+      }
+      sum.hidden=true;
+      if(form.elements.pf_hp && form.elements.pf_hp.value){ form.hidden=true; st.innerHTML='<div class="pf-done"><h2>Merci.</h2></div>'; return; }
+      if(!supabaseClient){ st.innerHTML='<p class="pf-err">Service indisponible. Réessayez plus tard.</p>'; return; }
+      var btn=document.getElementById('pfSend'); btn.disabled=true; st.textContent='Envoi en cours…';
+      try{
+        var id=uuid(), paths=[], files=form.elements.visuels.files;
+        for(var i=0;i<files.length;i++){
+          var ext=(files[i].name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
+          var p=id+'/'+(i+1)+'.'+ext;
+          var up=await supabaseClient.storage.from('provider-visuals').upload(p,files[i],{contentType:files[i].type});
+          if(up.error) throw up.error; paths.push(p);
+        }
+        var checks={}; PROV_CHECK_GROUPS.forEach(function(g){ checks[g]=checked(g); });
+        var radio=function(n){ return checked(n)[0]||null; };
+        var row={id:id,structure_name:val('structure_name'),activity_name:val('activity_name'),address:val('address'),website:val('website'),
+          contact_name:val('contact_name'),contact_email:val('contact_email'),contact_phone:val('contact_phone'),category:val('category'),
+          checks:checks,marches_entree:num('marches_entree'),marches_interieur:num('marches_interieur'),largeur_min_cm:num('largeur_min_cm'),
+          sanitaires:radio('sanitaires'),participation:radio('participation'),effort:radio('effort'),
+          tarif_usager:radio('tarif_usager'),tarif_usager_precisions:val('tarif_usager_precisions'),tarif_accompagnateur:radio('tarif_accompagnateur'),
+          visuels:paths,remarques:val('remarques'),engagement_honneur:true,status:'pending'};
+        var ins=await supabaseClient.from('hilia_provider_submissions').insert(row);
+        if(ins.error) throw ins.error;
+        form.hidden=true;
+        st.innerHTML='<div class="pf-done" tabindex="-1" id="pfOk"><h2>Merci, votre formulaire est bien envoyé.</h2><p>L’équipe HILIA le vérifie et vous recontacte par e-mail avant la publication de la fiche.</p><p><a href="#explore" data-nav-page="explore">Retour à l’exploration</a></p></div>';
+        var okLink=st.querySelector('[data-nav-page]'); if(okLink) okLink.addEventListener('click',function(e){ e.preventDefault(); navigatePage('explore',true); });
+        document.getElementById('pfOk').focus(); window.scrollTo(0,0);
+      }catch(e){
+        console.error(e); btn.disabled=false;
+        st.innerHTML='<p class="pf-err" role="alert">L’envoi a échoué. Vérifiez votre connexion et réessayez ; vos réponses sont conservées sur cette page.</p>';
+      }
+    });
+  }
+
+  // ---------- Admin : validation des qualifications ----------
+  var PROV_SUBS={};
+  function provBuildAccess(s){
+    var c=s.checks||{}, A={};
+    function has(g,k){ return Array.isArray(c[g]) && c[g].indexOf(k)>-1; }
+    [['transport','tc_accessibles_200m',F.TRANSPORT],['parking','parking_proche',F.STATIONNEMENT],['parking','parking_pmr_50m',F.STATIONNEMENT_PMR],
+     ['parking','parking_ext',F.STATIONNEMENT_EXT],['parking','parking_ext_pmr',F.STATIONNEMENT_EXT_PMR],
+     ['exterieur','chemin_plain_pied',F.CHEMIN_PLAIN_PIED],['exterieur','terrain_stable',F.CHEMIN_TERRAIN_STABLE],['exterieur','marches_reperees',F.CHEMIN_REPERAGE],
+     ['exterieur','main_courante',F.CHEMIN_MAIN_COURANTE],['exterieur','rampe_ext',F.CHEMIN_RAMPE],['exterieur','bande_guidage',F.CHEMIN_BANDE_GUIDAGE],
+     ['entree','entree_reperable',F.ENTREE_REPERABLE],['entree','entree_plain_pied',F.ENTREE_PLAIN_PIED],['entree','ascenseur',F.ENTREE_ASCENSEUR],
+     ['entree','entree_rampe',F.ENTREE_RAMPE],['entree','appel',F.ENTREE_DISPOSITIF_APPEL],['entree','balise_sonore',F.ENTREE_BALISE_SONORE],
+     ['entree','aide_humaine',F.ENTREE_AIDE_HUMAINE],['entree','entree_pmr',F.ENTREE_SPECIFIQUE_PMR],
+     ['accueil','personnel_accueil',F.ACCUEIL_PERSONNEL],['accueil','audiodescription',F.ACCUEIL_AUDIODESCR],['accueil','bim_accueil',F.ACCUEIL_EQUIP_MALENT],
+     ['accueil','accueil_plain_pied',F.ACCUEIL_PLAIN_PIED],['accueil','signaletique',F.ACCUEIL_SIGNALETIQUE]
+    ].forEach(function(m){ if(has(m[0],m[1])) A[m[2]]=1; });
+    if(s.sanitaires==='publics_pmr'){ A[F.SANITAIRES_DISPO]=1; A[F.SANITAIRES_PMR]=1; }
+    else if(s.sanitaires==='publics_non_pmr'){ A[F.SANITAIRES_DISPO]=1; A[F.SANITAIRES_PMR]=0; }
+    else if(s.sanitaires==='pmr_proximite'){ A[F.SANITAIRES_DISPO]=0; }
+    else if(s.sanitaires==='aucun'){ A[F.SANITAIRES_DISPO]=0; A[F.SANITAIRES_PMR]=0; }
+    if(s.marches_entree!=null) A[F.ENTREE_MARCHES]=s.marches_entree;
+    if(s.marches_interieur!=null) A[F.CHEMIN_MARCHES]=s.marches_interieur;
+    if(s.largeur_min_cm!=null) A[F.ENTREE_LARGEUR]=s.largeur_min_cm;
+    return A;
+  }
+  function provBuildQualif(s){
+    return {participation:s.participation,effort:s.effort,tarif_usager:s.tarif_usager,tarif_usager_precisions:s.tarif_usager_precisions||null,
+      tarif_accompagnateur:s.tarif_accompagnateur,marches_interieur:s.marches_interieur,checks:s.checks||{},category:s.category,sanitaires:s.sanitaires,source:'prestataire'};
+  }
+  async function provGeocode(addr){
+    try{
+      var r=await fetch('https://api-adresse.data.gouv.fr/search/?limit=1&q='+encodeURIComponent(addr));
+      var j=await r.json(); var f=j&&j.features&&j.features[0]; if(!f) return null;
+      return {lat:f.geometry.coordinates[1],lon:f.geometry.coordinates[0],cp:f.properties.postcode||'',commune:f.properties.city||''};
+    }catch(e){ return null; }
+  }
+  async function loadProvSubs(box){
+    var list=box.querySelector('#provSubList'); if(!list||!supabaseClient) return;
+    var r=await supabaseClient.from('hilia_provider_submissions').select('*').eq('status','pending').order('created_at',{ascending:false});
+    if(r.error){ list.innerHTML='<div class="admin-item"><div class="admin-item-main"><p>Qualifications indisponibles (migration SQL exécutée ?) : '+escapeHtml(r.error.message)+'</p></div></div>'; return; }
+    var rows=r.data||[]; PROV_SUBS={};
+    if(!rows.length){ list.innerHTML='<div class="admin-item"><div class="admin-item-main"><strong>Aucune qualification en attente</strong><p>Les formulaires envoyés depuis « Référencer mon activité » apparaîtront ici.</p></div></div>'; return; }
+    var opts='<option value="">Choisir…</option>'+ACTIVITES.map(function(a){return '<option value="'+escapeAttr(a)+'">'+escapeHtml(a)+'</option>';}).join('');
+    list.innerHTML=rows.map(function(s){
+      PROV_SUBS[s.id]=s;
+      var n=0; Object.keys(s.checks||{}).forEach(function(g){ n+=(s.checks[g]||[]).length; });
+      var m=String(s.address||'').match(/(\d{5})\s+([^,]+)$/);
+      return '<div class="admin-item"><div class="admin-item-main"><strong>'+escapeHtml(s.structure_name)+' · '+escapeHtml(s.activity_name)+'</strong>'+
+        '<p>'+escapeHtml(s.address)+'<br>'+escapeHtml(s.contact_name)+' · '+escapeHtml(s.contact_email)+(s.contact_phone?' · '+escapeHtml(s.contact_phone):'')+
+        '<br><small>'+n+' critères cochés · '+(s.visuels||[]).length+' photo(s) · '+formatDate(s.created_at)+'</small>'+
+        (s.remarques?'<br><small>Remarque : '+escapeHtml(s.remarques)+'</small>':'')+'</p>'+
+        '<div class="prov-extra"><label>Famille d’activité *<select data-ps-act="'+s.id+'">'+opts+'</select></label>'+
+        '<label>Code postal<input data-ps-cp="'+s.id+'" inputmode="numeric" value="'+escapeAttr(m?m[1]:'')+'"></label>'+
+        '<label>Commune<input data-ps-com="'+s.id+'" value="'+escapeAttr(m?m[2].trim():'')+'"></label></div>'+
+        '<div class="prov-photos" id="psph_'+s.id+'" aria-live="polite"></div></div>'+
+        '<div class="admin-item-actions">'+
+        ((s.visuels||[]).length?'<button class="small-btn" type="button" data-ps-photos="'+s.id+'">Voir les photos</button>':'')+
+        '<button class="small-btn primary" type="button" data-ps-ok="'+s.id+'">Publier</button>'+
+        '<button class="small-btn" type="button" data-ps-no="'+s.id+'">Refuser</button></div></div>';
+    }).join('');
+    list.querySelectorAll('[data-ps-photos]').forEach(function(b){ b.addEventListener('click',async function(){
+      var s=PROV_SUBS[b.dataset.psPhotos], holder=document.getElementById('psph_'+s.id);
+      var sg=await supabaseClient.storage.from('provider-visuals').createSignedUrls(s.visuels,3600);
+      if(sg.error){ holder.textContent='Photos inaccessibles : '+sg.error.message; return; }
+      holder.innerHTML=sg.data.map(function(x,i){ return x.signedUrl?'<a href="'+escapeAttr(x.signedUrl)+'" target="_blank" rel="noopener noreferrer">Photo '+(i+1)+'<span class="sr-only"> (nouvelle fenêtre)</span></a>':''; }).join(' · ');
+    }); });
+    list.querySelectorAll('[data-ps-no]').forEach(function(b){ b.addEventListener('click',async function(){
+      b.disabled=true;
+      var u=await supabaseClient.from('hilia_provider_submissions').update({status:'rejected'}).eq('id',b.dataset.psNo);
+      if(u.error){ announce('Refus impossible : '+u.error.message,0); b.disabled=false; return; }
+      loadProvSubs(box);
+    }); });
+    list.querySelectorAll('[data-ps-ok]').forEach(function(b){ b.addEventListener('click',async function(){
+      var id=b.dataset.psOk, s=PROV_SUBS[id];
+      var act=list.querySelector('[data-ps-act="'+id+'"]').value;
+      if(!act){ announce('Choisissez une famille d’activité avant de publier.',0); list.querySelector('[data-ps-act="'+id+'"]').focus(); return; }
+      var cp=list.querySelector('[data-ps-cp="'+id+'"]').value.trim(), com=list.querySelector('[data-ps-com="'+id+'"]').value.trim();
+      b.disabled=true;
+      var geo=await provGeocode(s.address);
+      if(!cp&&geo) cp=geo.cp; if(!com&&geo) com=geo.commune;
+      var name=(s.structure_name===s.activity_name||normalize(s.activity_name).indexOf(normalize(s.structure_name))>-1)?s.activity_name:s.structure_name+' — '+s.activity_name;
+      var row={id:'place_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),name:name,activity:act,address:s.address,cp:cp,commune:com||'Commune à préciser',
+        site:s.website||null,lat:geo?geo.lat:null,lon:geo?geo.lon:null,reason:null,author:null,author_name:s.structure_name,status:'approved',
+        approved_at:new Date().toISOString(),access:provBuildAccess(s),qualif:provBuildQualif(s)};
+      var ins=await supabaseClient.from('hilia_places').insert(row);
+      if(ins.error){ console.error(ins.error); announce('Publication impossible : '+ins.error.message,0); b.disabled=false; return; }
+      await supabaseClient.from('hilia_provider_submissions').update({status:'approved'}).eq('id',id);
+      await loadRemoteContent(); location.reload();
+    }); });
+  }
+
   // ---------- Site pages / lightweight routing ----------
   var currentPage='explore';
   var PAGE_META={
@@ -2256,13 +2608,14 @@
     cookies:{title:'Cookies & traceurs — HILIA',description:'Informations sur les cookies et traceurs utilisés par HILIA.'},
     contact:{title:'Contact — HILIA',description:'Contactez HILIA pour une question ou une suggestion.'},
     accessibility:{title:'Déclaration d’accessibilité — HILIA',description:'Engagement, état de conformité et voies de recours en matière d’accessibilité numérique.'},
-    sitemap:{title:'Plan du site — HILIA',description:'La liste de toutes les pages du site HILIA.'}
+    sitemap:{title:'Plan du site — HILIA',description:'La liste de toutes les pages du site HILIA.'},
+    prestataires:{title:'Référencer mon activité — HILIA',description:'Prestataires de loisirs : renseignez l’accessibilité de votre activité pour être référencé sur HILIA.'}
   };
   function syncPageMeta(page){var meta=PAGE_META[page]||PAGE_META.explore;document.title=meta.title;var d=document.querySelector('meta[name="description"]');if(d)d.setAttribute('content',meta.description);var t=document.querySelector('meta[property="og:title"]');if(t)t.setAttribute('content',meta.title);var od=document.querySelector('meta[property="og:description"]');if(od)od.setAttribute('content',meta.description);}
   function syncChromeOffset(){ var nav=document.querySelector('.topnav'); var h=nav ? nav.offsetHeight : 96; document.documentElement.style.setProperty('--topnav-height',h+'px'); }
   function setPageActiveButtons(page){ document.querySelectorAll('[data-nav-page]').forEach(function(b){ var active=b.dataset.navPage===page; b.classList.toggle('active',active); if(b.tagName==='A'){ if(active)b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); } }); }
   function navigatePage(page, push){
-    page=page||'explore'; if(['explore','about','faq','profile','legal','privacy','cgu','cookies','contact','accessibility','sitemap'].indexOf(page)===-1) page='explore';
+    page=page||'explore'; if(['explore','about','faq','prestataires','profile','legal','privacy','cgu','cookies','contact','accessibility','sitemap'].indexOf(page)===-1) page='explore';
     currentPage=page;
     syncPageMeta(page);
     document.getElementById('explorePage').style.display = page==='explore' ? '' : 'none';
@@ -2273,6 +2626,7 @@
     if(push!==false){ history.pushState({page:page},'',page==='explore' ? location.pathname+location.search : '#'+page); }
     closeDetail(); closeDrawer(); window.scrollTo(0,0); document.getElementById('siteMain')?.focus(); announce(PAGE_META[page].title,200);
     if(page==='profile') renderProfilePage();
+    if(page==='prestataires') initProviderForm();
     if(page==='explore'){
       if(currentTab==='map' && leafletMap) setTimeout(function(){ leafletMap.invalidateSize({pan:false,animate:false}); drawMap(); },80); else renderList();
     }
