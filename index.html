@@ -865,7 +865,7 @@
       <h2 id="profileFormTitle" style="color:var(--teal);margin:0 0 6px;font-family:'RocaOne','Archivo',sans-serif">Se connecter</h2>
       <p id="profileFormIntro" style="margin:0 0 16px;color:var(--muted);font-size:.84rem;line-height:1.5">Connectez-vous à votre compte HILIA pour publier et retrouver vos avis.</p>
       <div class="field" id="profileNameField"><label for="profileName">Prénom ou nom affiché</label><input id="profileName" autocomplete="name" placeholder="Votre prénom" aria-describedby="profileFormStatus"></div>
-      <div class="field"><label for="profileEmail">E-mail</label><input id="profileEmail" required aria-required="true" type="email" autocomplete="email" placeholder="vous@exemple.fr" aria-describedby="profileFormStatus"></div>
+      <div class="field" id="profileEmailField"><label for="profileEmail">E-mail</label><input id="profileEmail" required aria-required="true" type="email" autocomplete="email" placeholder="vous@exemple.fr" aria-describedby="profileFormStatus"></div>
       <div class="field"><label for="profilePassword">Mot de passe</label><div class="password-wrap"><input id="profilePassword" required aria-required="true" type="password" minlength="6" autocomplete="current-password" aria-describedby="profilePwHint profileFormStatus"><button type="button" class="password-toggle" id="profilePasswordToggle" aria-controls="profilePassword" aria-pressed="false">Afficher le mot de passe</button></div><span class="hint" id="profilePwHint">6 caractères minimum.</span></div>
       <button class="primary-btn" id="profileSubmitBtn" type="submit">Se connecter</button>
       <button class="secondary-btn" id="forgotPasswordBtn" type="button" style="width:100%;margin-top:10px">Mot de passe oublié ?</button>
@@ -2035,7 +2035,7 @@
       var password=document.getElementById('profilePassword')?.value||'';
       var status=document.getElementById('profileFormStatus');
       if(!supabaseClient){ profileFormError('Le service de compte ne se charge pas. Vérifiez votre connexion puis rechargez la page.'); return; }
-      if(!email){ profileFormError('Renseignez votre adresse e-mail.', document.getElementById('profileEmail')); return; }
+      if(!email && !passwordRecoveryMode){ profileFormError('Renseignez votre adresse e-mail.', document.getElementById('profileEmail')); return; }
       if(passwordRecoveryMode){
         if(password.length<6){ profileFormError('Le nouveau mot de passe doit contenir au moins 6 caractères.',document.getElementById('profilePassword')); return; }
         var recoverySubmit=document.getElementById('profileSubmitBtn'); recoverySubmit.disabled=true;
@@ -2048,6 +2048,9 @@
           document.getElementById('profilePassword').value='';
           setProfileMode('login',true);
           if(forgotPasswordBtn) forgotPasswordBtn.style.display='';
+          var emailField=document.getElementById('profileEmailField'); if(emailField) emailField.style.display='';
+          var emailInput=document.getElementById('profileEmail'); if(emailInput) emailInput.required=true;
+          var authSwitch=document.querySelector('.auth-switch'); if(authSwitch) authSwitch.style.display='';
           var recoveryIntro=document.getElementById('profileFormIntro'); if(recoveryIntro) recoveryIntro.textContent='Votre mot de passe a été modifié. Connectez-vous avec votre nouveau mot de passe.';
         }catch(err){
           var recoveryMsg=(err&&err.message)||'Impossible de modifier le mot de passe.';
@@ -2132,6 +2135,12 @@
         var password=document.getElementById('profilePassword');
         var submit=document.getElementById('profileSubmitBtn');
         var status=document.getElementById('profileFormStatus');
+        // Le lien de récupération doit ouvrir directement l'interface de réinitialisation.
+        // Le setTimeout laisse d'abord le routeur traiter le hash d'authentification Supabase.
+        setTimeout(function(){ navigatePage('profile',false); },0);
+        var authSwitch=document.querySelector('.auth-switch'); if(authSwitch) authSwitch.style.display='none';
+        var emailField=document.getElementById('profileEmailField'); if(emailField) emailField.style.display='none';
+        var emailInput=document.getElementById('profileEmail'); if(emailInput) emailInput.required=false;
         if(title) title.textContent='Choisir un nouveau mot de passe';
         if(intro) intro.textContent='Saisissez le nouveau mot de passe de votre compte HILIA.';
         if(password){password.value='';password.setAttribute('autocomplete','new-password');password.setAttribute('placeholder','Nouveau mot de passe');password.focus();}
