@@ -1089,6 +1089,8 @@
 (async function(){
   "use strict";
   // Supabase : clé publique uniquement. Les autorisations restent contrôlées par les politiques RLS.
+  // Détecter le lien de récupération AVANT que le SDK Supabase ne nettoie l'URL.
+  var initialPasswordRecoveryLink = /(?:[?&#])type=recovery(?:[&#]|$)/i.test(window.location.search + '&' + window.location.hash);
   var SUPABASE_URL = 'https://lokplzdkvzilsuuqflsk.supabase.co';
   var SUPABASE_ANON_KEY = 'sb_publishable_86IcrAhzRoOkZZn-KGKe6A_6-_FO0B0';
   // Client Supabase (SDK v2 chargé dans <head>). Session persistée + rafraîchissement automatique du jeton.
@@ -2125,31 +2127,41 @@
     }finally{forgotPasswordBtn.disabled=false;}
   });
 
+  function activatePasswordRecoveryUI(){
+    passwordRecoveryMode=true;
+    setProfileMode('login',true);
+    var title=document.getElementById('profileFormTitle');
+    var intro=document.getElementById('profileFormIntro');
+    var password=document.getElementById('profilePassword');
+    var submit=document.getElementById('profileSubmitBtn');
+    var status=document.getElementById('profileFormStatus');
+    navigatePage('profile',false);
+    var authSwitch=document.querySelector('.auth-switch'); if(authSwitch) authSwitch.style.display='none';
+    var emailField=document.getElementById('profileEmailField'); if(emailField) emailField.style.display='none';
+    var emailInput=document.getElementById('profileEmail'); if(emailInput) emailInput.required=false;
+    if(title) title.textContent='Choisir un nouveau mot de passe';
+    if(intro) intro.textContent='Saisissez le nouveau mot de passe de votre compte HILIA.';
+    if(password){password.value='';password.setAttribute('autocomplete','new-password');password.setAttribute('placeholder','Nouveau mot de passe');}
+    if(submit) submit.textContent='Enregistrer le nouveau mot de passe';
+    if(forgotPasswordBtn) forgotPasswordBtn.style.display='none';
+    if(status) status.textContent='Lien de réinitialisation détecté. Saisissez votre nouveau mot de passe.';
+    announce('Saisissez votre nouveau mot de passe.');
+  }
+
   if(supabaseClient && supabaseClient.auth && supabaseClient.auth.onAuthStateChange){
     supabaseClient.auth.onAuthStateChange(function(event){
       if(event==='PASSWORD_RECOVERY'){
-        passwordRecoveryMode=true;
-        setProfileMode('login',true);
-        var title=document.getElementById('profileFormTitle');
-        var intro=document.getElementById('profileFormIntro');
-        var password=document.getElementById('profilePassword');
-        var submit=document.getElementById('profileSubmitBtn');
-        var status=document.getElementById('profileFormStatus');
-        // Le lien de récupération doit ouvrir directement l'interface de réinitialisation.
-        // Le setTimeout laisse d'abord le routeur traiter le hash d'authentification Supabase.
-        setTimeout(function(){ navigatePage('profile',false); },0);
-        var authSwitch=document.querySelector('.auth-switch'); if(authSwitch) authSwitch.style.display='none';
-        var emailField=document.getElementById('profileEmailField'); if(emailField) emailField.style.display='none';
-        var emailInput=document.getElementById('profileEmail'); if(emailInput) emailInput.required=false;
-        if(title) title.textContent='Choisir un nouveau mot de passe';
-        if(intro) intro.textContent='Saisissez le nouveau mot de passe de votre compte HILIA.';
-        if(password){password.value='';password.setAttribute('autocomplete','new-password');password.setAttribute('placeholder','Nouveau mot de passe');password.focus();}
-        if(submit) submit.textContent='Enregistrer le nouveau mot de passe';
-        if(forgotPasswordBtn) forgotPasswordBtn.style.display='none';
-        if(status) status.textContent='Lien de réinitialisation validé. Choisissez un nouveau mot de passe.';
-        announce('Lien validé. Saisissez votre nouveau mot de passe.');
+        // Différer les manipulations d'interface hors du callback Supabase.
+        setTimeout(activatePasswordRecoveryUI,0);
       }
     });
+  }
+  // Le SDK peut traiter le lien avant que l'écouteur PASSWORD_RECOVERY soit installé.
+  // Le marqueur capturé au chargement permet alors d'afficher quand même le formulaire.
+  if(initialPasswordRecoveryLink){
+    Promise.resolve(supabaseClient && supabaseClient.auth ? supabaseClient.auth.getSession() : null)
+      .catch(function(){ return null; })
+      .then(function(){ activatePasswordRecoveryUI(); });
   }
 
   var logoutBtn=document.getElementById('profileLogoutBtn');
