@@ -983,7 +983,7 @@
     }
   }catch(err){ console.error('HILIA : initialisation Supabase impossible', err); }
 
-  // ---------- Chargement des lieux depuis Supabase (avec cache navigateur et secours intégré) ----------
+  // ---------- Chargement des lieux depuis la table unique hilia_places ----------
   var BASE_COLS=['name','address','cp','commune','activity','site','lat','lon','transport','stationnement','stationnement_pmr','stationnement_ext','stationnement_ext_pmr','chemin_plain_pied','chemin_terrain_stable','chemin_marches','chemin_reperage','chemin_main_courante','chemin_rampe','chemin_bande_guidage','entree_reperable','entree_plain_pied','entree_ascenseur','entree_marches','entree_rampe','entree_dispositif_appel','entree_balise_sonore','entree_aide_humaine','entree_largeur','entree_specifique_pmr','accueil_personnel','accueil_audiodescr','accueil_equip_malent','accueil_plain_pied','accueil_signaletique','sanitaires_dispo','sanitaires_pmr','labels','familles','conformite'];
   function idbOpen(){ return new Promise(function(res,rej){ var q=indexedDB.open('hilia_cache',1); q.onupgradeneeded=function(){ q.result.createObjectStore('kv'); }; q.onsuccess=function(){res(q.result);}; q.onerror=function(){rej(q.error);}; }); }
   function idbGet(k){ return idbOpen().then(function(db){ return new Promise(function(res,rej){ var t=db.transaction('kv').objectStore('kv').get(k); t.onsuccess=function(){res(t.result);}; t.onerror=function(){rej(t.error);}; }); }); }
@@ -994,43 +994,45 @@
     b.textContent=text; if(isError) b.style.background='#8A1C1C'; return b;
   }
   async function loadBasePlaces(raw){
-    var hasFallback=Array.isArray(raw.data) && raw.data.length>0;
-    function finish(ok){ var b=document.getElementById('baseLoading'); if(ok){ if(b) b.remove(); return true; } if(hasFallback){ if(b) b.remove(); return false; } baseBanner('Impossible de charger les lieux. Vérifiez votre connexion puis rechargez la page.',true); return false; }
+    function finish(ok){ var b=document.getElementById('baseLoading'); if(ok){ if(b) b.remove(); return true; } baseBanner('Impossible de charger les lieux depuis HILIA. Vérifiez la connexion et les autorisations Supabase, puis rechargez la page.',true); return false; }
     if(!supabaseClient) return finish(false);
     try{
       baseBanner('Chargement des lieux…');
-      var head=await supabaseClient.from('hilia_base_places').select('updated_at',{count:'exact'}).order('updated_at',{ascending:false}).limit(1);
-      if(head.error || !head.count) return finish(false);
-      var total=head.count, stamp=total+'|'+(head.data&&head.data[0]?head.data[0].updated_at:''), rows=null;
-      try{ var cached=await idbGet('base'); if(cached && cached.stamp===stamp && Array.isArray(cached.rows) && cached.rows.length===total) rows=cached.rows; }catch(e){}
+      var selectCols='id,'+BASE_COLS.join(',')+',access,qualif,status,approved_at,created_at,data_origin,updated_at';
+      var head=await supabaseClient.from('hilia_places').select('id,updated_at',{count:'exact',head:true}).eq('status','approved');
+      if(head.error) throw head.error;
+      var total=head.count||0;
+      if(!total){ raw.data=[]; return finish(true); }
+      var stamp=String(total)+'|'+String((await supabaseClient.from('hilia_places').select('updated_at').eq('status','approved').order('updated_at',{ascending:false}).limit(1)).data?.[0]?.updated_at||'');
+      var rows=null;
+      try{ var cached=await idbGet('places_v2'); if(cached && cached.stamp===stamp && Array.isArray(cached.rows) && cached.rows.length===total) rows=cached.rows; }catch(e){}
       if(!rows){
-        var sel='id,'+BASE_COLS.join(','), pages=Math.ceil(total/1000), out=new Array(total), nextPage=0, failed=false, donePages=0;
+        var pageSize=500, pages=Math.ceil(total/pageSize), nextPage=0, failed=null, donePages=0;
+        rows=new Array(total);
         var worker=async function(){
           while(!failed){
             var pg=nextPage++; if(pg>=pages) return;
-            var from=pg*1000, to=Math.min(from+999,total-1), data=null;
-            for(var t=0;t<3 && !data;t++){
-              var r=await supabaseClient.from('hilia_base_places').select(sel).order('id').range(from,to);
-              if(!r.error && r.data && r.data.length===to-from+1) data=r.data;
-            }
-            if(!data){ failed=true; return; }
-            for(var k=0;k<data.length;k++){
-              var o=data[k]; if(o.id!==from+k){ failed=true; return; }
-              out[from+k]=BASE_COLS.map(function(c){ return o[c]; });
-            }
+            var from=pg*pageSize, to=Math.min(from+pageSize-1,total-1);
+            var result=await supabaseClient.from('hilia_places').select(selectCols).eq('status','approved').order('id',{ascending:true}).range(from,to);
+            if(result.error){failed=result.error;return;}
+            if(!result.data || result.data.length!==to-from+1){failed=new Error('Lot incomplet lors du chargement des lieux ('+(from+1)+' à '+(to+1)+').');return;}
+            for(var j=0;j<result.data.length;j++) rows[from+j]=result.data[j];
             donePages++; baseBanner('Chargement des lieux… '+Math.round(donePages*100/pages)+' %');
           }
         };
         await Promise.all([worker(),worker(),worker(),worker(),worker(),worker()]);
-        if(failed){ console.warn('Chargement des lieux incomplet'); return finish(false); }
-        rows=out;
-        try{ await idbSet('base',{stamp:stamp,rows:rows}); }catch(e){}
+        if(failed) throw failed;
+        try{ await idbSet('places_v2',{stamp:stamp,rows:rows}); }catch(e){}
       }
       var cIdx=new Map(raw.communes.map(function(n,i){return [n,i];})), aIdx=new Map(raw.activites.map(function(n,i){return [n,i];}));
-      raw.data=rows.map(function(r){
-        var x=r.slice(), ci=cIdx.get(x[3]); if(ci===undefined){ ci=raw.communes.length; raw.communes.push(x[3]); cIdx.set(x[3],ci); } x[3]=ci;
-        var ai=aIdx.get(x[4]); if(ai===undefined){ ai=raw.activites.length; raw.activites.push(x[4]); aIdx.set(x[4],ai); } x[4]=ai;
-        [0,1,2,5,37,38].forEach(function(k){ if(x[k]==null) x[k]=''; });
+      raw.data=rows.map(function(o){
+        var x=BASE_COLS.map(function(c){return o[c]==null?'':o[c];});
+        var ci=cIdx.get(o.commune||''); if(ci===undefined){ci=raw.communes.length;raw.communes.push(o.commune||'');cIdx.set(o.commune||'',ci);} x[3]=ci;
+        var ai=aIdx.get(o.activity||''); if(ai===undefined){ai=raw.activites.length;raw.activites.push(o.activity||'');aIdx.set(o.activity||'',ai);} x[4]=ai;
+        // Les colonnes détaillées sont prioritaires ; access/qualif restent prises en charge pour les fiches ajoutées manuellement.
+        if(o.access && typeof o.access==='object') Object.keys(o.access).forEach(function(k){var ki=Number(k);if(ki>=8&&ki<=36&&x[ki]==='')x[ki]=o.access[k];});
+        x._hiliaPlaceId=o.id;
+        x._hiliaQualif=o.qualif||null;
         return x;
       });
       return finish(true);
@@ -1078,6 +1080,8 @@
   function buildCustomRows(){
     var out=[];
     getApprovedPlaces().forEach(function(p){
+      // Évite les doublons si un ancien cache navigateur contient encore les lieux importés.
+      if(p && p.id && DATA.some(function(existing){return String(existing._hiliaPlaceId||'')===String(p.id);})) return;
       var actIdx=ACTIVITES.indexOf(p.activity); if(actIdx<0) return;
       var commune=(p.commune||'').trim()||'Commune à préciser';
       var comIdx=COMMUNES.indexOf(commune); if(comIdx<0){ COMMUNES.push(commune); comIdx=COMMUNES.length-1; }
@@ -1787,11 +1791,11 @@
       var p=getProfile(), isAdm=!!p && roleOf(p)==='admin';
       var selP='id,name,activity,address,cp,commune,site,lat,lon,reason,author,author_name,status,created_at,approved_at', selE='place_id,name,address,cp,commune,activity,site';
       var res=await Promise.all([
-        supabaseClient.from('hilia_places').select(selP+',access,qualif'),
+        supabaseClient.from('hilia_places').select(selP+',access,qualif').is('data_origin',null),
         supabaseClient.from('hilia_place_edits').select(selE+',access').order('place_id'),
         supabaseClient.from('hilia_activities').select('name,created_at').order('created_at',{ascending:true})
       ]);
-      if(res[0].error && /access|qualif/i.test(res[0].error.message)) res[0]=await supabaseClient.from('hilia_places').select(selP);
+      if(res[0].error && /access|qualif/i.test(res[0].error.message)) res[0]=await supabaseClient.from('hilia_places').select(selP).is('data_origin',null);
       if(res[1].error && /access/i.test(res[1].error.message)) res[1]=await supabaseClient.from('hilia_place_edits').select(selE).order('place_id');
       var changed=false;
       function put(key,val){ var s=JSON.stringify(val); if(localStorage.getItem(key)!==s){ localStorage.setItem(key,s); return true; } return false; }
@@ -2289,8 +2293,8 @@
     if(r[F.SITE]) html += '<a class="d-link" href="'+escapeAttr(safeExternalUrl(r[F.SITE]))+'" target="_blank" rel="noopener noreferrer" title="Voir le site de '+escapeAttr(r[F.NOM])+' (nouvelle fenêtre)">'+icon('link')+' Voir le site du lieu<span class="sr-only"> '+escapeHtml(r[F.NOM])+' (s’ouvre dans une nouvelle fenêtre)</span></a>';
     if(profileState && roleOf(profileState)==='admin'){
       var remotePlace=null;
-      if(r._hiliaPlaceId){ remotePlace=getApprovedPlaces().find(function(p){return String(p.id)===String(r._hiliaPlaceId);})||null; }
-      // Compatibilité avec les fiches déjà en cache avant l’ajout de _hiliaPlaceId.
+      if(r._hiliaPlaceId){ remotePlace={id:r._hiliaPlaceId}; }
+      // Compatibilité avec les fiches personnalisées plus anciennes qui n’ont pas encore leur identifiant sur la ligne.
       if(!remotePlace){ remotePlace=getApprovedPlaces().find(function(p){return normalize(p.name)===normalize(r[F.NOM]) && normalize(p.address)===normalize(r[F.ADR]) && String(p.cp||'').trim()===String(r[F.CP]||'').trim() && normalize(p.activity)===normalize(ACTIVITES[r[F.ACT]]);})||null; }
       if(remotePlace && remotePlace.id) html += '<div class="detail-contrib-actions"><button type="button" class="detail-action-btn" id="copyPlaceLinkBtn">Copier le lien de cette fiche</button><button type="button" class="detail-action-btn" id="deletePlaceBtn" data-place-id="'+escapeAttr(remotePlace.id)+'" style="color:#8C2C24;border-color:#E2AAA4">Supprimer ce lieu</button></div>';
     }
@@ -2342,7 +2346,7 @@
     html += dItem(r[F.SANITAIRES_PMR],'Sanitaires adaptés PMR');
     html += '</div></div>';
     if(r[F.CONFORMITE]!=null) html += `<div class="disclaimer">Conformité réglementaire déclarée par l'établissement&nbsp;: ${isTrue(r[F.CONFORMITE])?'oui':'non'}.</div>`;
-    html += qualifHtml(r[F.QUALIF]);
+    html += qualifHtml(r._hiliaQualif || r[F.QUALIF]);
     html += reviewsHtml(di);
 
     detailContent.innerHTML = html;
