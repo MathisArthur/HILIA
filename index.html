@@ -652,6 +652,17 @@
     .detail{width:100%; padding-left:20px; padding-right:20px;}
     .detail .d-illus{margin-left:-20px; margin-right:-20px;}
   }
+
+  /* Correctif final après vérification des captures */
+  :root { --topnav-height: 105px; }
+  .subbar { position: sticky !important; top: var(--topnav-height) !important; z-index: 220 !important; background: #fffdf8 !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; opacity: 1 !important; }
+  @media (max-width:760px) { :root { --topnav-height: 105px; } }
+  /* Voile neutre : assombrit la page sans forte teinte verte ni flou */
+  .overlay-bg, .overlay-bg.open { position: fixed !important; inset: 0 !important; background: rgba(20,28,28,.34) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; z-index: 900 !important; }
+  .detail { position: fixed !important; top: 0 !important; right: 0 !important; bottom: 0 !important; height: 100vh !important; height: 100dvh !important; max-height: 100dvh !important; box-sizing: border-box !important; overflow-x: hidden !important; overflow-y: auto !important; background: #fffdf8 !important; opacity: 1 !important; z-index: 910 !important; isolation: isolate !important; transform: translateX(100%); }
+  .detail.open { transform: translateX(0) !important; }
+  #detailContent { background: #fffdf8 !important; opacity: 1 !important; }
+
 </style>
 </head>
 <body>
