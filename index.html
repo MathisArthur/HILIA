@@ -1082,6 +1082,9 @@
       var commune=(p.commune||'').trim()||'Commune à préciser';
       var comIdx=COMMUNES.indexOf(commune); if(comIdx<0){ COMMUNES.push(commune); comIdx=COMMUNES.length-1; }
       var row=new Array(40).fill(null);
+      // Conserver l’identifiant Supabase sur la ligne affichée : les actions Admin
+      // ne doivent pas dépendre d’une comparaison exacte des champs de la fiche.
+      row._hiliaPlaceId=p.id||null;
       row[F.NOM]=p.name||'Lieu sans nom'; row[F.ADR]=p.address||''; row[F.CP]=p.cp||''; row[F.COM]=comIdx; row[F.ACT]=actIdx; row[F.SITE]=p.site||'';
       row[F.LAT]=p.lat!=='' && p.lat!=null ? Number(p.lat) : null; row[F.LON]=p.lon!=='' && p.lon!=null ? Number(p.lon) : null;
       if(p.access && typeof p.access==='object') Object.keys(p.access).forEach(function(k){ var ki=Number(k); if(ki>=8 && ki<=36) row[ki]=p.access[k]; });
@@ -2013,7 +2016,7 @@
     box.innerHTML=html;
     var form=document.getElementById('newPlaceForm');
     if(form) form.addEventListener('submit',async function(e){
-      e.preventDefault(); var fd=new FormData(form); var latValue=fd.get('lat').trim(), lonValue=fd.get('lon').trim(); if(latValue!=='' && (!isFinite(Number(latValue)) || Number(latValue)<-90 || Number(latValue)>90)){document.getElementById('newPlaceStatus').textContent='Latitude invalide.';return;} if(lonValue!=='' && (!isFinite(Number(lonValue)) || Number(lonValue)<-180 || Number(lonValue)>180)){document.getElementById('newPlaceStatus').textContent='Longitude invalide.';return;} var payload={id:'place_'+Date.now(),name:fd.get('name').replace(/\s+/g,' ').trim(),activity:fd.get('activity'),address:fd.get('address').trim(),cp:fd.get('cp').trim(),commune:fd.get('commune').trim(),site:safeExternalUrl(fd.get('site')),lat:fd.get('lat').trim(),lon:fd.get('lon').trim(),reason:fd.get('reason').trim(),author:p.email,authorName:p.name,date:new Date().toISOString()}; var isAdm=roleOf(p)==='admin', stEl=document.getElementById('newPlaceStatus'), rnd=Date.now()+'_'+Math.random().toString(16).slice(2);
+      e.preventDefault(); var fd=new FormData(form); var latValue=fd.get('lat').trim(), lonValue=fd.get('lon').trim(); if(latValue!=='' && (!isFinite(Number(latValue)) || Number(latValue)<-90 || Number(latValue)>90)){document.getElementById('newPlaceStatus').textContent='Latitude invalide.';return;} if(lonValue!=='' && (!isFinite(Number(lonValue)) || Number(lonValue)<-180 || Number(lonValue)>180)){document.getElementById('newPlaceStatus').textContent='Longitude invalide.';return;} var payload={id:'place_'+Date.now(),name:fd.get('name').replace(/[\u2014\u2013]/g,' ').replace(/\s+/g,' ').trim(),activity:fd.get('activity'),address:fd.get('address').trim(),cp:fd.get('cp').trim(),commune:fd.get('commune').trim(),site:safeExternalUrl(fd.get('site')),lat:fd.get('lat').trim(),lon:fd.get('lon').trim(),reason:fd.get('reason').trim(),author:p.email,authorName:p.name,date:new Date().toISOString()}; var isAdm=roleOf(p)==='admin', stEl=document.getElementById('newPlaceStatus'), rnd=Date.now()+'_'+Math.random().toString(16).slice(2);
       var geo=null; if(payload.lat==='' || payload.lon===''){ geo=await provGeocode([payload.address,payload.cp,payload.commune,'France'].filter(Boolean).join(', ')); } var row={id:(isAdm?'place_':'pending_')+rnd,name:payload.name,activity:payload.activity,address:payload.address,cp:(payload.cp||(geo&&geo.cp)||''),commune:(payload.commune||(geo&&geo.commune)||''),site:payload.site||null,lat:payload.lat!==''?Number(payload.lat):(geo?geo.lat:null),lon:payload.lon!==''?Number(payload.lon):(geo?geo.lon:null),reason:payload.reason||null,author:isAdm?null:p.email,author_name:p.name||String(p.email||'').split('@')[0],status:isAdm?'approved':'pending',approved_at:isAdm?new Date().toISOString():null,access:readAccess(fd)};
       var ins=await supabaseClient.from('hilia_places').insert(row);
       if(ins.error){ console.error('Enregistrement du lieu impossible',ins.error); stEl.textContent='Impossible d’enregistrer le lieu : '+ins.error.message; return; }
@@ -2284,7 +2287,13 @@
       + '<p class="audio-note">Lecture à voix de synthèse, générée à partir des informations de cette fiche.</p></div>';
     html += '<span class="d-tag" style="background:'+color+';color:'+contrastText(color)+'">'+escapeHtml(ACTIVITES[r[F.ACT]])+'</span><br>';
     if(r[F.SITE]) html += '<a class="d-link" href="'+escapeAttr(safeExternalUrl(r[F.SITE]))+'" target="_blank" rel="noopener noreferrer" title="Voir le site de '+escapeAttr(r[F.NOM])+' (nouvelle fenêtre)">'+icon('link')+' Voir le site du lieu<span class="sr-only"> '+escapeHtml(r[F.NOM])+' (s’ouvre dans une nouvelle fenêtre)</span></a>';
-    if(profileState && roleOf(profileState)==='admin'){ var remotePlace=getApprovedPlaces().find(function(p){return p.name===r[F.NOM] && p.address===r[F.ADR] && p.cp===r[F.CP] && p.activity===ACTIVITES[r[F.ACT]];}); if(remotePlace && remotePlace.id) html += '<div class="detail-contrib-actions"><button type="button" class="detail-action-btn" id="copyPlaceLinkBtn">Copier le lien de cette fiche</button><button type="button" class="detail-action-btn" id="deletePlaceBtn" data-place-id="'+escapeAttr(remotePlace.id)+'" style="color:#8C2C24;border-color:#E2AAA4">Supprimer ce lieu</button></div>'; }
+    if(profileState && roleOf(profileState)==='admin'){
+      var remotePlace=null;
+      if(r._hiliaPlaceId){ remotePlace=getApprovedPlaces().find(function(p){return String(p.id)===String(r._hiliaPlaceId);})||null; }
+      // Compatibilité avec les fiches déjà en cache avant l’ajout de _hiliaPlaceId.
+      if(!remotePlace){ remotePlace=getApprovedPlaces().find(function(p){return normalize(p.name)===normalize(r[F.NOM]) && normalize(p.address)===normalize(r[F.ADR]) && String(p.cp||'').trim()===String(r[F.CP]||'').trim() && normalize(p.activity)===normalize(ACTIVITES[r[F.ACT]]);})||null; }
+      if(remotePlace && remotePlace.id) html += '<div class="detail-contrib-actions"><button type="button" class="detail-action-btn" id="copyPlaceLinkBtn">Copier le lien de cette fiche</button><button type="button" class="detail-action-btn" id="deletePlaceBtn" data-place-id="'+escapeAttr(remotePlace.id)+'" style="color:#8C2C24;border-color:#E2AAA4">Supprimer ce lieu</button></div>';
+    }
 
     var labels = parseListField(r[F.LABELS]);
     var familles = parseListField(r[F.FAMILLES]).map(function(f){ return FAMILLE_LABELS[f]||f; });
@@ -2646,7 +2655,7 @@
       b.disabled=true;
       var geo=await provGeocode(s.address);
       if(!cp&&geo) cp=geo.cp; if(!com&&geo) com=geo.commune;
-      var name=(s.structure_name===s.activity_name||normalize(s.activity_name).indexOf(normalize(s.structure_name))>-1)?s.activity_name:s.structure_name+' — '+s.activity_name;
+      var name=(s.structure_name===s.activity_name||normalize(s.activity_name).indexOf(normalize(s.structure_name))>-1)?s.activity_name:(s.structure_name+' '+s.activity_name).replace(/[\u2014\u2013]/g,' ').replace(/\s+/g,' ').trim();
       var row={id:'place_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),name:name,activity:act,address:s.address,cp:cp,commune:com||'Commune à préciser',
         site:s.website||null,lat:geo?geo.lat:null,lon:geo?geo.lon:null,reason:null,author:null,author_name:s.structure_name,status:'approved',
         approved_at:new Date().toISOString(),access:provBuildAccess(s),qualif:provBuildQualif(s)};
