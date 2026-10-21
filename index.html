@@ -719,6 +719,16 @@
     margin: 0 !important;
   }
 
+
+  /* Notifications globales : visibles au-dessus des fiches, modales et navigation */
+  #hilToast{position:fixed;z-index:2147483000;top:calc(env(safe-area-inset-top,0px) + 16px);right:18px;width:min(420px,calc(100vw - 32px));padding:14px 16px;border-radius:14px;background:#064647;color:#fff;box-shadow:0 12px 38px rgba(0,0,0,.25);font-size:.94rem;line-height:1.45;font-weight:600;display:flex;gap:12px;align-items:flex-start;opacity:0;transform:translateY(-10px);pointer-events:none;transition:opacity .18s ease,transform .18s ease;}
+  #hilToast.is-visible{opacity:1;transform:translateY(0);pointer-events:auto}
+  #hilToast[data-kind="error"]{background:#8b2525;color:#fff}
+  #hilToast[data-kind="success"]{background:#075e43;color:#fff}
+  #hilToast[data-kind="info"]{background:#183a3a;color:#fff}
+  #hilToast button{margin-left:auto;flex:0 0 auto;border:0;background:transparent;color:inherit;font-size:1.2rem;line-height:1;cursor:pointer;padding:0 0 0 8px}
+  @media(max-width:600px){#hilToast{top:calc(env(safe-area-inset-top,0px) + 10px);right:10px;width:calc(100vw - 20px);}}
+
 </style>
 </head>
 <body>
@@ -727,6 +737,7 @@
     <a class="skip-link" href="#resultsHeading">Aller aux résultats</a>
   </div>
   <div id="liveRegion" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="hilToast" role="status" aria-live="polite" aria-atomic="true" data-kind="info"><span id="hilToastText"></span><button type="button" id="hilToastClose" aria-label="Fermer la notification">×</button></div>
   <noscript><p class="noscript-msg">HILIA nécessite JavaScript pour afficher la recherche, les filtres et la carte. Activez JavaScript dans votre navigateur ou contactez-nous pour obtenir les informations d’accessibilité d’un lieu.</p></noscript>
 
 <datalist id="communesList"></datalist>
@@ -1292,8 +1303,19 @@
   function hexToRgb(h){ h=h.replace('#',''); return [parseInt(h.substr(0,2),16),parseInt(h.substr(2,2),16),parseInt(h.substr(4,2),16)]; }
   function relLum(rgb){ var c=rgb.map(function(v){ v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4); }); return 0.2126*c[0]+0.7152*c[1]+0.0722*c[2]; }
   function contrastText(bg){ var L=relLum(hexToRgb(bg)), dark='#10302F'; var cw=1.05/(L+0.05), cd=(L+0.05)/(relLum(hexToRgb(dark))+0.05); return cw>=cd ? '#FFFFFF' : dark; }
-  var liveEl=document.getElementById('liveRegion'), liveTimer=null;
-  function announce(msg, delay){ if(!liveEl) return; clearTimeout(liveTimer); liveTimer=setTimeout(function(){ liveEl.textContent=''; setTimeout(function(){ liveEl.textContent=msg; },40); }, delay==null?300:delay); }
+  var liveEl=document.getElementById('liveRegion'), liveTimer=null, toastTimer=null;
+  var toastEl=document.getElementById('hilToast'), toastText=document.getElementById('hilToastText');
+  function hideToast(){ if(toastEl) toastEl.classList.remove('is-visible'); if(toastTimer) clearTimeout(toastTimer); }
+  var toastClose=document.getElementById('hilToastClose'); if(toastClose) toastClose.addEventListener('click',hideToast);
+  function announce(msg, delay){
+    msg=String(msg==null?'':msg).trim(); if(!msg) return;
+    if(liveEl){ clearTimeout(liveTimer); liveTimer=setTimeout(function(){ liveEl.textContent=''; setTimeout(function(){ liveEl.textContent=msg; },40); }, delay==null?100:Math.max(0,Math.min(delay,250))); }
+    if(toastEl && toastText){
+      var kind=/impossible|erreur|échec|échoué|incorrect|invalide|réservée|trop court|minimum|manque|confirmez|vérifiez|ne se charge pas/i.test(msg)?'error':(/réussi|réussie|publié|publiée|enregistré|enregistrée|envoyée|transmise|supprimé|supprimée|retiré|retirée|déconnecté|copié|validé|validée|refusé|refusée|terminée|réinitialisés/i.test(msg)?'success':'info');
+      toastEl.dataset.kind=kind; toastText.textContent=msg; toastEl.classList.add('is-visible');
+      if(toastTimer) clearTimeout(toastTimer); toastTimer=setTimeout(hideToast,kind==='error'?8000:5500);
+    }
+  }
 
   // ---------- Illustration SVGs (one per template, flat & consistent) ----------
   function illustrationSVG(key){
@@ -2024,9 +2046,9 @@
           if(result.data.session){
             profileState={id:result.data.user.id,name:name,email:email,role:'user'};
             localStorage.setItem(PROFILE_KEY,JSON.stringify(profileState));
-            if(status) status.textContent='Compte créé et connecté. Vous pouvez maintenant publier des avis.';
+            if(status) status.textContent='Compte créé et connecté. Vous pouvez maintenant publier des avis.'; announce('Compte créé et connexion réussie. Vous pouvez maintenant publier des avis.');
           }else{
-            if(status) status.textContent='Compte créé. Consultez votre boîte e-mail pour confirmer votre adresse, puis connectez-vous.';
+            if(status) status.textContent='Compte créé. Consultez votre boîte e-mail pour confirmer votre adresse, puis connectez-vous.'; announce('Compte créé. Consultez votre boîte e-mail pour confirmer votre adresse avant de vous connecter.');
           }
         }else{
           result=await supabaseClient.auth.signInWithPassword({email:email,password:password});
@@ -2035,7 +2057,7 @@
           var assignedRole = await fetchSupabaseRole(user.id);
           profileState={id:user.id,name:meta.display_name||email.split('@')[0],email:user.email,role:assignedRole};
           localStorage.setItem(PROFILE_KEY,JSON.stringify(profileState));
-          if(status) status.textContent='Connexion réussie.';
+          if(status) status.textContent='Connexion réussie.'; announce('Connexion réussie. Bienvenue sur HILIA.');
         }
         if(profileState){ if(await loadRemoteContent()) return; await loadRemoteSuggestions(); renderProfilePage(); await loadRemoteReviews(); refreshReviewMinis(); }
       }catch(err){
@@ -2047,7 +2069,7 @@
         else if(/rate limit|too many|over_email_send_rate_limit/i.test(msg)) msg='Trop de tentatives. Patientez quelques minutes avant de réessayer.';
         else if(/invalid.*email|unable to validate email/i.test(msg)) msg='Cette adresse e-mail n’est pas valide.';
         else if(/failed to fetch|network/i.test(msg)) msg='Connexion impossible. Vérifiez votre réseau puis réessayez.';
-        if(status) status.textContent=msg;
+        if(status) status.textContent=msg; announce(msg);
       }finally{ submit.disabled=false; }
     });
   }
@@ -2057,9 +2079,9 @@
     if(!supabaseClient) return;
     var status=document.getElementById('profileFormStatus');
     try{ var result=await supabaseClient.auth.signOut(); if(result.error) throw result.error; }
-    catch(err){ if(status) status.textContent='Impossible de se déconnecter pour le moment.'; return; }
+    catch(err){ if(status) status.textContent='Impossible de se déconnecter pour le moment.'; announce('Impossible de se déconnecter pour le moment. Réessayez.'); return; }
     profileState=null; localStorage.removeItem(PROFILE_KEY); localStorage.removeItem(PENDING_PLACES_KEY); localStorage.removeItem(SUGGESTIONS_KEY); renderProfilePage();
-    if(status) status.textContent='Vous êtes déconnecté.';
+    if(status) status.textContent='Vous êtes déconnecté.'; announce('Vous êtes déconnecté de votre compte HILIA.');
   });
 
   async function restoreSupabaseSession(){
@@ -2222,7 +2244,7 @@
     detailContent.querySelectorAll('[data-delete-review]').forEach(function(btn){ btn.addEventListener('click',async function(){ btn.disabled=true; try{ if(await removeReview(parseInt(btn.dataset.deleteReview,10),btn.dataset.reviewEmail,btn.dataset.reviewDate)){ openDetail(di,true); renderProfilePage(); refreshReviewMinis(); announce('Avis retiré.',150); } }finally{btn.disabled=false;} }); });
     var loginBtn=detailContent.querySelector('[data-review-login]'); if(loginBtn) loginBtn.addEventListener('click',function(){ closeDetail(); navigatePage('profile'); });
     var suggestBtn=detailContent.querySelector('[data-open-suggestion]'); if(suggestBtn) suggestBtn.addEventListener('click',function(){
-      var holder=document.getElementById('detailSuggestionForm'); if(!holder) return; holder.innerHTML='<form class="inline-form"><div class="field" style="margin-bottom:9px"><label for="suggestionText'+di+'">Votre suggestion</label><textarea id="suggestionText'+di+'" name="text" required maxlength="1200" placeholder="Ex. L’adresse est incorrecte, une rampe a été ajoutée, les sanitaires ne sont plus accessibles…"></textarea></div><button class="small-btn primary" type="submit">Envoyer la suggestion</button><span class="auth-note" style="margin-left:8px">Elle sera revue par un Admin.</span></form>'; var f=holder.querySelector('form'); f.addEventListener('submit',async function(e){e.preventDefault();var v=f.querySelector('textarea').value;if(await saveSuggestion(di,v)){holder.innerHTML='<div class="auth-note" role="status">Merci ! Votre suggestion a été transmise à la modération.</div>';renderAdminArea();}});
+      var holder=document.getElementById('detailSuggestionForm'); if(!holder) return; holder.innerHTML='<form class="inline-form"><div class="field" style="margin-bottom:9px"><label for="suggestionText'+di+'">Votre suggestion</label><textarea id="suggestionText'+di+'" name="text" required maxlength="1200" placeholder="Ex. L’adresse est incorrecte, une rampe a été ajoutée, les sanitaires ne sont plus accessibles…"></textarea></div><button class="small-btn primary" type="submit">Envoyer la suggestion</button><span class="auth-note" style="margin-left:8px">Elle sera revue par un Admin.</span></form>'; var f=holder.querySelector('form'); f.addEventListener('submit',async function(e){e.preventDefault();var v=f.querySelector('textarea').value;if(await saveSuggestion(di,v)){holder.innerHTML='<div class="auth-note" role="status">Merci ! Votre suggestion a été transmise à la modération.</div>';announce('Votre suggestion a bien été envoyée à la modération.');renderAdminArea();}});
     });
     var editBtn=detailContent.querySelector('[data-open-edit]'); if(editBtn) editBtn.addEventListener('click',function(){
       var r=DATA[di], holder=document.getElementById('detailEditForm'); if(!holder) return;
@@ -2231,7 +2253,7 @@
         var row={place_id:String(di),name:fd.get('name').trim(),address:fd.get('address').trim(),cp:fd.get('cp').trim(),commune:fd.get('commune').trim(),activity:fd.get('activity'),site:safeExternalUrl(fd.get('site')),access:readAccess(fd),updated_at:new Date().toISOString()};
         var r=await supabaseClient.from('hilia_place_edits').upsert(row,{onConflict:'place_id'});
         if(r.error){ console.error('Modification impossible',r.error); announce('Impossible d’enregistrer la modification : '+r.error.message,0); return; }
-        await loadRemoteContent(); location.reload();});
+        await loadRemoteContent(); announce('Les modifications ont bien été enregistrées.'); location.reload();});
     });
   }
   function refreshReviewMinis(){ document.querySelectorAll('[data-review-mini-index]').forEach(function(el){ el.innerHTML=reviewSummaryHtml(parseInt(el.dataset.reviewMiniIndex,10),'mini'); }); }
