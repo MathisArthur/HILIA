@@ -167,8 +167,8 @@
   .map-legend{padding:12px 16px; border-top:1px solid var(--line); background:var(--paper); display:flex; gap:14px; flex-wrap:wrap; font-size:.78rem; color:var(--muted);}
   .map-legend span{display:inline-flex; align-items:center; gap:6px; cursor:default;}
   .map-legend i{width:10px; height:10px; border-radius:50%; display:inline-block; border:1px solid rgba(6,70,71,.25);}
-  .hilia-pin{width:22px; height:22px; border-radius:50% 50% 50% 0; border:2px solid #fff; background:var(--teal)!important; box-shadow:0 2px 8px rgba(24,58,58,.28); transform:rotate(-45deg);}
-  .hilia-pin i{display:block; width:8px; height:8px; margin:5px; border-radius:50%; background:var(--amber)!important; transform:rotate(45deg); box-shadow:0 0 0 2px rgba(255,255,255,.55);}
+  .hilia-pin{width:22px; height:22px; border-radius:50% 50% 50% 0; border:2px solid #fff; background:var(--pin-color,#064647)!important; box-shadow:0 2px 8px rgba(24,58,58,.28); transform:rotate(-45deg);}
+  .hilia-pin i{display:block; width:8px; height:8px; margin:5px; border-radius:50%; background:#fff!important; transform:rotate(45deg); box-shadow:0 0 0 2px rgba(255,255,255,.55);}
   .hilia-cluster{background:var(--teal); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-family:"RocaOne","Archivo",sans-serif; font-weight:800; font-size:.78rem; border:3px solid #fff; box-shadow:0 2px 10px rgba(24,58,58,.24);}
   .leaflet-popup-content-wrapper{border-radius:14px; border:1px solid var(--line-strong);}
   .leaflet-popup-tip{background:var(--paper);}
@@ -321,8 +321,10 @@
   .leaflet-pane,.leaflet-control-container{z-index:1;}
   .leaflet-popup-pane{z-index:8;}
   .map-hint,.map-locate,.map-brandmark,.map-attribution{z-index:20;}
-  .overlay-bg{z-index:900;}
-  .detail{z-index:910;}
+  .overlay-bg{z-index:900;backdrop-filter:blur(2px);}
+  .detail{z-index:910;isolation:isolate;overscroll-behavior:contain;}
+  body.modal-open .overlay-bg.open{position:fixed;}
+  body.modal-open .detail.open{will-change:transform;}
   .drawer-scrim{z-index:920;}
   .drawer{z-index:930;}
   .site-page{display:none;max-width:1280px;margin:0 auto;padding:42px 20px 72px;}
@@ -1120,7 +1122,7 @@
     return Array.from(new Uint8Array(digest)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
   }
 
-  function normalize(s){ if(!s) return ""; return s.toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+  function normalize(s){ if(!s) return ""; return s.toString().replace(/[\u2010-\u2015\u2212]/g,' ').replace(/\s+/g,' ').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 
   // ---------- Category -> illustration template mapping ----------
   var CATEGORY_TEMPLATE = {
@@ -1150,9 +1152,9 @@
   function getTemplate(name){ return CATEGORY_TEMPLATE[name] || "general"; }
 
   var TEMPLATE_COLOR = {
-    sport_salle:"#064647", stade_exterieur:"#D99818", piscine:"#1F7470", bibliotheque:"#356866",
-    musee_art:"#526C67", spectacle:"#0E5C5D", nature:"#3F6E65", tourisme:"#C28C16",
-    loisirs_creatifs:"#D4A13A", convivialite:"#1B5D5B", montagne:"#4A6B61", general:"#064647"
+    sport_salle:"#006D77", stade_exterieur:"#D1495B", piscine:"#0077B6", bibliotheque:"#6A4C93",
+    musee_art:"#8F5D00", spectacle:"#C2185B", nature:"#2A7F3F", tourisme:"#5B5F97",
+    loisirs_creatifs:"#E76F00", convivialite:"#00897B", montagne:"#5C677D", general:"#344054"
   };
   var TEMPLATE_LABEL = {
     sport_salle:"Sport en salle", stade_exterieur:"Sport extérieur & stade", piscine:"Piscine & baignade",
@@ -2011,8 +2013,8 @@
     box.innerHTML=html;
     var form=document.getElementById('newPlaceForm');
     if(form) form.addEventListener('submit',async function(e){
-      e.preventDefault(); var fd=new FormData(form); var latValue=fd.get('lat').trim(), lonValue=fd.get('lon').trim(); if(latValue!=='' && (!isFinite(Number(latValue)) || Number(latValue)<-90 || Number(latValue)>90)){document.getElementById('newPlaceStatus').textContent='Latitude invalide.';return;} if(lonValue!=='' && (!isFinite(Number(lonValue)) || Number(lonValue)<-180 || Number(lonValue)>180)){document.getElementById('newPlaceStatus').textContent='Longitude invalide.';return;} var payload={id:'place_'+Date.now(),name:fd.get('name').trim(),activity:fd.get('activity'),address:fd.get('address').trim(),cp:fd.get('cp').trim(),commune:fd.get('commune').trim(),site:safeExternalUrl(fd.get('site')),lat:fd.get('lat').trim(),lon:fd.get('lon').trim(),reason:fd.get('reason').trim(),author:p.email,authorName:p.name,date:new Date().toISOString()}; var isAdm=roleOf(p)==='admin', stEl=document.getElementById('newPlaceStatus'), rnd=Date.now()+'_'+Math.random().toString(16).slice(2);
-      var row={id:(isAdm?'place_':'pending_')+rnd,name:payload.name,activity:payload.activity,address:payload.address,cp:payload.cp,commune:payload.commune,site:payload.site||null,lat:payload.lat===''?null:Number(payload.lat),lon:payload.lon===''?null:Number(payload.lon),reason:payload.reason||null,author:isAdm?null:p.email,author_name:p.name||String(p.email||'').split('@')[0],status:isAdm?'approved':'pending',approved_at:isAdm?new Date().toISOString():null,access:readAccess(fd)};
+      e.preventDefault(); var fd=new FormData(form); var latValue=fd.get('lat').trim(), lonValue=fd.get('lon').trim(); if(latValue!=='' && (!isFinite(Number(latValue)) || Number(latValue)<-90 || Number(latValue)>90)){document.getElementById('newPlaceStatus').textContent='Latitude invalide.';return;} if(lonValue!=='' && (!isFinite(Number(lonValue)) || Number(lonValue)<-180 || Number(lonValue)>180)){document.getElementById('newPlaceStatus').textContent='Longitude invalide.';return;} var payload={id:'place_'+Date.now(),name:fd.get('name').replace(/\s+/g,' ').trim(),activity:fd.get('activity'),address:fd.get('address').trim(),cp:fd.get('cp').trim(),commune:fd.get('commune').trim(),site:safeExternalUrl(fd.get('site')),lat:fd.get('lat').trim(),lon:fd.get('lon').trim(),reason:fd.get('reason').trim(),author:p.email,authorName:p.name,date:new Date().toISOString()}; var isAdm=roleOf(p)==='admin', stEl=document.getElementById('newPlaceStatus'), rnd=Date.now()+'_'+Math.random().toString(16).slice(2);
+      var geo=null; if(payload.lat==='' || payload.lon===''){ geo=await provGeocode([payload.address,payload.cp,payload.commune,'France'].filter(Boolean).join(', ')); } var row={id:(isAdm?'place_':'pending_')+rnd,name:payload.name,activity:payload.activity,address:payload.address,cp:(payload.cp||(geo&&geo.cp)||''),commune:(payload.commune||(geo&&geo.commune)||''),site:payload.site||null,lat:payload.lat!==''?Number(payload.lat):(geo?geo.lat:null),lon:payload.lon!==''?Number(payload.lon):(geo?geo.lon:null),reason:payload.reason||null,author:isAdm?null:p.email,author_name:p.name||String(p.email||'').split('@')[0],status:isAdm?'approved':'pending',approved_at:isAdm?new Date().toISOString():null,access:readAccess(fd)};
       var ins=await supabaseClient.from('hilia_places').insert(row);
       if(ins.error){ console.error('Enregistrement du lieu impossible',ins.error); stEl.textContent='Impossible d’enregistrer le lieu : '+ins.error.message; return; }
       if(isAdm){ stEl.textContent='Lieu ajouté à l’annuaire.'; await loadRemoteContent(); location.reload(); }
@@ -2252,6 +2254,18 @@
   })();
   window.addEventListener('pagehide',function(){ AudioDesc.stop(true); });
 
+  function makePlaceSlug(r){
+    var base=String(r[F.NOM]||'lieu').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+    var remote=getApprovedPlaces().find(function(p){return p.name===r[F.NOM] && p.address===r[F.ADR] && p.cp===r[F.CP] && p.activity===ACTIVITES[r[F.ACT]];});
+    var id=remote&&remote.id?String(remote.id):String(r[F.CP]||'')+'-'+String(r[F.COM]!=null?COMMUNES[r[F.COM]]:'');
+    id=id.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+    return (base||'lieu')+'-'+(id||'fiche');
+  }
+  function openPlaceFromSlug(slug){
+    var idx=DATA.findIndex(function(r){return makePlaceSlug(r)===slug;});
+    if(idx>=0){ navigatePage('explore',false); setListTab(); openDetail(idx,true); return true; }
+    return false;
+  }
   function openDetail(di, keepOpen){
     AudioDesc.stop(true);
     var trigger = document.activeElement;
@@ -2270,6 +2284,7 @@
       + '<p class="audio-note">Lecture à voix de synthèse, générée à partir des informations de cette fiche.</p></div>';
     html += '<span class="d-tag" style="background:'+color+';color:'+contrastText(color)+'">'+escapeHtml(ACTIVITES[r[F.ACT]])+'</span><br>';
     if(r[F.SITE]) html += '<a class="d-link" href="'+escapeAttr(safeExternalUrl(r[F.SITE]))+'" target="_blank" rel="noopener noreferrer" title="Voir le site de '+escapeAttr(r[F.NOM])+' (nouvelle fenêtre)">'+icon('link')+' Voir le site du lieu<span class="sr-only"> '+escapeHtml(r[F.NOM])+' (s’ouvre dans une nouvelle fenêtre)</span></a>';
+    if(profileState && roleOf(profileState)==='admin'){ var remotePlace=getApprovedPlaces().find(function(p){return p.name===r[F.NOM] && p.address===r[F.ADR] && p.cp===r[F.CP] && p.activity===ACTIVITES[r[F.ACT]];}); if(remotePlace && remotePlace.id) html += '<div class="detail-contrib-actions"><button type="button" class="detail-action-btn" id="copyPlaceLinkBtn">Copier le lien de cette fiche</button><button type="button" class="detail-action-btn" id="deletePlaceBtn" data-place-id="'+escapeAttr(remotePlace.id)+'" style="color:#8C2C24;border-color:#E2AAA4">Supprimer ce lieu</button></div>'; }
 
     var labels = parseListField(r[F.LABELS]);
     var familles = parseListField(r[F.FAMILLES]).map(function(f){ return FAMILLE_LABELS[f]||f; });
@@ -2322,6 +2337,20 @@
     html += reviewsHtml(di);
 
     detailContent.innerHTML = html;
+    // URL partageable par lieu : hash stable basé sur un slug lisible + identifiant.
+    var slug = makePlaceSlug(r);
+    if(history && history.replaceState){ history.replaceState({page:'explore',place:slug},'',location.pathname+location.search+'#lieu/'+slug); }
+    var copyLinkBtn=detailContent.querySelector('#copyPlaceLinkBtn');
+    if(copyLinkBtn) copyLinkBtn.addEventListener('click',function(){ var url=location.href; if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(url).then(function(){announce('Lien de la fiche copié.',100);}).catch(function(){prompt('Copiez le lien de cette fiche :',url);}); } else prompt('Copiez le lien de cette fiche :',url); });
+    var deleteBtn=detailContent.querySelector('#deletePlaceBtn');
+    if(deleteBtn) deleteBtn.addEventListener('click',async function(){
+      if(!profileState || roleOf(profileState)!=='admin'){ announce('Action réservée aux administrateurs.',0); return; }
+      if(!confirm('Supprimer définitivement « '+r[F.NOM]+' » ? Cette action est irréversible.')) return;
+      deleteBtn.disabled=true;
+      var del=await supabaseClient.from('hilia_places').delete().eq('id',deleteBtn.dataset.placeId);
+      if(del.error){ deleteBtn.disabled=false; announce('Suppression impossible : '+del.error.message,0); return; }
+      await loadRemoteContent(); closeDetail(); location.hash=''; location.reload();
+    });
     var wasOpen = overlayBg.classList.contains('open');
     if(!wasOpen){ modalFocusReturn = trigger; detailPanel.scrollTop = 0; }
     overlayBg.classList.add('open'); detailPanel.classList.add('open');
@@ -2330,7 +2359,7 @@
     if(keepOpen && wasOpen){ var rh = detailContent.querySelector('#reviewsHeading'); if(rh) rh.focus(); }
     else activateModal(detailPanel);
   }
-  function closeDetail(){ if(typeof AudioDesc!=='undefined') AudioDesc.stop(true); overlayBg.classList.remove('open'); detailPanel.classList.remove('open'); if(!drawer.classList.contains('open')) syncModalLock(); }
+  function closeDetail(){ if(typeof AudioDesc!=='undefined') AudioDesc.stop(true); overlayBg.classList.remove('open'); detailPanel.classList.remove('open'); if(location.hash.indexOf('#lieu/')===0){ history.replaceState({page:'explore'},'',location.pathname+location.search); } if(!drawer.classList.contains('open')) syncModalLock(); }
   document.getElementById('detailClose').addEventListener('click', closeDetail);
   overlayBg.addEventListener('click', closeDetail);
   document.addEventListener('keydown', function(e){ if(e.key==='Escape'){ closeDetail(); closeDrawer(); } });
@@ -2679,7 +2708,8 @@
     if(id==='resultsHeading' && currentPage!=='explore') t=document.getElementById('siteMain');
     t.scrollIntoView({block:'start'}); t.focus({preventScroll:true});
   }); });
-  window.addEventListener('popstate',function(){ navigatePage((location.hash||'').replace('#','')||'explore',false); });
+  window.addEventListener('popstate',function(){ var h=location.hash||''; if(h.indexOf('#lieu/')===0){ if(!openPlaceFromSlug(decodeURIComponent(h.slice(6)))) navigatePage('explore',false); return; } navigatePage(h.replace('#','')||'explore',false); });
+  window.addEventListener('hashchange',function(){ var h=location.hash||''; if(h.indexOf('#lieu/')===0) openPlaceFromSlug(decodeURIComponent(h.slice(6))); });
   window.addEventListener('resize',syncChromeOffset);
   syncChromeOffset();
 
@@ -2781,7 +2811,7 @@
   refresh();
   initialized = true;
   restoreSupabaseSession();
-  var initialPage=(location.hash||'').replace('#',''); if(['about','faq','prestataires','profile','legal','privacy','cgu','cookies','contact','accessibility','sitemap'].indexOf(initialPage)!==-1) navigatePage(initialPage,false);
+  var initialHash=location.hash||''; if(initialHash.indexOf('#lieu/')===0){ var initialSlug=decodeURIComponent(initialHash.slice(6)); setTimeout(function(){openPlaceFromSlug(initialSlug);},0); } else { var initialPage=initialHash.replace('#',''); if(['about','faq','prestataires','profile','legal','privacy','cgu','cookies','contact','accessibility','sitemap'].indexOf(initialPage)!==-1) navigatePage(initialPage,false); }
 })();
 </script>
 </body>
