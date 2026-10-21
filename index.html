@@ -868,6 +868,7 @@
       <div class="field"><label for="profileEmail">E-mail</label><input id="profileEmail" required aria-required="true" type="email" autocomplete="email" placeholder="vous@exemple.fr" aria-describedby="profileFormStatus"></div>
       <div class="field"><label for="profilePassword">Mot de passe</label><div class="password-wrap"><input id="profilePassword" required aria-required="true" type="password" minlength="6" autocomplete="current-password" aria-describedby="profilePwHint profileFormStatus"><button type="button" class="password-toggle" id="profilePasswordToggle" aria-controls="profilePassword" aria-pressed="false">Afficher le mot de passe</button></div><span class="hint" id="profilePwHint">6 caractères minimum.</span></div>
       <button class="primary-btn" id="profileSubmitBtn" type="submit">Se connecter</button>
+      <button class="secondary-btn" id="forgotPasswordBtn" type="button" style="width:100%;margin-top:10px">Mot de passe oublié ?</button>
       <p class="auth-note">Les comptes, les avis et les contributions sont enregistrés dans Supabase.</p>
       <div id="profileFormStatus" class="auth-note" role="alert" aria-live="assertive" aria-atomic="true"></div>
     </form>
@@ -1313,7 +1314,7 @@
     if(toastEl && toastText){
       var kind=/impossible|erreur|échec|échoué|incorrect|invalide|réservée|trop court|minimum|manque|confirmez|vérifiez|ne se charge pas/i.test(msg)?'error':(/réussi|réussie|publié|publiée|enregistré|enregistrée|envoyée|transmise|supprimé|supprimée|retiré|retirée|déconnecté|copié|validé|validée|refusé|refusée|terminée|réinitialisés/i.test(msg)?'success':'info');
       toastEl.dataset.kind=kind; toastText.textContent=msg; toastEl.classList.add('is-visible');
-      if(toastTimer) clearTimeout(toastTimer); toastTimer=setTimeout(hideToast,kind==='error'?8000:5500);
+      if(toastTimer) clearTimeout(toastTimer); toastTimer=setTimeout(hideToast,kind==='error'?5000:3500);
     }
   }
 
@@ -2034,7 +2035,29 @@
       var password=document.getElementById('profilePassword')?.value||'';
       var status=document.getElementById('profileFormStatus');
       if(!supabaseClient){ profileFormError('Le service de compte ne se charge pas. Vérifiez votre connexion puis rechargez la page.'); return; }
-      if(!email||!password){ profileFormError('Renseignez votre adresse e-mail et votre mot de passe.', !email ? document.getElementById('profileEmail') : document.getElementById('profilePassword')); return; }
+      if(!email){ profileFormError('Renseignez votre adresse e-mail.', document.getElementById('profileEmail')); return; }
+      if(passwordRecoveryMode){
+        if(password.length<6){ profileFormError('Le nouveau mot de passe doit contenir au moins 6 caractères.',document.getElementById('profilePassword')); return; }
+        var recoverySubmit=document.getElementById('profileSubmitBtn'); recoverySubmit.disabled=true;
+        try{
+          var updateResult=await supabaseClient.auth.updateUser({password:password});
+          if(updateResult.error) throw updateResult.error;
+          passwordRecoveryMode=false;
+          if(status) status.textContent='Votre mot de passe a été modifié. Vous pouvez maintenant utiliser ce nouveau mot de passe.';
+          announce('Mot de passe modifié avec succès.');
+          document.getElementById('profilePassword').value='';
+          setProfileMode('login',true);
+          if(forgotPasswordBtn) forgotPasswordBtn.style.display='';
+          var recoveryIntro=document.getElementById('profileFormIntro'); if(recoveryIntro) recoveryIntro.textContent='Votre mot de passe a été modifié. Connectez-vous avec votre nouveau mot de passe.';
+        }catch(err){
+          var recoveryMsg=(err&&err.message)||'Impossible de modifier le mot de passe.';
+          if(/weak password|at least \d+ characters/i.test(recoveryMsg)) recoveryMsg='Le mot de passe doit contenir au moins 6 caractères.';
+          else recoveryMsg='Impossible de modifier le mot de passe. Le lien est peut-être expiré : demandez un nouvel e-mail de réinitialisation.';
+          if(status) status.textContent=recoveryMsg; announce(recoveryMsg);
+        }finally{recoverySubmit.disabled=false;}
+        return;
+      }
+      if(!password){ profileFormError('Renseignez votre mot de passe.',document.getElementById('profilePassword')); return; }
       if(profileAuthMode==='register' && name.length<2){ profileFormError('Indiquez un nom affiché de 2 caractères minimum.', document.getElementById('profileName')); return; }
       if(profileAuthMode==='register' && password.length<6){ profileFormError('Le mot de passe doit contenir au moins 6 caractères.', document.getElementById('profilePassword')); return; }
       var submit=document.getElementById('profileSubmitBtn'); submit.disabled=true;
@@ -2071,6 +2094,52 @@
         else if(/failed to fetch|network/i.test(msg)) msg='Connexion impossible. Vérifiez votre réseau puis réessayez.';
         if(status) status.textContent=msg; announce(msg);
       }finally{ submit.disabled=false; }
+    });
+  }
+
+  // Réinitialisation du mot de passe via le lien sécurisé envoyé par Supabase.
+  var passwordRecoveryMode=false;
+  var forgotPasswordBtn=document.getElementById('forgotPasswordBtn');
+  if(forgotPasswordBtn) forgotPasswordBtn.addEventListener('click', async function(){
+    var email=(document.getElementById('profileEmail')?.value||'').trim().toLowerCase();
+    var status=document.getElementById('profileFormStatus');
+    if(!supabaseClient){ profileFormError('Le service de compte ne se charge pas. Rechargez la page puis réessayez.'); return; }
+    if(!email){ profileFormError('Saisissez votre adresse e-mail, puis cliquez sur « Mot de passe oublié ? ».',document.getElementById('profileEmail')); return; }
+    if(!/^\S+@\S+\.\S+$/.test(email)){ profileFormError('Cette adresse e-mail ne semble pas valide.',document.getElementById('profileEmail')); return; }
+    forgotPasswordBtn.disabled=true;
+    try{
+      var redirectUrl=window.location.origin+window.location.pathname+'#profile';
+      var result=await supabaseClient.auth.resetPasswordForEmail(email,{redirectTo:redirectUrl});
+      if(result.error) throw result.error;
+      var msg='Si un compte correspond à cette adresse, un e-mail de réinitialisation vient d’être envoyé. Consultez aussi vos courriers indésirables.';
+      if(status) status.textContent=msg; announce(msg);
+    }catch(err){
+      var msg=(err&&err.message)||'Impossible d’envoyer l’e-mail de réinitialisation.';
+      if(/rate limit|too many|over_email_send_rate_limit/i.test(msg)) msg='Trop de demandes. Patientez quelques minutes avant de réessayer.';
+      else if(/failed to fetch|network/i.test(msg)) msg='Envoi impossible. Vérifiez votre connexion puis réessayez.';
+      else msg='Impossible d’envoyer l’e-mail de réinitialisation. Vérifiez la configuration e-mail de Supabase puis réessayez.';
+      if(status) status.textContent=msg; announce(msg);
+    }finally{forgotPasswordBtn.disabled=false;}
+  });
+
+  if(supabaseClient && supabaseClient.auth && supabaseClient.auth.onAuthStateChange){
+    supabaseClient.auth.onAuthStateChange(function(event){
+      if(event==='PASSWORD_RECOVERY'){
+        passwordRecoveryMode=true;
+        setProfileMode('login',true);
+        var title=document.getElementById('profileFormTitle');
+        var intro=document.getElementById('profileFormIntro');
+        var password=document.getElementById('profilePassword');
+        var submit=document.getElementById('profileSubmitBtn');
+        var status=document.getElementById('profileFormStatus');
+        if(title) title.textContent='Choisir un nouveau mot de passe';
+        if(intro) intro.textContent='Saisissez le nouveau mot de passe de votre compte HILIA.';
+        if(password){password.value='';password.setAttribute('autocomplete','new-password');password.setAttribute('placeholder','Nouveau mot de passe');password.focus();}
+        if(submit) submit.textContent='Enregistrer le nouveau mot de passe';
+        if(forgotPasswordBtn) forgotPasswordBtn.style.display='none';
+        if(status) status.textContent='Lien de réinitialisation validé. Choisissez un nouveau mot de passe.';
+        announce('Lien validé. Saisissez votre nouveau mot de passe.');
+      }
     });
   }
 
