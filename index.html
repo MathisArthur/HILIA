@@ -611,6 +611,47 @@
   .admin-item .prov-extra{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
   .admin-item .prov-extra label{font-size:.78rem;font-weight:650;display:flex;flex-direction:column;gap:2px}
   .admin-item .prov-extra select,.admin-item .prov-extra input{padding:6px 8px;border:1.5px solid var(--line-strong);border-radius:8px;background:var(--paper);color:var(--ink);font:inherit;font-size:.82rem}
+
+  /* Correctifs UI : filtres persistants et fiche détail avec fond opaque */
+  :root{--topnav-height:145px;}
+  .subbar{
+    position:sticky !important;
+    top:var(--topnav-height) !important;
+    z-index:180 !important;
+    background-color:var(--paper, #fffdf8) !important;
+    background-image:none !important;
+    opacity:1;
+  }
+  .subbar-inner{background:transparent;}
+  .overlay-bg.open{
+    position:fixed !important;
+    inset:0 !important;
+    display:block !important;
+    background-color:rgba(6,70,71,.42) !important;
+    z-index:900 !important;
+  }
+  .detail{
+    position:fixed !important;
+    top:0 !important;
+    right:0 !important;
+    bottom:0 !important;
+    height:100vh !important;
+    height:100dvh !important;
+    background-color:var(--paper, #fffdf8) !important;
+    opacity:1 !important;
+    z-index:910 !important;
+    isolation:isolate;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+  }
+  .detail.open{transform:translateX(0) !important;}
+  #detailContent{background-color:var(--paper, #fffdf8); min-height:100%;}
+  @media (max-width:760px){
+    :root{--topnav-height:130px;}
+    .subbar-inner{gap:8px;}
+    .detail{width:100%; padding-left:20px; padding-right:20px;}
+    .detail .d-illus{margin-left:-20px; margin-right:-20px;}
+  }
 </style>
 </head>
 <body>
