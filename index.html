@@ -1125,7 +1125,7 @@
       if(head.error) throw head.error;
       var total=head.count||0;
       if(!total){ raw.data=[]; return finish(true); }
-      var stamp=String(total)+'|'+String((await supabaseClient.from('hilia_places').select('updated_at').eq('status','approved').order('updated_at',{ascending:false}).limit(1)).data?.[0]?.updated_at||'');
+      var stamp=String(total)+'|'+String((await supabaseClient.from('hilia_places').select('updated_at').eq('status','approved').order('updated_at',{ascending:false,nullsFirst:false}).limit(1)).data?.[0]?.updated_at||'');
       var rows=null;
       try{ var cached=await idbGet('places_v2'); if(cached && cached.stamp===stamp && Array.isArray(cached.rows) && cached.rows.length===total) rows=cached.rows; }catch(e){}
       if(!rows){
@@ -1733,7 +1733,7 @@
     if(rDataHasCoords(DATA[vi])) validIdx.push(vi);
   }
 
-  function rDataHasCoords(r){ return r[F.LAT]!=null && r[F.LON]!=null && isFinite(Number(r[F.LAT])) && isFinite(Number(r[F.LON])); }
+  function rDataHasCoords(r){ return r[F.LAT]!=null && r[F.LON]!=null && r[F.LAT]!=='' && r[F.LON]!=='' && isFinite(Number(r[F.LAT])) && isFinite(Number(r[F.LON])); }
 
   function showMapUnavailable(){
     var el=document.getElementById('leafletMap');
@@ -2882,7 +2882,7 @@
       var name=(s.structure_name===s.activity_name||normalize(s.activity_name).indexOf(normalize(s.structure_name))>-1)?s.activity_name:(s.structure_name+' '+s.activity_name).replace(/[\u2014\u2013]/g,' ').replace(/\s+/g,' ').trim();
       var row={id:'place_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),name:name,activity:act,address:s.address,cp:cp,commune:com||'Commune à préciser',
         site:s.website||null,lat:geo?geo.lat:null,lon:geo?geo.lon:null,reason:null,author:null,author_name:s.structure_name,status:'approved',
-        approved_at:new Date().toISOString(),access:provBuildAccess(s),qualif:provBuildQualif(s)};
+        approved_at:new Date().toISOString(),updated_at:new Date().toISOString(),access:provBuildAccess(s),qualif:provBuildQualif(s)};
       var ins=await supabaseClient.from('hilia_places').insert(row), warned=false;
       if(ins.error && /qualif/i.test(ins.error.message)){
         var row2=Object.assign({},row); delete row2.qualif;
