@@ -1,0 +1,15 @@
+# HILIA — rendre le loisir accessible à tous
+# https://www.hilia.fr/
+
+User-agent: *
+Allow: /
+
+# Données servies à l'application (jeu de données des fiches, liste des communes) :
+# utiles au site, sans intérêt pour les moteurs de recherche.
+Disallow: /data/
+
+# Images d’aperçu des fiches : elles doivent rester accessibles aux robots des
+# réseaux sociaux, qui les récupèrent pour les aperçus de partage.
+Allow: /api/og
+
+Sitemap: https://www.hilia.fr/sitemap.xml
