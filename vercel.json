@@ -1,5 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/og.js": {
+      "includeFiles": [
+        "node_modules/satori/yoga.wasm",
+        "node_modules/harfbuzzjs/hb.wasm",
+        "node_modules/harfbuzzjs/hb-subset.wasm",
+        "node_modules/@resvg/**"
+      ]
+    }
+  },
   "rewrites": [
     { "source": "/lieu/:slug", "destination": "/api/place?slug=:slug" },
     { "source": "/a-propos", "destination": "/index.html" },
