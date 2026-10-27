@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "node scripts/dev-server.mjs",
     "data": "node scripts/build-dataset.mjs",
-    "cards": "node scripts/preview-card.mjs"
+    "cards": "node scripts/preview-card.mjs",
+    "check:cards": "node scripts/check-card.mjs"
   },
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2",

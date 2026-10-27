@@ -26,6 +26,7 @@ Supabase**.
 | `scripts/build-dataset.mjs` | Régénère `data/places.json` **et** les sitemaps. |
 | `scripts/dev-server.mjs` | Serveur local qui rejoue les en-têtes, les réécritures et les fonctions de `vercel.json`. |
 | `scripts/preview-card.mjs` | Génère des exemples de cartes de partage, sans déployer. |
+| `scripts/check-card.mjs` | Contrôle que le rendu d'une carte ne lit aucun fichier `.wasm`. |
 | `vercel.json` | Réécritures d'URL, en-têtes de sécurité (CSP, nosniff, frame-ancestors…) et règles de cache. |
 | `404.html` | Page « introuvable » aux couleurs du site. |
 | `robots.txt`, `sitemap.xml` | Directives d'exploration ; `sitemap.xml` est un index vers `sitemap-pages.xml` et `sitemap-lieux-*.xml`. |
@@ -93,7 +94,12 @@ cas, fait échouer la construction de ce projet) : les images sortaient vides ou
 en repli. En 0.32.0, Satori et Yoga embarquent leur WebAssembly dans le
 JavaScript, donc le rendu ne lit plus aucun fichier. Le test est simple :
 bloquer la lecture des `.wasm` et vérifier que la carte se dessine encore.
-Ne pas relever cette version sans refaire ce test.
+
+```bash
+npm run check:cards   # échoue si le rendu tente de lire un .wasm
+```
+
+Ne pas relever cette version sans relancer ce contrôle.
 
 Pour voir le visuel sans déployer (mêmes moteurs et même police que la fonction) :
 
