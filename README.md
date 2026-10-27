@@ -71,9 +71,9 @@ titre et la même image. Deux fonctions s'en chargent :
    canonique, `og:*`, données structurées). Le corps de la page reste servi tel
    quel : l'application prend le relais dans le navigateur.
 2. `og:image` pointe vers `/api/og?s=<slug>`, qui dessine une carte 1200 × 630
-   (nom du lieu, commune, catégorie, trois critères d'accessibilité) avec
-   `@vercel/og`. Si la fiche est introuvable, l'image générique du site est
-   renvoyée : jamais d'aperçu cassé.
+   (nom du lieu, commune, catégorie, trois critères d'accessibilité) avec Satori
+   (mise en page) et Resvg (SVG → PNG). Si la fiche est introuvable ou si le
+   rendu échoue, l'image générique du site est renvoyée : jamais d'aperçu cassé.
 
 Les URL canoniques utilisent toujours `https://www.hilia.fr`, y compris depuis
 une préversion `*.vercel.app` : pas de doublons dans les moteurs de recherche.
@@ -86,10 +86,19 @@ interprété comme un handler Node : l'URL reçue est alors **relative**, et
 Garder la forme `{ fetch }` telle quelle. Les utilitaires vivent dans `lib/`, à
 l'extérieur de `api/` : tout fichier de `api/` devient une fonction séparée.
 
-Pour vérifier le visuel sans déployer (même moteur que `@vercel/og`) :
+**Pourquoi Satori est figé en 0.32.0.** À partir de 0.33, Satori confie la mise
+en forme du texte à `harfbuzzjs`, qui lit son `hb.wasm` sur le disque. Vercel ne
+l'embarque pas dans la fonction (et `functions.includeFiles`, prévu pour ces
+cas, fait échouer la construction de ce projet) : les images sortaient vides ou
+en repli. En 0.32.0, Satori et Yoga embarquent leur WebAssembly dans le
+JavaScript, donc le rendu ne lit plus aucun fichier. Le test est simple :
+bloquer la lecture des `.wasm` et vérifier que la carte se dessine encore.
+Ne pas relever cette version sans refaire ce test.
+
+Pour voir le visuel sans déployer (mêmes moteurs et même police que la fonction) :
 
 ```bash
-npm i --no-save satori @resvg/resvg-js
+npm install
 node scripts/preview-card.mjs   # images dans og-preview/, non versionnées
 ```
 
@@ -197,7 +206,7 @@ deviendra préférable.
 ## Tester en local
 
 ```bash
-npm install        # une seule fois : dépendance @vercel/og (aperçus)
+npm install        # une seule fois : Satori, Resvg (aperçus des fiches)
 node scripts/dev-server.mjs
 ```
 
@@ -208,8 +217,8 @@ du navigateur, et il ne doit y avoir aucune erreur.
 
 - `/lieu/<slug>` passe par `/api/place` comme en production : le titre et
   l'`og:image` de la fiche sont bien ceux de la fiche.
-- `/api/og` ne peut pas dessiner en local (`@vercel/og` dépend de modules
-  WebAssembly fournis par Vercel) : l'image générique est servie à la place. Pour
-  voir une carte réelle, utiliser `scripts/preview-card.mjs`.
+- `/api/og` dessine la carte pour de vrai en local, avec la même police que la
+  fonction en ligne : c'est le rendu de production, avant publication. Pour
+  générer des exemples sans serveur, utiliser `scripts/preview-card.mjs`.
 
 `npx vercel dev` fonctionne aussi, mais demande une connexion à Vercel.
