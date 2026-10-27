@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="shortcut icon" href="/favicon.ico" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<link rel="manifest" href="/site.webmanifest" />
+<title>Déclaration d’accessibilité - HILIA</title>
+  <meta name="description" content="Engagement, état de conformité et voies de recours en matière d’accessibilité numérique.">
+  <meta name="theme-color" content="#064647">
+<meta name="robots" content="index,follow">
+  <meta property="og:site_name" content="HILIA">
+  <meta property="og:title" content="Déclaration d’accessibilité - HILIA">
+  <meta property="og:description" content="Engagement, état de conformité et voies de recours en matière d’accessibilité numérique.">
+  <meta property="og:type" content="website">
+    <meta property="og:locale" content="fr_FR">
+  <meta property="og:image" content="https://www.hilia.fr/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="HILIA - Rendre le loisir accessible à tous">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Déclaration d’accessibilité - HILIA">
+  <meta name="twitter:description" content="Engagement, état de conformité et voies de recours en matière d’accessibilité numérique.">
+  <meta name="twitter:image" content="https://www.hilia.fr/og-image.png">
+  <meta name="twitter:image:alt" content="HILIA - Rendre le loisir accessible à tous">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="preconnect" href="https://unpkg.com" crossorigin>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4" integrity="sha384-GFr3yTh5lJznCbZfpTtXnwboFsxqtTQoeTZCRHhE0579KrRmlCzen5AA8ohaB5ug" crossorigin="anonymous"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Work+Sans:wght@400;500;600;700&family=Gochi+Hand&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css" integrity="sha384-uIZNAcoEHVWMk8LrCSX95DJk6FQzH6zG00LQC9BykRY1UKKpkDzDhbDLYQ1Ho3mI" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.min.css" integrity="sha384-NyCa0nBOjmCqS9HwLKpE7yqy2HVG6PN/cDyAAIdPijDlUH6jCfqX6ydzXFTA/L/l" crossorigin="anonymous">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css" integrity="sha384-uTttxo/aOKbdE5RlD/SPzSDoDmNvGlUYPjONi2MN/b7c9HPSvW07OIuyP7uL6jxK" crossorigin="anonymous">
+<link rel="stylesheet" href="/styles.css">
+  <meta property="og:url" content="https://www.hilia.fr/accessibilite">
+  <link rel="canonical" href="https://www.hilia.fr/accessibilite">
+</head>
+<body>
+  <div class="skip-links">
+    <a class="skip-link" href="#siteMain">Aller au contenu principal</a>
+    <a class="skip-link" href="#resultsHeading">Aller aux résultats</a>
+  </div>
+  <div id="liveRegion" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+  <div id="hilToast" role="status" aria-live="polite" aria-atomic="true" data-kind="info"><span id="hilToastText"></span><button type="button" id="hilToastClose" aria-label="Fermer la notification">×</button></div>
+  <noscript><p class="noscript-msg">HILIA nécessite JavaScript pour afficher la recherche, les filtres et la carte. Activez JavaScript dans votre navigateur ou contactez-nous pour obtenir les informations d’accessibilité d’un lieu.</p></noscript>
+
+<datalist id="communesList"></datalist>
+
+<header class="topnav">
+  <div class="topnav-inner">
+    <a class="brand" href="/" data-nav-target="explore"><img class="brand-logo" alt="HILIA - retour à l’accueil" src="/logo-hilia.png" width="190" height="180"></a>
+    <div class="nav-search" role="search" aria-label="Recherche de lieux">
+      <label class="sr-only" for="searchInput">Rechercher un lieu, une ville ou un code postal</label>
+      <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input id="searchInput" type="search" enterkeyhint="search" placeholder="Un lieu, une ville, un code postal…" autocomplete="off" aria-describedby="searchHelp"><span id="searchHelp" class="sr-only">Les résultats se mettent à jour pendant la saisie.</span>
+    </div>
+    <nav class="topnav-links" aria-label="Navigation principale">
+      <a class="topnav-link active" href="/" data-nav-page="explore" aria-current="page">Explorer</a>
+      <a class="topnav-link" href="/a-propos" data-nav-page="about">À propos</a>
+      <a class="topnav-link" href="/faq" data-nav-page="faq">FAQ</a>
+      <a class="topnav-link" href="/prestataires" data-nav-page="prestataires">Référencer mon activité</a>
+    </nav>
+    <a class="nav-cta" id="profileNavBtn" href="/mon-profil">Mon profil</a>
+    <button class="settings-btn" id="accessibilitySettingsBtn" type="button" aria-haspopup="dialog" aria-controls="accessibilitySettings" aria-expanded="false">Accessibilité</button>
+  </div>
+  <div class="tabbar" id="mainTabbar">
+    <div class="tabbar-inner" role="tablist" aria-label="Affichage des résultats">
+      <button class="tab-btn active" id="tabListBtn" role="tab" aria-selected="true" aria-controls="gridWrap" tabindex="0" type="button"><span aria-hidden="true">☰ </span>Liste</button>
+      <button class="tab-btn" id="tabMapBtn" role="tab" aria-selected="false" aria-controls="mapWrap" tabindex="-1" type="button"><span aria-hidden="true">📍 </span>Carte</button>
+    </div>
+  </div>
+</header>
+
+<main id="siteMain" tabindex="-1">
+  <section id="explorePage">
+<header class="hero">
+  <div class="hero-inner">
+    <h1 class="display">Le loisir accessible,<br><em>partout en France.</em></h1>
+    <span class="tag brand-tagline">Rendre le loisir accessible à tous</span>
+    <p class="lede">Salles de sport, musées, médiathèques, piscines, théâtres&nbsp;: chaque lieu référencé indique ses conditions d'accès réelles - stationnement, cheminement, entrée, accueil, sanitaires - pour sortir sans mauvaise surprise.</p>
+    <div class="stat-strip">
+      <div class="stat-chip"><b id="statTotal">-</b><span>lieux référencés</span></div>
+      <div class="stat-chip"><b id="statCommunes">-</b><span>communes couvertes</span></div>
+      <div class="stat-chip"><b id="statCats">65</b><span>familles d'activités</span></div>
+    </div>
+  </div>
+</header>
+
+<div class="subbar" role="region" aria-label="Filtres rapides">
+  <div class="subbar-inner">
+    <div class="pills" id="pillsRow" role="group" aria-label="Filtrer par famille d’activités"></div>
+    <button class="filter-btn" id="filterBtn" type="button" aria-haspopup="dialog"><span class="dot" id="filterDot" aria-hidden="true"></span>
+      <svg aria-hidden="true" focusable="false" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+      Filtres &amp; tri<span class="sr-only" id="filterCountSr"></span>
+    </button>
+  </div>
+</div>
+
+<h2 class="sr-only" id="resultsHeading" tabindex="-1">Résultats de la recherche</h2>
+<div class="results-line">
+  <div><b id="resultCount">0</b> lieu(x) trouvé(s)</div>
+</div>
+
+<div class="grid-wrap" id="gridWrap" role="tabpanel" aria-labelledby="tabListBtn">
+  <div class="virtual-viewport" id="viewport"></div>
+</div>
+
+<div class="map-wrap" id="mapWrap" role="tabpanel" aria-labelledby="tabMapBtn" hidden>
+  <h2 class="sr-only">Carte des lieux</h2>
+  <div class="map-card">
+    <div class="map-canvas-wrap" id="mapCanvasWrap">
+      <div id="leafletMap" role="region" aria-label="Carte interactive des lieux" aria-describedby="mapHint mapAltText"></div>
+      <p class="sr-only" id="mapAltText">Carte interactive à la souris et au clavier. Tous les lieux affichés sur la carte sont aussi disponibles sous forme de liste, dans l’onglet Liste, plus simple à parcourir avec un lecteur d’écran.</p>
+      <div class="map-hint" id="mapHint">Carte HILIA · molette ou boutons +/− : zoom · glisser ou flèches du clavier : déplacer · Tab puis Entrée sur un point : détails</div>
+      <div class="map-brandmark"><img alt="" src="/logo-hilia.png" width="38" height="36"><span>Rendre le loisir accessible à tous</span></div>
+      <button class="map-locate" id="mapReset" type="button"><span aria-hidden="true">⤾ </span>Vue France entière</button>
+      <div class="map-attribution">OpenFreeMap · OpenStreetMap</div>
+    </div>
+    <ul class="map-legend" id="mapLegend" aria-label="Légende des familles d’activités"></ul>
+    <div class="map-alt"><p>La carte est un complément visuel : tous les lieux sont aussi consultables sous forme de liste, avec les mêmes informations.</p><button type="button" class="secondary-btn" id="mapToListBtn">Voir la liste des lieux</button></div>
+  </div>
+</div>
+
+  </section>
+
+<!-- Additional site pages -->
+<section class="site-page" id="prestatairesPage" data-page="prestataires">
+  <a class="page-back" href="/" data-nav-page="explore">← Retour à l’exploration</a>
+  <div class="page-hero"><h1>Référencer mon activité</h1><p>Prestataires de loisirs : renseignez l’accessibilité de votre lieu et de votre activité. Une trentaine de questions, environ 10 minutes. Cochez uniquement ce qui est vrai : une information fausse est pire qu’une information absente. Les champs marqués d’un astérisque (*) sont obligatoires.</p></div>
+  <div id="provSummary" role="alert" tabindex="-1" hidden></div>
+  <form id="provForm" novalidate></form>
+  <div id="provStatus" aria-live="polite"></div>
+</section>
+
+<section class="site-page" id="aboutPage" data-page="about">
+  <a class="page-back" href="/" data-nav-page="explore">← Retour à l’exploration</a>
+  <div class="page-hero"><h1>À propos de HILIA</h1><p>HILIA a pour objectif de rendre le loisir accessible à tous en permettant de trouver plus facilement des lieux de sortie et de comprendre leurs conditions d’accès avant de se déplacer.</p></div>
+  <div class="page-grid">
+    <article class="page-card"><h2>Pourquoi HILIA ?</h2><p>Une sortie ne devrait pas commencer par des dizaines de recherches pour savoir si l’on pourra entrer, circuler, utiliser les sanitaires ou simplement se garer. HILIA rassemble ces informations dans une même interface, lieu par lieu.</p></article>
+    <article class="page-card"><h2>Une information concrète</h2><p>La fiche de chaque établissement regroupe les informations disponibles sur le stationnement, les cheminements, l’entrée, l’accueil et les sanitaires. Quand une information n’est pas disponible, elle n’est pas affichée.</p></article>
+  </div>
+  <div class="page-card" style="margin-top:18px"><h2>Nos valeurs</h2><div class="value-list"><div class="value-pill"><strong>Confiance</strong><span>Des informations lisibles, sans promettre plus que ce qui est réellement renseigné.</span></div><div class="value-pill"><strong>Inclusion</strong><span>Donner à chacun les moyens de choisir ses loisirs avec davantage de visibilité.</span></div><div class="value-pill"><strong>Plaisir</strong><span>Faire de la recherche d’une sortie une expérience simple et agréable.</span></div></div></div>
+
+  <div class="page-card" style="margin-top:18px"><h2>Les niveaux de profil</h2><p>Les droits augmentent selon le rôle. Les changements proposés ne sont pas publiés automatiquement.</p><p style="margin-top:8px;color:var(--muted);font-size:.82rem">L’Admin garde la main sur la validation des nouvelles fiches, la modification des informations publiques et la modération des avis.</p><div class="role-card-grid"><article class="role-card"><h3>Utilisateur</h3><p>Le rôle de base pour participer à la plateforme.</p><ul class="permission-list"><li>Publier des avis</li><li>Suggérer une modification</li></ul></article><article class="role-card certified"><h3>Utilisateur certifié</h3><p>Profil pouvant contribuer davantage aux données, avec validation.</p><ul class="permission-list"><li>Tout ce que peut faire l’utilisateur</li><li>Proposer de nouveaux lieux</li><li>Propositions soumises à validation Admin</li></ul></article><article class="role-card admin"><h3>Admin</h3><p>Rôle de gestion et de modération de la plateforme.</p><ul class="permission-list"><li>Gérer les fiches</li><li>Valider/refuser les propositions</li><li>Modérer les avis et contributions</li></ul></article></div></div>
+</section>
+
+<section class="site-page" id="faqPage" data-page="faq">
+  <a class="page-back" href="/" data-nav-page="explore">← Retour à l’exploration</a>
+  <div class="page-hero"><h1>Questions fréquentes</h1><p>Les réponses aux principales questions sur HILIA, les données d’accessibilité et les avis.</p></div>
+  <div class="faq-list">
+    <details class="faq-item"><summary>Les informations d’accessibilité sont-elles garanties ?</summary><div class="faq-answer">Non. Les données présentes sur HILIA sont déclaratives et peuvent évoluer. Une information affichée sur une fiche ne remplace pas une vérification auprès du lieu avant une visite.</div></details>
+    <details class="faq-item"><summary>Pourquoi certaines informations sont-elles inconnues ?</summary><div class="faq-answer">Lorsqu’un critère n’est pas renseigné dans les données disponibles, HILIA masque ce critère plutôt que de supposer qu’il est accessible ou non accessible.</div></details>
+    <details class="faq-item"><summary>Comment trouver un lieu précis ?</summary><div class="faq-answer">Utilisez la recherche en haut de l’écran avec le nom du lieu, la commune ou le code postal. Vous pouvez ensuite filtrer par activité ou par critères d’accessibilité.</div></details>
+    <details class="faq-item"><summary>À quoi sert la carte ?</summary><div class="faq-answer">La carte permet de visualiser les lieux géolocalisés, de zoomer sur une zone et d’ouvrir directement la fiche d’un établissement.</div></details>
+    <details class="faq-item"><summary>Comment laisser un avis ?</summary><div class="faq-answer">Ouvrez la fiche d’un lieu, puis la rubrique « Avis ». Une connexion est nécessaire pour publier un avis. Les comptes et les avis sont enregistrés dans Supabase et peuvent être retrouvés depuis différents appareils.</div></details>
+    <details class="faq-item"><summary>HILIA permet-elle déjà de réserver une activité ?</summary><div class="faq-answer">La version actuelle présentée ici est un annuaire de lieux avec recherche, carte, filtres, informations d’accessibilité et avis. La réservation n’est pas incluse dans cette version du prototype.</div></details>
+  </div>
+</section>
+
+<section class="site-page" id="profilePage" data-page="profile">
+  <a class="page-back" href="/" data-nav-page="explore">← Retour à l’exploration</a>
+  <div class="page-hero"><h1>Mon profil</h1><p>Connectez-vous pour retrouver vos avis et participer à la vie des fiches HILIA.</p></div>
+  <div class="auth-layout">
+    <form class="auth-form" id="profileForm" aria-labelledby="profileFormTitle">
+      <div class="auth-switch" role="group" aria-label="Choisir : se connecter ou créer un profil">
+        <button class="auth-mode-btn active" type="button" aria-pressed="true" data-auth-mode="login">Se connecter</button>
+        <button class="auth-mode-btn" type="button" aria-pressed="false" data-auth-mode="register">Créer un profil</button>
+      </div>
+      <h2 id="profileFormTitle" style="color:var(--teal);margin:0 0 6px;font-family:'RocaOne','Archivo',sans-serif">Se connecter</h2>
+      <p id="profileFormIntro" style="margin:0 0 16px;color:var(--muted);font-size:.84rem;line-height:1.5">Connectez-vous à votre compte HILIA pour publier et retrouver vos avis.</p>
+      <div class="field" id="profileNameField"><label for="profileName">Prénom ou nom affiché</label><input id="profileName" autocomplete="name" placeholder="Votre prénom" aria-describedby="profileFormStatus"></div>
+      <div class="field" id="profileEmailField"><label for="profileEmail">E-mail</label><input id="profileEmail" required aria-required="true" type="email" autocomplete="email" placeholder="vous@exemple.fr" aria-describedby="profileFormStatus"></div>
+      <div class="field"><label for="profilePassword">Mot de passe</label><div class="password-wrap"><input id="profilePassword" required aria-required="true" type="password" minlength="6" autocomplete="current-password" aria-describedby="profilePwHint profileFormStatus"><button type="button" class="password-toggle" id="profilePasswordToggle" aria-controls="profilePassword" aria-pressed="false">Afficher le mot de passe</button></div><span class="hint" id="profilePwHint">6 caractères minimum.</span></div>
+      <button class="primary-btn" id="profileSubmitBtn" type="submit">Se connecter</button>
+      <button class="secondary-btn" id="forgotPasswordBtn" type="button" style="width:100%;margin-top:10px">Mot de passe oublié ?</button>
+      <p class="auth-note">Les comptes, les avis et les contributions sont enregistrés dans Supabase.</p>
+      <div id="profileFormStatus" class="auth-note" role="alert" aria-live="assertive" aria-atomic="true"></div>
+    </form>
+    <aside class="profile-summary" aria-label="Résumé du profil">
+      <div id="profileRolePill" class="role-pill"><span class="role-dot"></span><span>Utilisateur</span></div>
+      <h2 id="profileSummaryTitle" style="margin-top:12px">Pas encore connecté</h2>
+      <p id="profileSummaryText">Créez un compte HILIA pour publier des avis sur les lieux.</p>
+      <div class="profile-stat"><strong id="profileReviewCount">0</strong><span>avis publiés</span></div>
+      <div class="profile-actions"><button class="secondary-btn" id="profileLogoutBtn" type="button" style="display:none">Se déconnecter</button></div>
+      <div id="prototypeRoleBox" class="prototype-role" style="display:none">
+        <label for="prototypeRoleSelect">Rôle de démonstration</label>
+        <select id="prototypeRoleSelect">
+          <option value="user">Utilisateur</option>
+          <option value="certified">Utilisateur certifié</option>
+          <option value="admin">Admin</option>
+        </select>
+        <p class="auth-note" style="margin-top:8px">Uniquement pour tester le prototype local. En production, un utilisateur ne pourra pas s’attribuer lui-même un rôle.</p>
+      </div>
+    </aside>
+  </div>
+  <div id="profilePermissions"></div>
+  <div id="profileContributionArea"></div>
+  <div id="profileAdminArea"></div>
+  <div id="profileMyReviews"></div>
+</section>
+
+<section class="site-page" id="legalPage" data-page="legal">
+  <a class="page-back" href="/" data-nav-page="explore">← Retour à l’exploration</a>
+  <div class="page-hero"><h1>Mentions légales</h1><p>Identification de l’éditeur, hébergement et règles d’utilisation du site.</p></div>
+  <p class="auth-note">Dernière mise à jour : 27 octobre 2026.</p>
+  <div class="legal-grid">
+    <article class="page-card legal-copy">
+      <h2>Éditeur du site</h2>
+      <p><strong>Dénomination :</strong> HILIA</p>
+      <p><strong>Forme juridique :</strong> société par actions simplifiée (SAS)</p>
+      <p><strong>Capital social :</strong> 1 500 €</p>
+      <p><strong>Siège social :</strong> 24 boulevard Voltaire, 75011 Paris, France</p>
+      <p><strong>RCS :</strong> Paris 912 345 678 · <strong>SIRET :</strong> 912 345 678 00019</p>
+      <p><strong>TVA intracommunautaire :</strong> FR 32 912345678</p>
+      <p><strong>E-mail :</strong> <a href="mailto:contact@hilia.fr">contact@hilia.fr</a></p>
+      <p><strong>Directeur de la publication :</strong> Arthur URBACH</p>
+    </article>
+    <article class="page-card legal-copy">
+      <h2>Hébergement</h2>
+      <p><strong>Hébergement du site :</strong> Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, États-Unis - <a href="https://vercel.com" target="_blank" rel="noopener noreferrer">vercel.com</a></p>
+      <p><strong>Base de données, comptes et contributions :</strong> Supabase Inc. Les fiches de lieux, les comptes, les avis, les photos transmises par les prestataires et les propositions de modification sont stockés dans une base de données hébergée par ce prestataire.</p>
+    </article>
+  </div>
+  <div class="page-grid" style="margin-top:18px">
+    <article class="page-card legal-copy">
+      <h2>Propriété intellectuelle</h2>
+      <p>Le nom HILIA, le logo, les illustrations, les textes et le code du site sont protégés par le droit d’auteur et le droit des marques. Toute reproduction ou réutilisation, totale ou partielle, sans autorisation écrite est interdite.</p>
+      <p><strong>Contenus et composants tiers :</strong> fonds de carte © les contributeurs d’OpenStreetMap (licence ODbL), tuiles vectorielles OpenFreeMap ; bibliothèques Leaflet, MarkerCluster, MapLibre GL JS et Supabase JS (licences MIT). Ces composants restent soumis aux droits de leurs auteurs.</p>
+    </article>
+    <article class="page-card legal-copy">
+      <h2>Responsabilité</h2>
+      <p>Les informations d’accessibilité publiées sur HILIA sont déclaratives : elles proviennent des établissements, des contributeurs et de vérifications internes. Elles ne constituent ni une garantie de conformité ni une certification de l’établissement. Les visiteurs sont invités à confirmer les conditions d’accueil directement auprès du lieu avant leur déplacement.</p>
+      <p>HILIA met en œuvre les moyens raisonnables pour maintenir le service disponible et les informations à jour, sans pouvoir garantir l’absence d’interruption ou d’erreur.</p>
+    </article>
+  </div>
+  <div class="page-grid" style="margin-top:18px">
+    <article class="page-card legal-copy">
+      <h2>Signalement d’un contenu</h2>
+      <p>Pour signaler un contenu illicite, une fiche erronée ou un avis contraire à la charte de contribution : <a href="mailto:contact@hilia.fr">contact@hilia.fr</a>. Chaque signalement est examiné et peut conduire à la modification ou au retrait du contenu.</p>
+    </article>
+    <article class="page-card legal-copy">
+      <h2>Droit applicable</h2>
+      <p>Le présent site est soumis au droit français. En cas de difficulté, une solution amiable est recherchée en priorité ; à défaut, les tribunaux français sont compétents.</p>
+      <p>Les données personnelles sont traitées dans les conditions décrites par la <a href="/confidentialite" data-nav-page="privacy">politique de confidentialité</a>.</p>
+    </article>
+  </div>
+</section>
+
+<section class="site-page" id="privacyPage" data-page="privacy">
+  <a class="page-back" href="/" data-nav-page="explore">← Retour à l’exploration</a>
+  <div class="page-hero"><h1>Politique de confidentialité</h1><p>Quelles données HILIA traite, pourquoi, combien de temps, et comment exercer vos droits.</p></div>
+  <p class="auth-note">Dernière mise à jour : 27 octobre 2026.</p>
+  <div class="page-card legal-copy">
+    <h2>Responsable du traitement</h2>
+    <p>HILIA, SAS au capital de 1 500 €, 24 boulevard Voltaire, 75011 Paris, France. Pour toute question relative aux données personnelles : <a href="mailto:contact@hilia.fr">contact@hilia.fr</a>.</p>
+
+    <h2 style="margin-top:22px">Données traitées</h2>
+    <ul>
+      <li><strong>Compte :</strong> adresse e-mail, mot de passe (stocké sous forme de condensat par le prestataire d’authentification), nom ou pseudo affiché, rôle attribué.</li>
+      <li><strong>Contributions :</strong> avis et notes publiés, suggestions de modification, propositions de lieux, photographies transmises par les prestataires.</li>
+      <li><strong>Données techniques :</strong> adresse IP et journaux de connexion générés par l’hébergeur, conservés pour la sécurité et le diagnostic des incidents.</li>
+      <li><strong>Préférences d’affichage :</strong> thème, taille du texte et réglages d’accessibilité, enregistrés uniquement dans votre navigateur.</li>
+    </ul>
+
+    <h2 style="margin-top:22px">Finalités et bases juridiques</h2>
+    <ul>
+      <li>Créer et gérer votre compte, publier vos contributions : exécution du contrat qui vous lie à HILIA.</li>
+      <li>Afficher les avis et les informations d’accessibilité des lieux : intérêt légitime à informer le public, et consentement lorsque vous publiez volontairement un avis.</li>
+      <li>Modérer les contenus, prévenir les abus et sécuriser le service : intérêt légitime.</li>
+      <li>Répondre à vos demandes et exercer vos droits : obligation légale.</li>
+    </ul>
+
+    <h2 style="margin-top:22px">Durées de conservation</h2>
+    <ul>
+      <li>Compte et profil : jusqu’à la suppression du compte, puis 30 jours de sauvegarde technique.</li>
+      <li>Avis publiés : tant qu’ils sont en ligne ; ils peuvent être supprimés à votre demande ou par la modération.</li>
+      <li>Propositions de lieux et de modification : 3 ans à compter du dernier contact.</li>
+      <li>Journaux techniques : 12 mois maximum.</li>
+    </ul>
+
+    <h2 style="margin-top:22px">Destinataires et sous-traitants</h2>
+    <p>Les données sont accessibles aux seules personnes habilitées de HILIA (administration et modération) et aux prestataires techniques suivants :</p>
+    <ul>
+      <li><strong>Supabase Inc.</strong> - base de données, authentification et stockage des photographies.</li>
+      <li><strong>Vercel Inc.</strong> - hébergement du site et diffusion des fichiers.</li>
+    </ul>
+    <p>Ces prestataires peuvent traiter des données en dehors de l’Union européenne. Les transferts s’appuient sur les clauses contractuelles types de la Commission européenne et sur les garanties prévues par leurs contrats. Aucune donnée n’est vendue ni cédée à des fins publicitaires.</p>
+
+    <h2 style="margin-top:22px">Vos droits</h2>
+    <p>Vous disposez d’un droit d’accès, de rectification, d’effacement, de limitation, d’opposition et de portabilité de vos données. Pour l’exercer, écrivez à <a href="mailto:contact@hilia.fr">contact@hilia.fr</a> : une réponse vous sera apportée dans un délai d’un mois, prolongeable une fois si la demande est complexe. Une pièce d’identité peut être demandée en cas de doute raisonnable sur votre identité.</p>
+    <p>Si la réponse ne vous satisfait pas, vous pouvez introduire une réclamation auprès de la CNIL - 3 place de Fontenoy, TSA 80715, 75334 Paris CEDEX 07 - <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer">cnil.fr</a>.</p>
+
+    <h2 style="margin-top:22px">Sécurité et mineurs</h2>
+    <p>Les échanges avec le site sont chiffrés (HTTPS) et l’accès aux données est restreint par des règles appliquées côté base de données, et non dans le navigateur. Aucun système n’étant infaillible, HILIA s’engage à notifier toute violation susceptible d’engendrer un risque élevé pour vos droits.</p>
+    <p>Le service n’est pas destiné aux enfants de moins de 15 ans : la création d’un compte par un mineur de cet âge requiert l’accord du titulaire de l’autorité parentale.</p>
+  </div>
+</section>
+
+<section class="site-page" id="cguPage" data-page="cgu">
+  <a class="page-back" href="/" data-nav-page="explore">← Retour à l’exploration</a>
+  <div class="page-hero"><h1>Conditions générales d’utilisation</h1><p>Les règles de fonctionnement de HILIA, des comptes et des contributions.</p></div>
+  <div class="page-card legal-copy"><h2>Compte utilisateur</h2><p>L’utilisateur renseigne des informations exactes et conserve la confidentialité de ses identifiants. Les rôles attribués sur la plateforme ne sont pas librement modifiables en production.</p><h2 style="margin-top:22px">Avis et contributions</h2><p>Les avis et suggestions doivent rester utiles, respectueux, non diffamatoires et liés à l’expérience du lieu. HILIA pourra modérer ou retirer un contenu qui ne respecte pas les règles de publication.</p><h2 style="margin-top:22px">Informations sur les lieux</h2><p>Les informations publiées peuvent provenir de déclarations d’établissements, de contributions d’utilisateurs et de vérifications internes. Une modification proposée par un utilisateur n’est pas appliquée automatiquement.</p><h2 style="margin-top:22px">Disponibilité</h2><p>Le service peut évoluer, être interrompu pour maintenance ou comporter des fonctionnalités encore expérimentales dans cette version.</p></div>
+<div class="page-card" style="margin-top:18px"><h2>Charte de contribution</h2><p class="legal-copy">Les contributions doivent être basées sur une expérience réelle ou sur des informations que vous êtes en mesure de justifier. Les faux avis, contenus injurieux, données personnelles publiées sans motif et manipulations de fiches peuvent être retirés par la modération.</p></div>
+</section>
+
+<section class="site-page" id="cookiesPage" data-page="cookies">
+  <a class="page-back" href="/" data-nav-page="explore">← Retour à l’exploration</a>
+  <div class="page-hero"><h1>Cookies &amp; traceurs</h1><p>Ce que HILIA enregistre dans votre navigateur, et pourquoi.</p></div>
+  <p class="auth-note">Dernière mise à jour : 27 octobre 2026.</p>
+  <div class="page-card legal-copy">
+    <h2>Aucun traceur publicitaire ni mesure d’audience</h2>
+    <p>HILIA n’utilise ni cookie publicitaire, ni outil de mesure d’audience, ni bouton de réseau social actif. Aucun consentement n’est donc requis pour la navigation.</p>
+    <h2 style="margin-top:22px">Ce qui est enregistré dans votre navigateur</h2>
+    <ul>
+      <li><strong>Session de connexion</strong> (stockage local) : jeton délivré par Supabase lorsque vous vous connectez, afin de rester identifié d’une page à l’autre. Il est supprimé à la déconnexion. Ce stockage est strictement nécessaire au service.</li>
+      <li><strong>Préférences d’accessibilité</strong> (stockage local) : thème, taille du texte, interlignage, police, contraste des liens et réduction des animations. Ces valeurs restent dans votre navigateur et ne sont jamais transmises.</li>
+    </ul>
+    <p>Les deux peuvent être effacés à tout moment depuis les réglages de votre navigateur ; la conséquence est la perte de vos préférences d’affichage et de votre session.</p>
+    <h2 style="margin-top:22px">Contenus externes</h2>
+    <p>Le site charge des bibliothèques depuis des réseaux de diffusion (jsDelivr, cdnjs, unpkg) et la police depuis Google Fonts. Ces requêtes transmettent votre adresse IP à ces services, sans cookie de HILIA. Les fonds de carte proviennent d’OpenFreeMap et d’OpenStreetMap.</p>
+    <p>Si des outils soumis à consentement sont ajoutés (mesure d’audience, vidéo, réseaux sociaux), un bandeau de consentement sera mis en place et cette page sera mise à jour.</p>
+  </div>
+</section>
+
+<section class="site-page" id="contactPage" data-page="contact">
+  <a class="page-back" href="/" data-nav-page="explore">← Retour à l’exploration</a>
+  <div class="page-hero"><h1>Contact</h1><p>Une question, une correction sur une fiche ou une demande de partenariat ?</p></div>
+  <div class="page-grid">
+    <article class="page-card">
+      <h2>Nous écrire</h2>
+      <p>Adresse générale : <strong><a href="mailto:contact@hilia.fr">contact@hilia.fr</a></strong></p>
+      <p>Demandes liées aux données personnelles : <strong><a href="mailto:contact@hilia.fr">contact@hilia.fr</a></strong></p>
+      <p>Établissements et partenariats : <strong><a href="mailto:contact@hilia.fr">contact@hilia.fr</a></strong></p>
+      <p class="legal-copy">Une réponse est apportée sous 5 jours ouvrés. Pour une correction de fiche, précisez le nom du lieu, sa commune et l’information à corriger.</p>
+    </article>
+    <article class="page-card">
+      <h2>Corriger une fiche</h2>
+      <p>Vous gérez un lieu ? La page <a href="/prestataires" data-nav-page="prestataires">Référencer mon activité</a> permet de décrire précisément l’accessibilité de votre établissement. Les informations transmises sont vérifiées avant publication.</p>
+      <p>Vous avez repéré une erreur ? Ouvrez la fiche concernée, puis utilisez le bouton de suggestion de modification : la proposition est transmise à la modération avec l’identifiant du lieu.</p>
+    </article>
+  </div>
+  <div class="page-card" style="margin-top:18px">
+    <h2>Accessibilité de ce site</h2>
+    <p>Si vous rencontrez une difficulté pour utiliser HILIA, écrivez à <a href="mailto:contact@hilia.fr">contact@hilia.fr</a> en décrivant la page concernée et le problème rencontré. Une alternative vous sera proposée. La <a href="/accessibilite" data-nav-page="accessibility">déclaration d’accessibilité</a> détaille les voies de recours.</p>
+  </div>
+</section>
+
+
+
+
+<section class="site-page" id="accessibilityPage" data-page="accessibility">
+  <a class="page-back" href="/" data-nav-page="explore">← Retour à l’exploration</a>
+  <div class="page-hero"><h1>Déclaration d’accessibilité</h1><p>HILIA s’engage à rendre son site utilisable par le plus grand nombre, y compris par les personnes en situation de handicap.</p></div>
+
+  <div class="page-grid">
+    <article class="page-card"><h2>Référentiels visés</h2><p>Le site vise le niveau AA des WCAG 2.1, mis en œuvre en France par le RGAA (Référentiel général d’amélioration de l’accessibilité) et fondé sur la norme européenne EN 301 549.</p></article>
+    <article class="page-card"><h2>État de conformité</h2><p><strong>Accessibilité : non conforme.</strong> Ce site n’a pas encore fait l’objet d’un audit de conformité RGAA : aucun taux ne peut donc être publié à ce jour. Un audit est prévu ; cette déclaration sera mise à jour avec le taux obtenu et la liste des non-conformités constatées.</p></article>
+  </div>
+  <div class="page-card legal-copy" style="margin-top:18px"><h2>Ce qui est déjà en place</h2>
+    <ul>
+      <li>Liens d’évitement, structure de la page en zones (en-tête, navigation, contenu principal, pied de page) et hiérarchie de titres.</li>
+      <li>Navigation complète au clavier, indicateur de focus visible, fenêtres modales qui piègent puis restituent le focus.</li>
+      <li>Champs de formulaire associés à un libellé, champs obligatoires indiqués, erreurs signalées et annoncées.</li>
+      <li>Résultats présentés sous forme de liste paginée et annonce vocale du nombre de résultats.</li>
+      <li>Les critères connus sont exprimés en texte (« Oui » ou « Non ») ; les critères sans donnée sont masqués.</li>
+      <li>Une base de contrastes renforcés, une langue de page déclarée et le respect de « réduire les animations » sont prévus ; la vérification complète des contrastes reste à réaliser avec un outil et un audit manuel.</li>
+      <li>Carte complétée par une alternative textuelle : la liste des lieux.</li>
+    </ul></div>
+  <div class="page-grid" style="margin-top:18px">
+    <article class="page-card legal-copy"><h2>Contenus non accessibles ou limites connues</h2><ul><li>La carte interactive repose sur des bibliothèques tierces (Leaflet, MapLibre) : sa manipulation reste moins confortable qu’avec la liste, qui fournit les mêmes informations.</li><li>Les informations d’accessibilité des lieux sont déclaratives et peuvent être incomplètes ou obsolètes.</li><li>Les avis publiés par les utilisateurs ne sont pas relus par un professionnel de l’accessibilité.</li></ul></article>
+    <article class="page-card legal-copy"><h2>Technologies et environnement de test</h2><p>HTML5, CSS, JavaScript, WAI-ARIA.</p><p>Le site est vérifié manuellement au clavier et avec un zoom de 200 % sur les versions courantes de Chrome, Firefox, Safari et Edge, sur ordinateur et sur mobile. Les tests avec lecteurs d’écran (NVDA sous Windows, VoiceOver sous macOS et iOS, TalkBack sous Android) sont planifiés dans le cadre de l’audit.</p></article>
+  </div>
+  <div class="page-grid" style="margin-top:18px">
+    <article class="page-card legal-copy"><h2>Signaler un défaut d’accessibilité</h2><p>Si vous ne parvenez pas à accéder à un contenu ou à un service, contactez-nous pour obtenir une alternative ou signaler le problème.</p><p><strong>E-mail :</strong> <a href="mailto:contact@hilia.fr">contact@hilia.fr</a></p><p>Vous pouvez aussi utiliser la <a href="/contact" data-nav-page="contact">page Contact</a>.</p></article>
+    <article class="page-card legal-copy"><h2>Voies de recours</h2><p>Si la réponse reçue ne vous satisfait pas, vous pouvez écrire au Défenseur des droits :</p><ul><li><a href="https://formulaire.defenseurdesdroits.fr" target="_blank" rel="noopener noreferrer">Formulaire en ligne du Défenseur des droits (s’ouvre dans une nouvelle fenêtre)</a></li><li>Courrier gratuit, sans affranchissement : Défenseur des droits, Libre réponse 71120, 75342 Paris CEDEX 07.</li></ul></article>
+  </div>
+  <div class="page-card legal-copy" style="margin-top:18px"><h2>Contrastes à vérifier avant l’audit</h2><p>Le code expose <code>window.HILIAContrastCheck()</code> pour contrôler les principales paires de couleurs configurées. Ce contrôle ne remplace pas une vérification manuelle de tous les états, composants, images, thèmes et contextes.</p><ul><li>Texte normal : cible 4,5:1 minimum.</li><li>Grand texte : cible 3:1 minimum.</li><li>Contours, focus et composants graphiques : cible 3:1 minimum lorsque le critère s’applique.</li><li>Tester aussi les états survol, focus, actif, désactivé et les quatre thèmes.</li></ul></div>
+  <p class="auth-note" style="margin-top:18px">Déclaration établie le 27 octobre 2026.</p>
+  </section>
+
+<section class="site-page" id="sitemapPage" data-page="sitemap">
+  <a class="page-back" href="/" data-nav-page="explore">← Retour à l’exploration</a>
+  <div class="page-hero"><h1>Plan du site</h1><p>Toutes les pages de HILIA en un coup d’œil.</p></div>
+  <nav class="page-card" aria-label="Plan du site"><ul class="sitemap-list">
+    <li><a href="/" data-nav-page="explore">Explorer les lieux (liste, carte, filtres)</a></li>
+    <li><a href="/a-propos" data-nav-page="about">À propos</a></li>
+    <li><a href="/prestataires" data-nav-page="prestataires">Référencer mon activité (prestataires)</a></li>
+    <li><a href="/faq" data-nav-page="faq">Questions fréquentes</a></li>
+    <li><a href="/mon-profil" data-nav-page="profile">Mon profil</a></li>
+    <li><a href="/contact" data-nav-page="contact">Contact</a></li>
+    <li><a href="/accessibilite" data-nav-page="accessibility">Déclaration d’accessibilité</a></li>
+    <li><a href="/mentions-legales" data-nav-page="legal">Mentions légales</a></li>
+    <li><a href="/confidentialite" data-nav-page="privacy">Politique de confidentialité</a></li>
+    <li><a href="/cgu" data-nav-page="cgu">Conditions d’utilisation</a></li>
+    <li><a href="/cookies" data-nav-page="cookies">Cookies &amp; traceurs</a></li>
+  </ul></nav>
+</section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <div><div class="footer-brand">HILIA</div><p class="footer-text">Rendre le loisir accessible à tous. Trouver un lieu, comprendre ses conditions d’accès et partager son expérience.</p><div class="socials" style="margin-top:14px"><span class="social"><span aria-hidden="true">IG</span><span class="sr-only">Instagram : lien à venir</span></span><span class="social"><span aria-hidden="true">in</span><span class="sr-only">LinkedIn : lien à venir</span></span><span class="social"><span aria-hidden="true">TT</span><span class="sr-only">TikTok : lien à venir</span></span><span class="social"><span aria-hidden="true">f</span><span class="sr-only">Facebook : lien à venir</span></span></div></div>
+      <div><h2 class="footer-h">HILIA</h2><nav class="footer-links" aria-label="À propos de HILIA"><a class="footer-link" href="/a-propos" data-nav-page="about">À propos</a><a class="footer-link" href="/faq" data-nav-page="faq">FAQ</a><a class="footer-link" href="/contact" data-nav-page="contact">Contact</a></nav></div>
+      <div><h2 class="footer-h">Informations</h2><nav class="footer-links" aria-label="Informations légales et accessibilité"><a class="footer-link" href="/mentions-legales" data-nav-page="legal">Mentions légales</a><a class="footer-link" href="/confidentialite" data-nav-page="privacy">Politique de confidentialité</a><a class="footer-link" href="/cgu" data-nav-page="cgu">Conditions d’utilisation</a><a class="footer-link" href="/cookies" data-nav-page="cookies">Cookies &amp; traceurs</a><a class="footer-link" href="/accessibilite" data-nav-page="accessibility">Accessibilité</a><a class="footer-link" href="/plan-du-site" data-nav-page="sitemap">Plan du site</a></nav></div>
+      <div><h2 class="footer-h">Contributions</h2><nav class="footer-links" aria-label="Contributions"><a class="footer-link" href="/mon-profil" data-nav-page="profile">Mon profil</a><a class="footer-link" href="/prestataires" data-nav-page="prestataires">Référencer mon activité</a><a class="footer-link" href="/faq" data-nav-page="faq">Comment fonctionnent les avis ?</a><a class="footer-link" href="/faq" data-nav-page="faq">Comment corriger une fiche ?</a><a class="footer-link" href="/cgu" data-nav-page="cgu">Règles de publication</a></nav></div>
+    </div>
+    <div class="footer-bottom"><span>© 2026 HILIA · Tous droits réservés</span><span><a href="/accessibilite" data-nav-page="accessibility">Accessibilité : non conforme - audit à venir</a></span><span>Données déclaratives · Vérifiez les conditions d’accueil avant votre visite.</span></div>
+  </div>
+</footer>
+
+<div class="settings-scrim" id="settingsScrim" hidden></div>
+<aside class="settings-panel" id="accessibilitySettings" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" aria-describedby="settingsIntro" aria-hidden="true" hidden>
+  <button class="drawer-close" id="settingsClose" type="button" aria-label="Fermer les réglages d’accessibilité">
+    <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+  <h2 id="settingsTitle">Réglages d’accessibilité</h2>
+  <p class="sub" id="settingsIntro">Ces réglages sont enregistrés uniquement dans ce navigateur.</p>
+  <fieldset class="settings-group"><legend>Thème</legend>
+    <div class="settings-options" role="group" aria-label="Choisir un thème">
+      <button type="button" class="setting-choice" data-setting="theme" data-value="light" aria-pressed="true">Clair</button>
+      <button type="button" class="setting-choice" data-setting="theme" data-value="dark" aria-pressed="false">Sombre</button>
+      <button type="button" class="setting-choice" data-setting="theme" data-value="high-light" aria-pressed="false">Contraste élevé clair</button>
+      <button type="button" class="setting-choice" data-setting="theme" data-value="high-dark" aria-pressed="false">Contraste élevé sombre</button>
+    </div>
+  </fieldset>
+  <fieldset class="settings-group"><legend>Texte et lecture</legend>
+    <div class="settings-options" role="group" aria-label="Taille du texte">
+      <button type="button" class="setting-choice" data-setting="text" data-value="100" aria-pressed="true">100 %</button>
+      <button type="button" class="setting-choice" data-setting="text" data-value="125" aria-pressed="false">125 %</button>
+      <button type="button" class="setting-choice" data-setting="text" data-value="150" aria-pressed="false">150 %</button>
+      <button type="button" class="setting-choice" data-setting="text" data-value="175" aria-pressed="false">175 %</button>
+      <button type="button" class="setting-choice" data-setting="text" data-value="200" aria-pressed="false">200 %</button>
+    </div>
+    <div class="settings-options settings-toggles">
+      <button type="button" class="setting-choice" data-setting="line" data-value="on" aria-pressed="false">Espacement des lignes augmenté</button>
+      <button type="button" class="setting-choice" data-setting="letter" data-value="on" aria-pressed="false">Espacement lettres et mots augmenté</button>
+      <button type="button" class="setting-choice" data-setting="font" data-value="sans" aria-pressed="false">Police sans empattement renforcée</button>
+      <button type="button" class="setting-choice" data-setting="links" data-value="on" aria-pressed="false">Souligner davantage les liens</button>
+    </div>
+  </fieldset>
+  <fieldset class="settings-group"><legend>Confort</legend>
+    <div class="settings-options settings-toggles">
+      <button type="button" class="setting-choice" data-setting="motion" data-value="off" aria-pressed="false">Réduire les animations</button>
+      <button type="button" class="setting-choice" data-setting="visuals" data-value="off" aria-pressed="false">Masquer les visuels décoratifs</button>
+      <button type="button" class="setting-choice" data-setting="pointer" data-value="large" aria-pressed="false">Agrandir le pointeur</button>
+      <button type="button" class="setting-choice" data-setting="color" data-value="on" aria-pressed="false">Mode renforcé pour la perception des couleurs</button>
+    </div>
+  </fieldset>
+  <button class="reset-btn" id="settingsReset" type="button">Réinitialiser les réglages</button>
+  <p class="auth-note" id="settingsStatus" role="status" aria-live="polite"></p>
+</aside>
+
+<div class="drawer-scrim" id="drawerScrim"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle" aria-hidden="true">
+  <button class="drawer-close" id="drawerClose" aria-label="Fermer les filtres">
+    <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+  <h2 id="drawerTitle">Filtres & tri</h2>
+  <p class="sub">Tous les critères viennent des fiches d'accessibilité déclarées par chaque établissement.</p>
+  <div class="fgroup">
+    <label class="flabel" for="sortSelect">Trier les résultats par</label>
+    <select id="sortSelect">
+      <option value="name">Nom (A → Z)</option>
+      <option value="commune">Commune (A → Z)</option>
+      <option value="access">Accessibilité (la plus complète)</option>
+    </select>
+  </div>
+  <div id="filterGroups"></div>
+  <button class="apply-btn" id="applyBtn" type="button">Voir les résultats</button>
+  <button class="reset-btn" id="resetBtn" type="button">Réinitialiser</button>
+</aside>
+
+<div class="overlay-bg" id="overlayBg"></div>
+<aside class="detail" id="detailPanel" role="dialog" aria-modal="true" aria-labelledby="detailDialogTitle" aria-hidden="true">
+  <button class="detail-close" id="detailClose" aria-label="Fermer la fiche du lieu">
+    <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+  <div id="detailContent"></div>
+</aside>
+
+
+<script id="franceMapGeoJSON" type="application/json">{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"name":"France m\u00e9tropolitaine"},"geometry":{"type":"MultiPolygon","coordinates":[[[[6.186320428094177,49.463802802114515],[6.658229607783568,49.20195831969157],[8.099278598674744,49.01778351500333],[7.593676385131062,48.33301911070372],[7.466759067422231,47.62058197691181],[7.192202182655507,47.44976552997102],[6.736571079138059,47.541801255882845],[6.768713820023606,47.2877082383037],[6.037388950229001,46.725778713561866],[6.022609490593538,46.27298981382047],[6.5000997249704255,46.42967275652944],[6.843592970414505,45.99114655210061],[6.802355177445605,45.70857982032864],[7.096652459347837,45.33309886329589],[6.749955275101655,45.02851797136758],[7.007562290076635,44.25476675066136],[7.549596388386107,44.12790110938481],[7.435184767291872,43.69384491634922],[6.52924523278304,43.128892320318315],[4.556962517931424,43.399650987311595],[3.1004105973526634,43.075200507167054],[2.9859989762584576,42.47301504166986],[1.8267932470871528,42.34338471126569],[0.7015906103638941,42.795734361332606],[0.3380469091905809,42.57954600683955],[-1.502770961910528,43.03401439063043],[-1.901351284177764,43.42280202897834],[-1.384225226232985,44.022610378590116],[-1.1937975732374184,46.01491771095486],[-2.2257242496738456,47.06436269793822],[-2.9632761295596026,47.57032664650795],[-4.4915549381594815,47.954954332056374],[-4.592349819344776,48.68416046812699],[-3.295813971357802,48.90169240985963],[-1.6165107893849608,48.64442129169454],[-1.933494025063311,49.776341864615745],[-0.98946895995536,49.34737580016091],[1.3387610205226963,50.12717316344526],[1.6390010921384996,50.9466063502975],[2.5135730322461427,51.14850617126183],[2.658422071960274,50.796848049515745],[3.1232515804256877,50.78036326761455],[3.588184441755658,50.37899241800356],[4.2860229834250845,49.907496649772554],[4.799221632515724,49.98537303323637],[5.897759230176348,49.44266714130711],[6.186320428094177,49.463802802114515]]],[[[8.746009148807559,42.62812185319392],[9.390000848028876,43.00998484961471],[9.560016310269134,42.15249197037952],[9.229752231491773,41.380006822264455],[8.775723097375362,41.58361196549443],[8.544212680707773,42.25651662858306],[8.746009148807559,42.62812185319392]]]]}}]}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js" integrity="sha384-SIh+qcEBNMda8tT+rx66aCBuWtVYMVzRABqhK4eeQh4pjDHoRdVx8nYU4LQ5eGzI" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js" integrity="sha384-5+cfbwT0iiub6VsQAdn6yz16nr6sDiQoHx6tm4O8OVYXHYOxcffFmCJBL0dgdvGp" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.4/leaflet-maplibre-gl.js" integrity="sha384-tXYNKOHx4T02jMP7YYCtBxPIv1B5gaA5mcVPBzqMp6d7VzWzxJgI2aWF/nJLrQdS" crossorigin="anonymous"></script>
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-# HILIA — rendre le loisir accessible à tous
+# HILIA - rendre le loisir accessible à tous
 # https://www.hilia.fr/
 
 User-agent: *

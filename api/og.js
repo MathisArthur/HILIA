@@ -6,7 +6,7 @@
  *
  * Rendu par Satori (mise en page SVG) puis Resvg (SVG → PNG), sur le runtime
  * Node. Satori est figé en 0.32.0 : à partir de 0.33, il met en forme le texte
- * avec harfbuzzjs, qui lit son hb.wasm sur le disque — fichier que Vercel
+ * avec harfbuzzjs, qui lit son hb.wasm sur le disque - fichier que Vercel
  * n'embarque pas dans la fonction. Voir la section « Aperçu de partage » du
  * README avant de relever cette dépendance.
  */
@@ -34,7 +34,7 @@ export default {
       if (!png || !png.length) throw new Error('rendu vide');
 
       // Le corps est lu ici plutôt que transmis en flux : le rendu est
-      // asynchrone, et sans cette lecture une erreur ne remonterait pas — on
+      // asynchrone, et sans cette lecture une erreur ne remonterait pas - on
       // servirait un en-tête image/png vide.
       return new Response(png, {
         status: 200,

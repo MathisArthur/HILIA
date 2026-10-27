@@ -2,11 +2,12 @@
   "name": "hilia",
   "version": "1.0.0",
   "private": true,
-  "description": "HILIA — rendre le loisir accessible à tous : site statique et fonctions Vercel",
+  "description": "HILIA - rendre le loisir accessible à tous : site statique et fonctions Vercel",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev-server.mjs",
     "data": "node scripts/build-dataset.mjs",
+    "pages": "node scripts/build-pages.mjs",
     "cards": "node scripts/preview-card.mjs",
     "check:cards": "node scripts/check-card.mjs"
   },

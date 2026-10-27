@@ -32,7 +32,9 @@ export default {
 
     let html = null;
     try {
-      const res = await fetch(new URL('/index.html', url), { headers: { 'user-agent': 'HILIA-meta' } });
+      // Le socle de l'application, pris à la racine : depuis cleanUrls,
+      // /index.html redirige vers / et coûterait un aller-retour de plus.
+      const res = await fetch(new URL('/', url), { headers: { 'user-agent': 'HILIA-meta' } });
       if (res.ok) html = await res.text();
     } catch (err) {
       html = null;

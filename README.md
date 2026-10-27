@@ -1,4 +1,4 @@
-# HILIA — rendre le loisir accessible à tous
+# HILIA - rendre le loisir accessible à tous
 
 Site public : <https://www.hilia.fr/>
 
@@ -9,13 +9,16 @@ que les qualifications déclarées par les prestataires.
 ## Comment c'est construit
 
 Site statique, **sans étape de build** : les pages sont dans le dépôt telles
-quelles. Les deux fonctions de `api/` sont compilées par Vercel au déploiement
-(rien à lancer localement). Chaîne : **GitHub → Vercel (statique + fonctions) →
-Supabase**.
+quelles et Vercel les sert directement. Deux scripts les préparent hors ligne, et
+leurs sorties sont versionnées : `npm run data` (jeu de données et sitemaps) et
+`npm run pages` (les onze rubriques). Les deux fonctions de `api/` sont compilées
+par Vercel au déploiement (rien à lancer localement). Chaîne : **GitHub → Vercel
+(statique + fonctions) → Supabase**.
 
 | Élément | Rôle |
 | --- | --- |
-| `index.html` | La structure des pages (HTML seul, ~50 Ko). |
+| `index.html` | La structure des pages (HTML seul, ~50 Ko) et le socle des pages. |
+| `a-propos.html`, `faq.html`, … | Les onze rubriques, **générées** depuis `index.html` par `npm run pages` : chacune y ajoute son titre, sa description et son adresse canonique. |
 | `styles.css` | Toute la feuille de style (~56 Ko). |
 | `app.js` | Toute l'application : chargement des données, recherche, filtres, carte, fiches, comptes, contributions, routeur d'URL (~170 Ko). |
 | `data/places.json` | Jeu de données compact des fiches approuvées, **généré** (voir plus bas) et servi par le CDN. |
@@ -24,6 +27,7 @@ Supabase**.
 | `api/og.js` | Fonction qui dessine l'image d'aperçu d'une fiche (1200 × 630). |
 | `lib/` | Logique partagée par les fonctions : lecture d'une fiche, métadonnées, carte d'aperçu. |
 | `scripts/build-dataset.mjs` | Régénère `data/places.json` **et** les sitemaps. |
+| `scripts/build-pages.mjs` | Réécrit les onze rubriques depuis `PAGE_META` d'`app.js` et vérifie leur cohérence avec le sitemap. |
 | `scripts/dev-server.mjs` | Serveur local qui rejoue les en-têtes, les réécritures et les fonctions de `vercel.json`. |
 | `scripts/preview-card.mjs` | Génère des exemples de cartes de partage, sans déployer. |
 | `scripts/check-card.mjs` | Contrôle que le rendu d'une carte ne lit aucun fichier `.wasm`. |
@@ -41,10 +45,22 @@ dans `app.js`, et ce sont les politiques RLS qui font autorité. Les permissions
 vérifiées dans le navigateur (rôles, administration, modération) ne sont qu'un
 confort d'interface.
 
+Les fonctions s'exécutent à Paris (`"regions": ["cdg1"]` dans `vercel.json`), au
+plus près de Supabase et du public : la région par défaut de Vercel est
+Washington (`iad1`), à l'autre bout du chemin. Les fichiers statiques, eux, sont
+toujours servis depuis le point de présence le plus proche du visiteur.
+
+Convention d'affichage : **aucun tiret cadratin** (`—`) dans ce que voit le
+visiteur. Les noms importés qui en contiennent sont nettoyés à l'affichage
+(`lib/place.js`, et le même nettoyage à l'entrée du jeu de données).
+
 ## URL
 
-Une page = une adresse. Les réécritures de `vercel.json` renvoient toutes ces
-adresses vers `index.html`, et `app.js` affiche la bonne vue.
+Une page = une adresse. Chaque rubrique a son fichier HTML, servi sans son
+extension grâce à `cleanUrls`, la fiche passe par la fonction `api/place`, et
+`app.js` affiche la bonne vue. Une adresse inconnue reçoit désormais une vraie
+page 404, et non l'application avec un code 200 (ce que les moteurs appellent une
+« fausse 404 »).
 
 | Adresse | Vue |
 | --- | --- |
@@ -55,8 +71,9 @@ adresses vers `index.html`, et `app.js` affiche la bonne vue.
 
 Pour ajouter une rubrique : créer sa `<section class="site-page" data-page="…">`
 dans `index.html`, l'ajouter à `PAGE_META` **et** à `PAGE_PATHS` dans `app.js`,
-puis ajouter la ligne correspondante dans les `rewrites` de `vercel.json` et dans
-`PAGES` de `scripts/build-dataset.mjs` (pour le sitemap).
+puis l'ajouter à `PAGES` de `scripts/build-dataset.mjs` et lancer `npm run data`
+(sitemap), enfin `npm run pages` (la page elle-même). Aucune réécriture à écrire :
+`cleanUrls` sert `ma-rubrique.html` sous `/ma-rubrique`.
 
 Les anciens liens `#lieu/…` et `#faq` restent acceptés : ils sont convertis en
 adresse propre à l'ouverture.
@@ -111,6 +128,26 @@ node scripts/preview-card.mjs   # images dans og-preview/, non versionnées
 À contrôler après le premier déploiement : ouvrir une fiche et vérifier que
 l'en-tête `Content-Security-Policy` est bien appliqué à la réponse de la fonction
 (les règles `headers` de `vercel.json` s'appliquent au chemin demandé).
+
+## Régénérer les pages
+
+Les onze rubriques ne sont pas écrites à la main : elles sont produites depuis
+`index.html` et depuis `PAGE_META` (dans `app.js`, seule source des titres et des
+descriptions).
+
+```bash
+npm run pages
+```
+
+À relancer après toute modification de `PAGE_META` ou `PAGE_PATHS`, puis à
+committer les fichiers `.html` modifiés. Le script :
+
+- écrit une page par rubrique, avec son titre, sa description, son `og:url` et son
+  lien canonique dans le HTML servi - sans quoi Google voyait onze URL sous le
+  même titre et sans canonique, le vrai titre n'étant posé que par le navigateur ;
+- place `noindex,follow` sur `/mon-profil`, qui est personnel ;
+- refuse de générer si l'accueil (`index.html`) et `PAGE_META` ne disent pas la
+  même chose, ou si les pages et le sitemap ne concordent pas.
 
 ## Régénérer les données et le sitemap
 
@@ -226,5 +263,9 @@ du navigateur, et il ne doit y avoir aucune erreur.
 - `/api/og` dessine la carte pour de vrai en local, avec la même police que la
   fonction en ligne : c'est le rendu de production, avant publication. Pour
   générer des exemples sans serveur, utiliser `scripts/preview-card.mjs`.
+
+- `/a-propos`, `/faq`, … sont servis depuis leurs fichiers : l'en-tête du document
+  est celui du HTML généré, pas celui de l'application. Une adresse inconnue
+  renvoie la page 404, et non l'application avec un code 200.
 
 `npx vercel dev` fonctionne aussi, mais demande une connexion à Vercel.

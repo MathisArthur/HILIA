@@ -132,7 +132,11 @@ await writeFile(new URL('data/places.json', ROOT), json);
 // être reportée ici, et inversement.
 const SITE = 'https://www.hilia.fr';
 const INVISIBLE = /[\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufe00-\ufe0f\ufeff]/g;
-const tidy = (v) => String(v == null ? '' : v).replace(INVISIBLE, '').replace(/\s+/g, ' ').trim();
+// Convention d'affichage du site : un tiret simple, jamais de tiret cadratin.
+// Le slug est inchangé (toute ponctuation devient déjà un tiret), mais le nom
+// écrit dans le jeu de données l'est aussi.
+const EM_DASH = /\u2014/g;
+const tidy = (v) => String(v == null ? '' : v).replace(INVISIBLE, '').replace(/\s+/g, ' ').trim().replace(EM_DASH, '-');
 const slugify = (s) => tidy(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 const placeSlug = (name, id) => (slugify(name) || 'lieu') + '-' + (slugify(String(id)) || 'fiche');
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

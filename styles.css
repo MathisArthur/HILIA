@@ -377,7 +377,7 @@
   }
 
   /* =====================================================================
-     ACCESSIBILITÉ — RGAA 4.1 / WCAG 2.1 AA
+     ACCESSIBILITÉ - RGAA 4.1 / WCAG 2.1 AA
      (surcouche : ces règles complètent et corrigent les styles ci-dessus)
      ===================================================================== */
   :root{ --muted:#566867; --ring:#064647; --ring-alt:#FEB31E; --input-border:#5F7A77; }

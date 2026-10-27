@@ -1,18 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["cdg1"],
+  "cleanUrls": true,
   "rewrites": [
-    { "source": "/lieu/:slug", "destination": "/api/place?slug=:slug" },
-    { "source": "/a-propos", "destination": "/index.html" },
-    { "source": "/faq", "destination": "/index.html" },
-    { "source": "/prestataires", "destination": "/index.html" },
-    { "source": "/mon-profil", "destination": "/index.html" },
-    { "source": "/mentions-legales", "destination": "/index.html" },
-    { "source": "/confidentialite", "destination": "/index.html" },
-    { "source": "/cgu", "destination": "/index.html" },
-    { "source": "/cookies", "destination": "/index.html" },
-    { "source": "/contact", "destination": "/index.html" },
-    { "source": "/accessibilite", "destination": "/index.html" },
-    { "source": "/plan-du-site", "destination": "/index.html" }
+    { "source": "/lieu/:slug", "destination": "/api/place?slug=:slug" }
   ],
   "headers": [
     {

@@ -23,7 +23,7 @@ const OUT = 'og-preview';
 const SAMPLES = [
   { id: '48171' },
   {
-    name: 'Centre aquatique intercommunal du Pays de Brocéliande — piscine et espace bien-être',
+    name: 'Centre aquatique intercommunal du Pays de Brocéliande - piscine et espace bien-être',
     commune: 'Sérent', cp: '56460', activity: 'Piscine, centre aquatique',
     entree_plain_pied: 1, stationnement_pmr: 1,
   },
@@ -43,5 +43,5 @@ for (const [i, sample] of SAMPLES.entries()) {
   const png = new Resvg(svg, { fitTo: { mode: 'width', value: 1200 } }).render().asPng();
   const file = path.join(OUT, 'carte-' + (i + 1) + '.png');
   await writeFile(file, png);
-  console.log(file, '—', place.name);
+  console.log(file, '-', place.name);
 }

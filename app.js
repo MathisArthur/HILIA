@@ -1,4 +1,4 @@
-/* HILIA — application : tout le JavaScript du site, chargé en fin de page. */
+/* HILIA - application : tout le JavaScript du site, chargé en fin de page. */
   // Le jeu de données des fiches (une seule requête, servie par le CDN) part dès
   // l'analyse de l'en-tête : il est prêt quand le script principal s'exécute.
   window.__hiliaDataset = fetch('/data/places.json', {cache:'force-cache'})
@@ -32,7 +32,7 @@
     b.textContent=text; if(isError) b.style.background='#8A1C1C'; return b;
   }
   // Chargement des lieux. Deux sources, dans cet ordre :
-  //  1. data/places.json — jeu de données compact des fiches approuvées, généré par
+  //  1. data/places.json - jeu de données compact des fiches approuvées, généré par
   //     scripts/build-dataset.mjs et servi par le CDN : une seule requête, mise en
   //     cache, aucune charge sur Supabase. À régénérer après un import en masse.
   //  2. Repli : lecture paginée de la table hilia_places, si le fichier est absent
@@ -151,7 +151,9 @@
   // polluaient l’affichage, les titres de page et les données structurées.
   (function cleanLabels(){
     var INVISIBLE=/[\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufe00-\ufe0f\ufeff]/g;
-    function tidy(v){ return String(v==null?'':v).replace(INVISIBLE,'').replace(/\s+/g,' ').trim(); }
+    // Convention d’affichage du site : un tiret simple, jamais de tiret cadratin.
+    var EM_DASH=/\u2014/g;
+    function tidy(v){ return String(v==null?'':v).replace(INVISIBLE,'').replace(/\s+/g,' ').trim().replace(EM_DASH,'-'); }
     for(var i=0;i<DATA.length;i++){ var r=DATA[i]; if(r) r[F.NOM]=tidy(r[F.NOM])||'Lieu sans nom'; }
     for(var c=0;c<COMMUNES.length;c++){ var nom=tidy(COMMUNES[c]); if(nom) COMMUNES[c]=nom; }
   })();
@@ -617,7 +619,7 @@
     var has = state.access.length>0 || state.sort!=='name';
     document.getElementById('filterBtn').classList.toggle('has-filters', has);
     var n = state.access.length + (state.sort!=='name' ? 1 : 0);
-    var sr = document.getElementById('filterCountSr'); if(sr) sr.textContent = has ? ' — '+n+' critère'+(n>1?'s':'')+' actif'+(n>1?'s':'') : '';
+    var sr = document.getElementById('filterCountSr'); if(sr) sr.textContent = has ? ' - '+n+' critère'+(n>1?'s':'')+' actif'+(n>1?'s':'') : '';
   }
   document.getElementById('resetBtn').addEventListener('click', function(){
     state.access=[]; state.sort='name'; document.getElementById('sortSelect').value='name';
@@ -1790,7 +1792,7 @@
         sum.hidden=false;
         sum.innerHTML='<strong>'+errs.length+' erreur'+(errs.length>1?'s':'')+' à corriger :</strong><ul>'+errs.map(function(e){
           var target='pf_'+e.id+((e.kind==='radio'||e.kind==='check')?'_0':'');
-          return '<li><a href="#" data-pf-go="'+target+'">'+escapeHtml(e.l)+'</a> — '+escapeHtml(e.m)+'</li>'; }).join('')+'</ul>';
+          return '<li><a href="#" data-pf-go="'+target+'">'+escapeHtml(e.l)+'</a> - '+escapeHtml(e.m)+'</li>'; }).join('')+'</ul>';
         sum.focus(); return;
       }
       sum.hidden=true;
@@ -1927,18 +1929,18 @@
   // ---------- Site pages / lightweight routing ----------
   var currentPage='explore';
   var PAGE_META={
-    explore:{title:'HILIA — Rendre le loisir accessible à tous',description:'Trouvez des lieux de loisirs en France et consultez leurs informations d’accessibilité.'},
-    about:{title:'À propos — HILIA',description:'Découvrez HILIA, son objectif, ses valeurs et sa démarche autour du loisir accessible.'},
-    faq:{title:'FAQ — HILIA',description:'Les réponses aux principales questions sur HILIA, les données d’accessibilité et les avis.'},
-    profile:{title:'Mon profil — HILIA',description:'Gérez votre profil HILIA et vos contributions.'},
-    legal:{title:'Mentions légales — HILIA',description:'Informations légales relatives au site HILIA.'},
-    privacy:{title:'Politique de confidentialité — HILIA',description:'Informations relatives à la protection des données personnelles sur HILIA.'},
-    cgu:{title:'CGU — HILIA',description:'Conditions générales d’utilisation du site HILIA.'},
-    cookies:{title:'Cookies & traceurs — HILIA',description:'Informations sur les cookies et traceurs utilisés par HILIA.'},
-    contact:{title:'Contact — HILIA',description:'Contactez HILIA pour une question ou une suggestion.'},
-    accessibility:{title:'Déclaration d’accessibilité — HILIA',description:'Engagement, état de conformité et voies de recours en matière d’accessibilité numérique.'},
-    sitemap:{title:'Plan du site — HILIA',description:'La liste de toutes les pages du site HILIA.'},
-    prestataires:{title:'Référencer mon activité — HILIA',description:'Prestataires de loisirs : renseignez l’accessibilité de votre activité pour être référencé sur HILIA.'}
+    explore:{title:'HILIA - Rendre le loisir accessible à tous',description:'HILIA référence des lieux de loisirs en France et présente les informations d’accessibilité disponibles pour faciliter les sorties.'},
+    about:{title:'À propos - HILIA',description:'Découvrez HILIA, son objectif, ses valeurs et sa démarche autour du loisir accessible.'},
+    faq:{title:'FAQ - HILIA',description:'Les réponses aux principales questions sur HILIA, les données d’accessibilité et les avis.'},
+    profile:{title:'Mon profil - HILIA',description:'Gérez votre profil HILIA et vos contributions.'},
+    legal:{title:'Mentions légales - HILIA',description:'Informations légales relatives au site HILIA.'},
+    privacy:{title:'Politique de confidentialité - HILIA',description:'Informations relatives à la protection des données personnelles sur HILIA.'},
+    cgu:{title:'CGU - HILIA',description:'Conditions générales d’utilisation du site HILIA.'},
+    cookies:{title:'Cookies & traceurs - HILIA',description:'Informations sur les cookies et traceurs utilisés par HILIA.'},
+    contact:{title:'Contact - HILIA',description:'Contactez HILIA pour une question ou une suggestion.'},
+    accessibility:{title:'Déclaration d’accessibilité - HILIA',description:'Engagement, état de conformité et voies de recours en matière d’accessibilité numérique.'},
+    sitemap:{title:'Plan du site - HILIA',description:'La liste de toutes les pages du site HILIA.'},
+    prestataires:{title:'Référencer mon activité - HILIA',description:'Prestataires de loisirs : renseignez l’accessibilité de votre activité pour être référencé sur HILIA.'}
   };
   // ---------- URL réelles : une page = un chemin, une fiche = /lieu/<slug> ----------
   var PAGE_PATHS={"explore":"/","about":"/a-propos","faq":"/faq","prestataires":"/prestataires","profile":"/mon-profil","legal":"/mentions-legales","privacy":"/confidentialite","cgu":"/cgu","cookies":"/cookies","contact":"/contact","accessibility":"/accessibilite","sitemap":"/plan-du-site"};
@@ -1971,7 +1973,7 @@
     var url=SITE_ORIGIN+placePath(slug);
     // Évite « Piscine à Sérent à Sérent » quand le nom contient déjà la commune.
     var place=(com && normalize(name).indexOf(normalize(com))!==-1) ? name : (name+(com?' à '+com:''));
-    var title=place+' — accessibilité | HILIA';
+    var title=place+' - accessibilité | HILIA';
     var desc='Accessibilité de '+place+(cp?' ('+cp+')':'')+' : '+accessibilitySummary(r)+'. Stationnement, entrée, accueil et sanitaires sur HILIA.';
     document.title=title;
     setContent('meta[name="description"]',desc);

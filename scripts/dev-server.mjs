@@ -5,11 +5,11 @@
  *   node scripts/dev-server.mjs   ->   http://127.0.0.1:8787
  *
  * Les fonctions de /api sont exécutées telles quelles (elles reçoivent un
- * `Request` et renvoient un `Response`). Seule exception : /api/og, qui dépend
- * d'un module WebAssembly fourni par Vercel et retombe donc, en local, sur
- * l'image générique. Pour voir une carte générée :
+ * `Request` et renvoient un `Response`), /api/og comprise : la carte d'aperçu
+ * d'une fiche est dessinée en local comme en ligne. Pour produire des exemples
+ * de cartes sans lancer le serveur :
  *
- *   npm i --no-save satori @resvg/resvg-js && node scripts/preview-card.mjs
+ *   npm run cards
  */
 import http from 'node:http';
 import { readFile, stat } from 'node:fs/promises';
@@ -57,7 +57,11 @@ async function fileFor(rel) {
     const st = await stat(full);
     if (st.isDirectory()) return (await stat(path.join(full, 'index.html'))).isFile() ? path.join(full, 'index.html') : null;
     return st.isFile() ? full : null;
-  } catch { return null; }
+  } catch {
+    // cleanUrls (vercel.json) : /a-propos est servi depuis a-propos.html.
+    if (!path.extname(clean)) return fileFor(clean + '.html');
+    return null;
+  }
 }
 
 /** Exécute une fonction de /api comme le ferait Vercel. */
