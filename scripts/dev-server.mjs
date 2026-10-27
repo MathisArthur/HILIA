@@ -64,15 +64,6 @@ async function fileFor(rel) {
 async function runApi(dest, req, res, extraHeaders) {
   const [pathPart, query] = dest.split('?');
   const name = pathPart.replace(/^\/api\//, '').replace(/\.js$/, '');
-  // @vercel/og s'appuie sur des modules WebAssembly fournis par la plateforme de
-  // déploiement : en local, on sert l'image générique (voir scripts/preview-card.mjs
-  // pour générer une carte réelle).
-  if (name === 'og') {
-    res.writeHead(302, { location: '/og-image.png' });
-    res.end();
-    return;
-  }
-
   const url = `http://${req.headers.host}${pathPart}${query ? '?' + query : ''}`;
   try {
     const mod = await import('../api/' + name + '.js');
@@ -86,11 +77,6 @@ async function runApi(dest, req, res, extraHeaders) {
     res.end(body);
   } catch (err) {
     console.error('Fonction /api/' + name + ' :', err.message);
-    if (name === 'og') {
-      res.writeHead(302, { location: '/og-image.png' });
-      res.end();
-      return;
-    }
     res.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });
     res.end('Fonction indisponible : ' + err.message);
   }

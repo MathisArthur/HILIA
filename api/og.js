@@ -1,19 +1,24 @@
 /**
  * Image d'aperçu (Open Graph) d'une fiche : /api/og?s=<slug>
  *
- * Rendue par @vercel/og (Satori + Resvg). Les robots des réseaux sociaux ne
- * lisent pas le JavaScript : c'est api/place.js qui place cette adresse dans le
- * <head> de la page, côté serveur.
+ * Les robots des réseaux sociaux ne lisent pas le JavaScript : c'est
+ * api/place.js qui place cette adresse dans le <head> de la page, côté serveur.
  *
- * Deux précautions apprises à l'usage :
- *   - la forme d'export est l'objet `{ fetch(request) }` (standard Web), comme
- *     api/place.js ;
- *   - le corps de l'image est lu ici (await arrayBuffer) au lieu d'être
- *     transmis en flux : le rendu est asynchrone, et sans cette lecture une
- *     erreur ne remonterait pas — on servirait un en-tête image/png vide.
+ * Rendu par Satori (mise en page SVG) puis Resvg (SVG → PNG), sur le runtime
+ * Node. @vercel/og a été écarté : son paquet ne se charge pas dans une fonction
+ * Node de ce projet (« Dynamic require of "fs" is not supported » dans son
+ * propre bundle), Satori et Resvg en sont les moteurs, et ils s'exécutent ici
+ * comme en local — donc l'aperçu peut être vérifié avant publication.
+ *
+ * Deux formes à respecter :
+ *   - l'export `{ fetch(request) }` (standard Web), comme api/place.js ;
+ *   - la lecture du corps (await arrayBuffer) avant de répondre : le rendu est
+ *     asynchrone, et sans cette lecture une erreur ne remonterait pas — on
+ *     servirait un en-tête image/png vide.
  */
 import { SITE_ORIGIN, fetchPlace, idFromSlug } from '../lib/place.js';
 import { cardElement } from '../lib/card.js';
+import { cardFonts } from '../lib/font.js';
 
 const CACHE = 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400';
 
@@ -24,20 +29,23 @@ export default {
   async fetch(request) {
     const diag = String(request.url || '').includes('diag=' + DIAG);
     try {
-      const { ImageResponse } = await import('@vercel/og');
-      const url = new URL(request.url, SITE_ORIGIN);
-      const slug = url.searchParams.get('s') || '';
+      const [{ default: satori }, { Resvg }, fonts] = await Promise.all([
+        import('satori'),
+        import('@resvg/resvg-js'),
+        cardFonts(),
+      ]);
 
-      const place = await fetchPlace(idFromSlug(slug));
+      const url = new URL(request.url, SITE_ORIGIN);
+      const place = await fetchPlace(idFromSlug(url.searchParams.get('s') || ''));
       if (!place) throw new Error('fiche introuvable');
 
-      const image = new ImageResponse(cardElement(place), { width: 1200, height: 630 });
-      const png = Buffer.from(await image.arrayBuffer());
-      if (!png.length) throw new Error('rendu vide');
+      const svg = await satori(cardElement(place), { width: 1200, height: 630, fonts });
+      const png = new Resvg(svg, { fitTo: { mode: 'width', value: 1200 } }).render().asPng();
+      if (!png || !png.length) throw new Error('rendu vide');
 
       return new Response(png, {
         status: 200,
-        headers: { 'content-type': 'image/png', 'cache-control': CACHE },
+        headers: { 'content-type': 'image/png', 'content-length': String(png.length), 'cache-control': CACHE },
       });
     } catch (err) {
       if (diag) {
