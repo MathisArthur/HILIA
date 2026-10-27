@@ -44,9 +44,11 @@ export default {
 
     try {
       const place = await fetchPlace(idFromSlug(slug));
-      // Fiche inconnue ou retirée : l'application affichera la liste (et l'URL
-      // sera nettoyée côté navigateur).
-      if (!place) return new Response(html, { status: 200, headers: HTML_HEADERS });
+      // Fiche inconnue ou retirée : l'application s'affiche quand même (elle
+      // nettoiera l'URL), mais le refus est dit clairement aux moteurs. Répondre
+      // 200 ferait de chaque adresse inventée après /lieu/ une page valable à
+      // leurs yeux : autant de doublons de l'accueil à indexer.
+      if (!place) return new Response(html, { status: 404, headers: HTML_HEADERS });
       return new Response(injectMeta(html, place, slug), { status: 200, headers: HTML_HEADERS });
     } catch (err) {
       return new Response(html, { status: 200, headers: HTML_HEADERS });
