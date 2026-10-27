@@ -22,7 +22,7 @@ Supabase**.
 | `data/communes.json` | Liste de secours des communes (le jeu de données la fournit déjà). |
 | `api/place.js` | Fonction qui sert une fiche (`/lieu/<slug>`) avec ses métadonnées de partage. |
 | `api/og.js` | Fonction qui dessine l'image d'aperçu d'une fiche (1200 × 630). |
-| `api/_lib/` | Logique partagée : lecture d'une fiche, métadonnées, carte d'aperçu. |
+| `lib/` | Logique partagée par les fonctions : lecture d'une fiche, métadonnées, carte d'aperçu. |
 | `scripts/build-dataset.mjs` | Régénère `data/places.json` **et** les sitemaps. |
 | `scripts/dev-server.mjs` | Serveur local qui rejoue les en-têtes, les réécritures et les fonctions de `vercel.json`. |
 | `scripts/preview-card.mjs` | Génère des exemples de cartes de partage, sans déployer. |
@@ -77,6 +77,14 @@ titre et la même image. Deux fonctions s'en chargent :
 
 Les URL canoniques utilisent toujours `https://www.hilia.fr`, y compris depuis
 une préversion `*.vercel.app` : pas de doublons dans les moteurs de recherche.
+
+**Forme d'export à respecter.** Vercel n'accepte, pour une fonction de `api/`, que
+l'objet `{ fetch(request) {…} }` (standard Web), un export par méthode (`GET`),
+ou la signature Node `(request, response)`. Un `export default function` est
+interprété comme un handler Node : l'URL reçue est alors **relative**, et
+`new URL(request.url)` échoue (erreur `FUNCTION_INVOCATION_FAILED` en ligne).
+Garder la forme `{ fetch }` telle quelle. Les utilitaires vivent dans `lib/`, à
+l'extérieur de `api/` : tout fichier de `api/` devient une fonction séparée.
 
 Pour vérifier le visuel sans déployer (même moteur que `@vercel/og`) :
 

@@ -76,8 +76,10 @@ async function runApi(dest, req, res, extraHeaders) {
   const url = `http://${req.headers.host}${pathPart}${query ? '?' + query : ''}`;
   try {
     const mod = await import('../api/' + name + '.js');
+    // Vercel appelle l'export `fetch` (standard Web) ; on fait de même.
+    const handler = typeof mod.default === 'function' ? mod.default : mod.default.fetch.bind(mod.default);
     const request = new Request(url, { method: req.method || 'GET', headers: req.headers });
-    const response = await mod.default(request);
+    const response = await handler(request);
     const body = Buffer.from(await response.arrayBuffer());
     const headers = { ...Object.fromEntries(response.headers), ...extraHeaders };
     res.writeHead(response.status, headers);
