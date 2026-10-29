@@ -690,3 +690,22 @@
   #hilToast button{margin-left:auto;flex:0 0 auto;border:0;background:transparent;color:inherit;font-size:1.2rem;line-height:1;cursor:pointer;padding:0 0 0 8px}
   @media(max-width:600px){#hilToast{top:calc(env(safe-area-inset-top,0px) + 10px);right:10px;width:calc(100vw - 20px);}}
 
+
+  /* ---------------------------------------------------------------------
+     Filtres : activité, ville et tarif réduit dans le panneau « Filtres & tri ».
+     L'activité ne figure plus au-dessus de la liste ; chaque liste longue
+     (activités, villes) a sa propre barre de recherche.
+     --------------------------------------------------------------------- */
+  .filter-summary{flex:1; min-width:0; margin:0; font-size:.8rem; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .filter-summary:empty{display:none;}
+  .filter-search{width:100%; box-sizing:border-box; padding:8px 10px; border:1.5px solid var(--line-strong); border-radius:9px; background:var(--paper); color:var(--ink); font:inherit; font-size:.84rem; margin:0 0 8px;}
+  .filter-search::placeholder{color:var(--muted);}
+  .filter-search:focus-visible{outline:2px solid var(--ring, #1F5F5B); outline-offset:1px;}
+  .filter-list{max-height:220px; overflow-y:auto; overscroll-behavior:contain; display:flex; flex-direction:column; gap:1px; padding-right:2px;}
+  .filter-option{display:flex; align-items:center; gap:8px; font-size:.86rem; padding:5px 4px; border-radius:6px; cursor:pointer;}
+  .filter-option:hover{background:var(--cream);}
+  .filter-option input[type=radio]{width:16px; height:16px; flex:none; accent-color:var(--teal); margin:0;}
+  .filter-option .fo-name{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis;}
+  .filter-option .fo-count{flex:none; color:var(--muted); font-size:.76rem; font-variant-numeric:tabular-nums;}
+  .filter-hint{font-size:.76rem; color:var(--muted); line-height:1.4; margin:8px 0 0;}
+  @media (max-width:760px){.filter-list{max-height:170px;}}

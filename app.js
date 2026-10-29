@@ -336,31 +336,15 @@
   document.getElementById('statCommunes').textContent = COMMUNES.length.toLocaleString('fr-FR');
   document.getElementById('statCats').textContent = ACTIVITES.length;
 
-  // ---------- Category pills ----------
+  // ---------- Ordre des activités (les plus représentées d'abord) ----------
+  // L'activité ne se choisit plus au-dessus de la liste : elle est filtrée dans
+  // le panneau « Filtres & tri », comme la ville et les autres critères.
   var order = ACTIVITES.map(function(n,idx){ return idx; }).sort(function(a,b){ return actCounts[b]-actCounts[a]; });
-  var pillsRow = document.getElementById('pillsRow');
-  var allPill = document.createElement('button');
-  allPill.type='button'; allPill.className='pill active'; allPill.textContent='Toutes les activités'; allPill.dataset.act=''; allPill.setAttribute('aria-pressed','true');
-  pillsRow.appendChild(allPill);
-  order.slice(0,10).forEach(function(idx){
-    var p = document.createElement('button');
-    p.type='button'; p.className='pill'; p.textContent=ACTIVITES[idx]; p.dataset.act=idx; p.setAttribute('aria-pressed','false');
-    pillsRow.appendChild(p);
-  });
-  var actSelect = document.createElement('select');
-  actSelect.className='act-select'; actSelect.setAttribute('aria-label','Filtrer par activité (liste complète)');
-  actSelect.innerHTML = '<option value="">Toutes les activités (liste)</option>' + ACTIVITES.map(function(n,idx){ return idx; }).sort(function(a,b){ return ACTIVITES[a].localeCompare(ACTIVITES[b],'fr'); }).map(function(idx){ return '<option value="'+idx+'">'+escapeHtml(ACTIVITES[idx])+' ('+actCounts[idx]+')</option>'; }).join('');
-  pillsRow.insertBefore(actSelect, allPill.nextSibling);
-  actSelect.addEventListener('change', function(){
-    pillsRow.querySelectorAll('.pill').forEach(function(b){ b.classList.remove('active'); b.setAttribute('aria-pressed','false'); });
-    if(!actSelect.value){ allPill.classList.add('active'); allPill.setAttribute('aria-pressed','true'); }
-    state.activity = actSelect.value; refresh();
-  });
-  pillsRow.addEventListener('click', function(e){
-    var btn = e.target.closest('.pill'); if(!btn) return; actSelect.value='';
-    pillsRow.querySelectorAll('.pill').forEach(function(b){ b.classList.remove('active'); b.setAttribute('aria-pressed','false'); });
-    btn.classList.add('active'); btn.setAttribute('aria-pressed','true'); state.activity = btn.dataset.act; refresh();
-  });
+
+  // ---------- État des filtres ----------
+  // Déclaré avant la construction du panneau « Filtres & tri » : les listes
+  // d'activités et de villes lisent cet état pour se dessiner.
+  var state = { query:'', activity:'', commune:'', access:[], sort:'name' };
 
   // ---------- Filter groups (drawer) ----------
   var FILTER_GROUPS = [
@@ -420,8 +404,9 @@
       [F.Q_BIM,"Boucle à induction magnétique"],
       [F.Q_AUDIODESC,"Audiodescription / visite adaptée"]
     ]},
-    {title:"Tarifs", items:[
-      [F.Q_TARIF_AVANT,"Gratuit ou tarif réduit pour l’usager"],
+    // Le « tarif réduit » a son propre filtre en tête du panneau : il n'est pas
+    // répété ici.
+    {title:"Accompagnement", items:[
       [F.Q_GRATUIT_ACCOMP,"Accompagnateur gratuit"]
     ]}
   ];
@@ -438,7 +423,105 @@
     });
     g.appendChild(cl); filterGroupsEl.appendChild(g);
   });
-  var allCheckboxes = filterGroupsEl.querySelectorAll('input[type=checkbox]');
+  // ---------- Activité, ville et tarif réduit (en tête du panneau) ----------
+  // Deux de ces listes sont longues (65 activités, plus de 13 000 communes) :
+  // chacune a sa propre barre de recherche, et la liste des villes s'arrête aux
+  // villes les plus fournies tant que la recherche ne précise pas.
+  var CITY_LIMIT = 40;
+  var communeCounts = new Int32Array(COMMUNES.length);
+  var communeOrder = [];
+  for(var cc=0; cc<DATA.length; cc++){
+    var comIdx = DATA[cc][F.COM];
+    if(typeof comIdx === 'number' && comIdx >= 0 && comIdx < communeCounts.length) communeCounts[comIdx]++;
+  }
+  for(var ck=0; ck<COMMUNES.length; ck++){ if(communeCounts[ck] > 0) communeOrder.push(ck); }
+  communeOrder.sort(function(a,b){ return communeCounts[b]-communeCounts[a] || COMMUNES[a].localeCompare(COMMUNES[b],'fr'); });
+
+  function countLabel(n){ return n.toLocaleString('fr-FR'); }
+  function optionHtml(name, value, label, count, checked){
+    return '<label class="filter-option"><input type="radio" name="'+name+'" value="'+value+'"'+(checked?' checked':'')+'>'+
+      '<span class="fo-name">'+escapeHtml(label)+'</span>'+
+      (count==null?'':'<span class="fo-count">'+countLabel(count)+'</span>')+'</label>';
+  }
+  function buildSearchGroup(legend, name, placeholder, listLabel){
+    var group = document.createElement('fieldset'); group.className='fgroup';
+    var lg = document.createElement('legend'); lg.textContent=legend; group.appendChild(lg);
+    var search = document.createElement('input');
+    search.type='search'; search.className='filter-search'; search.autocomplete='off';
+    search.placeholder=placeholder; search.setAttribute('aria-label', placeholder);
+    group.appendChild(search);
+    var list = document.createElement('div');
+    list.className='filter-list'; list.id=name+'Options';
+    list.setAttribute('role','radiogroup'); list.setAttribute('aria-label', listLabel);
+    search.setAttribute('aria-controls', list.id);
+    group.appendChild(list);
+    var hint = document.createElement('p'); hint.className='filter-hint'; hint.hidden=true;
+    group.appendChild(hint);
+    return {group:group, search:search, list:list, hint:hint, name:name};
+  }
+
+  var actFilter = buildSearchGroup('Activité', 'actFilter', 'Rechercher une activité…', 'Filtrer par activité');
+  var cityFilter = buildSearchGroup('Ville', 'cityFilter', 'Rechercher une ville…', 'Filtrer par ville');
+
+  function renderActivityOptions(){
+    var q = normalize(actFilter.search.value);
+    var html = optionHtml('actFilter','','Toutes les activités',null,state.activity==='');
+    var shown = 0;
+    order.forEach(function(idx){
+      if(q && normalize(ACTIVITES[idx]).indexOf(q) === -1) return;
+      html += optionHtml('actFilter', idx, ACTIVITES[idx], actCounts[idx], String(state.activity)===String(idx));
+      shown++;
+    });
+    actFilter.list.innerHTML = html;
+    actFilter.hint.hidden = shown > 0;
+    actFilter.hint.textContent = shown ? '' : 'Aucune activité ne correspond à cette recherche.';
+  }
+  function renderCityOptions(){
+    var q = normalize(cityFilter.search.value);
+    var html = optionHtml('cityFilter','','Toutes les villes',null,state.commune==='');
+    var shown = 0, total = 0;
+    for(var i=0; i<communeOrder.length; i++){
+      var idx = communeOrder[i];
+      if(q && normalize(COMMUNES[idx]).indexOf(q) === -1) continue;
+      total++;
+      if(shown >= CITY_LIMIT) continue;
+      html += optionHtml('cityFilter', idx, COMMUNES[idx], communeCounts[idx], String(state.commune)===String(idx));
+      shown++;
+    }
+    cityFilter.list.innerHTML = html;
+    var rest = total - shown;
+    cityFilter.hint.hidden = rest <= 0;
+    cityFilter.hint.textContent = rest > 0 ? 'Encore '+countLabel(rest)+' ville'+(rest>1?'s':'')+' : précisez la recherche.' : '';
+  }
+
+  // Tarif réduit : un seul critère, à cocher ou à décocher.
+  var tarifGroup = document.createElement('fieldset'); tarifGroup.className='fgroup';
+  var tarifLegend = document.createElement('legend'); tarifLegend.textContent='Tarif'; tarifGroup.appendChild(tarifLegend);
+  var tarifList = document.createElement('div'); tarifList.className='check-list';
+  var tarifLabel = document.createElement('label');
+  var tarifCb = document.createElement('input'); tarifCb.type='checkbox'; tarifCb.dataset.field=F.Q_TARIF_AVANT;
+  tarifLabel.appendChild(tarifCb);
+  tarifLabel.appendChild(document.createTextNode('Tarif réduit ou gratuité pour l’usager'));
+  tarifList.appendChild(tarifLabel);
+  tarifGroup.appendChild(tarifList);
+  var tarifCount = 0;
+  for(var tq=0; tq<DATA.length; tq++){ if(isTrue(DATA[tq][F.Q_TARIF_AVANT])) tarifCount++; }
+  if(!tarifCount){
+    var tarifHint = document.createElement('p'); tarifHint.className='filter-hint';
+    tarifHint.textContent = 'Aucune fiche ne renseigne encore ce critère.';
+    tarifGroup.appendChild(tarifHint);
+  }
+
+  // Ordre final : activité, ville, tarif, puis les critères d'accessibilité.
+  var firstAccessGroup = filterGroupsEl.firstChild;
+  filterGroupsEl.insertBefore(tarifGroup, firstAccessGroup);
+  filterGroupsEl.insertBefore(cityFilter.group, tarifGroup);
+  filterGroupsEl.insertBefore(actFilter.group, cityFilter.group);
+
+  actFilter.search.addEventListener('input', renderActivityOptions);
+  cityFilter.search.addEventListener('input', renderCityOptions);
+  renderActivityOptions();
+  renderCityOptions();
 
   // ---------- Formulaire d'accessibilité (création / modification de lieux) ----------
   var ACCESS_NUM_FIELDS = [[F.CHEMIN_MARCHES,'Nombre de marches sur le cheminement'],[F.ENTREE_MARCHES,'Nombre de marches à l’entrée'],[F.ENTREE_LARGEUR,'Largeur minimale de l’entrée (cm)']];
@@ -481,17 +564,18 @@
   }
 
   // ---------- State ----------
-  var state = { query:'', activity:'', access:[], sort:'name' };
   var filtered = [];
 
   function computeFiltered(){
     var q = normalize(state.query);
     var act = state.activity;
+    var com = state.commune;
     var acc = state.access;
     var out = [];
     for(var idx=0; idx<DATA.length; idx++){
       var r = DATA[idx];
       if(act !== '' && String(r[F.ACT]) !== act) continue;
+      if(com !== '' && String(r[F.COM]) !== com) continue;
       if(q && searchIdx[idx].indexOf(q) === -1) continue;
       var ok = true;
       for(var a=0;a<acc.length;a++){ if(!isTrue(r[acc[a]])){ ok=false; break; } }
@@ -611,19 +695,42 @@
   var debTimer=null;
   searchInput.addEventListener('input', function(){ clearTimeout(debTimer); debTimer=setTimeout(function(){ state.query=searchInput.value; refresh(); }, 140); });
   document.getElementById('sortSelect').addEventListener('change', function(e){ state.sort = e.target.value; });
-  filterGroupsEl.addEventListener('change', function(){
+  filterGroupsEl.addEventListener('change', function(e){
+    var t = e.target;
+    // Une seule activité, une seule ville : la liste se comporte comme un choix unique.
+    if(t && t.type === 'radio'){
+      if(t.name === 'actFilter') state.activity = t.value;
+      if(t.name === 'cityFilter') state.commune = t.value;
+    }
     var boxes = filterGroupsEl.querySelectorAll('input[type=checkbox]:checked');
     state.access = Array.from(boxes).map(function(cb){ return parseInt(cb.dataset.field,10); });
   });
+  function activeFilterLabels(){
+    var parts = [];
+    if(state.activity !== '') parts.push(ACTIVITES[Number(state.activity)] || '');
+    if(state.commune !== '') parts.push('Ville : '+(COMMUNES[Number(state.commune)] || ''));
+    var tarif = state.access.indexOf(F.Q_TARIF_AVANT) !== -1;
+    if(tarif) parts.push('Tarif réduit');
+    var n = state.access.filter(function(f){ return f !== F.Q_TARIF_AVANT; }).length;
+    if(n) parts.push(n+' critère'+(n>1?'s':'')+' d’accessibilité');
+    if(state.sort !== 'name') parts.push('Tri : '+(state.sort === 'commune' ? 'commune' : 'accessibilité'));
+    return parts.filter(Boolean);
+  }
   function updateFilterDot(){
-    var has = state.access.length>0 || state.sort!=='name';
+    var parts = activeFilterLabels();
+    var has = parts.length > 0;
     document.getElementById('filterBtn').classList.toggle('has-filters', has);
-    var n = state.access.length + (state.sort!=='name' ? 1 : 0);
-    var sr = document.getElementById('filterCountSr'); if(sr) sr.textContent = has ? ' - '+n+' critère'+(n>1?'s':'')+' actif'+(n>1?'s':'') : '';
+    var sr = document.getElementById('filterCountSr');
+    if(sr) sr.textContent = has ? ' - '+parts.length+' filtre'+(parts.length>1?'s':'')+' actif'+(parts.length>1?'s':'') : '';
+    var summary = document.getElementById('filterSummary');
+    if(summary) summary.textContent = parts.join(' · ');
   }
   document.getElementById('resetBtn').addEventListener('click', function(){
-    state.access=[]; state.sort='name'; document.getElementById('sortSelect').value='name';
-    allCheckboxes.forEach(function(cb){ cb.checked=false; });
+    state.access=[]; state.sort='name'; state.activity=''; state.commune='';
+    document.getElementById('sortSelect').value='name';
+    filterGroupsEl.querySelectorAll('input[type=checkbox]').forEach(function(cb){ cb.checked=false; });
+    actFilter.search.value=''; cityFilter.search.value='';
+    renderActivityOptions(); renderCityOptions();
     refresh(); closeDrawer(); announce('Filtres réinitialisés.',900);
   });
   document.getElementById('applyBtn').addEventListener('click', function(){ refresh(); closeDrawer(); });

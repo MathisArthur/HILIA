@@ -92,13 +92,13 @@
   </div>
 </header>
 
-<div class="subbar" role="region" aria-label="Filtres rapides">
+<div class="subbar" role="region" aria-label="Filtres">
   <div class="subbar-inner">
-    <div class="pills" id="pillsRow" role="group" aria-label="Filtrer par famille d’activités"></div>
     <button class="filter-btn" id="filterBtn" type="button" aria-haspopup="dialog"><span class="dot" id="filterDot" aria-hidden="true"></span>
       <svg aria-hidden="true" focusable="false" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
       Filtres &amp; tri<span class="sr-only" id="filterCountSr"></span>
     </button>
+    <p class="filter-summary" id="filterSummary"></p>
   </div>
 </div>
 
@@ -464,7 +464,7 @@
     <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
   </button>
   <h2 id="drawerTitle">Filtres & tri</h2>
-  <p class="sub">Tous les critères viennent des fiches d'accessibilité déclarées par chaque établissement.</p>
+  <p class="sub">Activité, ville, tarif et critères d'accessibilité. Ces derniers viennent des fiches déclarées par chaque établissement.</p>
   <div class="fgroup">
     <label class="flabel" for="sortSelect">Trier les résultats par</label>
     <select id="sortSelect">
