@@ -180,6 +180,17 @@
   }
   DATA = DATA.concat(buildCustomRows());
 
+  // Les fiches importées portent leur qualification prestataire dans
+  // `_hiliaQualif`, mais les colonnes de filtrage (Q_*) n'étaient remplies que
+  // pour les fiches créées dans ce navigateur. Résultat : les critères de
+  // qualification - tarif réduit, confort sensoriel, communication, pratique de
+  // l'activité - ne trouvaient aucune fiche importée, alors que la fiche en
+  // affichait bien les informations.
+  for(var qr=0; qr<DATA.length; qr++){
+    var rowQ = DATA[qr];
+    if(rowQ && rowQ._hiliaQualif && rowQ[F.QUALIF] == null) applyQualif(rowQ, rowQ._hiliaQualif);
+  }
+
   // ---------- Rattachement des contributions à l'identifiant réel des fiches ----------
   // Avis, suggestions et modifications étaient enregistrés avec la *position* de la
   // fiche dans la liste : le moindre import, ajout ou suppression décalait tous les
@@ -506,11 +517,11 @@
   tarifGroup.appendChild(tarifList);
   var tarifCount = 0;
   for(var tq=0; tq<DATA.length; tq++){ if(isTrue(DATA[tq][F.Q_TARIF_AVANT])) tarifCount++; }
-  if(!tarifCount){
-    var tarifHint = document.createElement('p'); tarifHint.className='filter-hint';
-    tarifHint.textContent = 'Aucune fiche ne renseigne encore ce critère.';
-    tarifGroup.appendChild(tarifHint);
-  }
+  var tarifHint = document.createElement('p'); tarifHint.className='filter-hint';
+  tarifHint.textContent = tarifCount
+    ? countLabel(tarifCount)+' fiche'+(tarifCount>1?'s':'')+' renseigne'+(tarifCount>1?'nt':'')+' ce critère.'
+    : 'Aucune fiche ne renseigne encore ce critère.';
+  tarifGroup.appendChild(tarifHint);
 
   // Ordre final : activité, ville, tarif, puis les critères d'accessibilité.
   var firstAccessGroup = filterGroupsEl.firstChild;
