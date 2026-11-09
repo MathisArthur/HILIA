@@ -2,8 +2,8 @@
   // Le jeu de données des fiches (une seule requête, servie par le CDN) part dès
   // l'analyse de l'en-tête sur les pages qui en ont besoin : l'exploration et une
   // fiche. Les pages de contenu (/faq, /mentions-legales, ...) n'affichent aucune
-  // fiche : leurs 2,9 Mo compressés n'y sont pas téléchargés. Un clic vers
-  // l'exploration y passe par une navigation normale (voir navigatePage).
+  // fiche : leurs 2,9 Mo compressés n'y sont pas téléchargés. Une recherche ou
+  // un clic vers l'exploration les charge à la demande (voir ensurePlaces).
   var CONTENT_ONLY_PATHS = ['/a-propos','/faq','/mentions-legales','/confidentialite','/cgu','/cookies','/contact','/accessibilite','/plan-du-site'];
   var BOOT_PATH = String(location.pathname||'/').replace(/\/index\.html$/,'/').replace(/\/+$/,'') || '/';
   var DEFER_PLACES = CONTENT_ONLY_PATHS.indexOf(BOOT_PATH) !== -1;
@@ -45,6 +45,11 @@
   //     (juste après un premier déploiement, par exemple).
   async function loadPlacesFromDataset(raw){
     var ds=await window.__hiliaDataset;
+    if(!ds){
+      // Page de contenu : le fichier n'était pas préchargé, on le demande maintenant
+      // (ou le préchargement a échoué : une seconde tentative ne coûte rien).
+      try{ var resp=await fetch('/data/places.json',{cache:'force-cache'}); ds=resp.ok?await resp.json():null; }catch(err){ ds=null; }
+    }
     if(!ds) throw new Error('data/places.json : téléchargement impossible');
     if(!Array.isArray(ds.rows) || !ds.rows.length) throw new Error('data/places.json : format inattendu');
     if(Array.isArray(ds.activites) && ds.activites.length) raw.activites=ds.activites.slice();
@@ -159,14 +164,15 @@
   // Noms et communes : retirer les caractères invisibles laissés par l’import
   // (emoji tronqués, séparateurs Unicode) et les espaces multiples, qui
   // polluaient l’affichage, les titres de page et les données structurées.
-  (function cleanLabels(){
+  function cleanLabels(){
     var INVISIBLE=/[\u200b-\u200f\u202a-\u202e\u2060-\u206f\ufe00-\ufe0f\ufeff]/g;
     // Convention d’affichage du site : un tiret simple, jamais de tiret cadratin.
     var EM_DASH=/\u2014/g;
     function tidy(v){ return String(v==null?'':v).replace(INVISIBLE,'').replace(/\s+/g,' ').trim().replace(EM_DASH,'-'); }
     for(var i=0;i<DATA.length;i++){ var r=DATA[i]; if(r) r[F.NOM]=tidy(r[F.NOM])||'Lieu sans nom'; }
     for(var c=0;c<COMMUNES.length;c++){ var nom=tidy(COMMUNES[c]); if(nom) COMMUNES[c]=nom; }
-  })();
+  }
+  cleanLabels();
 
   function buildCustomRows(){
     var out=[];
@@ -388,6 +394,7 @@
   function ratingThresholdLabel(v){ return String(v).replace('.', ',')+'/5 et plus'; }
   async function loadReviewRatings(){
     if(!supabaseClient) return false;
+    if(ratingsLoaded) return true;
     var pageSize = 1000, from = 0, next = {};
     try{
       for(;;){
@@ -583,11 +590,15 @@
   tarifList.appendChild(tarifLabel);
   tarifGroup.appendChild(tarifList);
   var tarifCount = 0;
-  for(var tq=0; tq<DATA.length; tq++){ if(isTrue(DATA[tq][F.Q_TARIF_AVANT])) tarifCount++; }
   var tarifHint = document.createElement('p'); tarifHint.className='filter-hint';
-  tarifHint.textContent = tarifCount
-    ? countLabel(tarifCount)+' fiche'+(tarifCount>1?'s':'')+' renseigne'+(tarifCount>1?'nt':'')+' ce critère.'
-    : 'Aucune fiche ne renseigne encore ce critère.';
+  function renderTarifHint(){
+    tarifCount = 0;
+    for(var tq=0; tq<DATA.length; tq++){ if(isTrue(DATA[tq][F.Q_TARIF_AVANT])) tarifCount++; }
+    tarifHint.textContent = tarifCount
+      ? countLabel(tarifCount)+' fiche'+(tarifCount>1?'s':'')+' renseigne'+(tarifCount>1?'nt':'')+' ce critère.'
+      : 'Aucune fiche ne renseigne encore ce critère.';
+  }
+  renderTarifHint();
   tarifGroup.appendChild(tarifHint);
 
   // Avis : barre de sélection de 1 à 5 étoiles. La note choisie est la note
@@ -805,6 +816,8 @@
     if(!isNaN(v)) goToPage(v-1);
   });
   function announceResults(){
+    // Tant que les fiches ne sont pas chargées, il n'y a rien à annoncer.
+    if(!DATA.length) return;
     var n = filtered.length, pages = pagesCount();
     announce(n===0 ? 'Aucun lieu trouvé.' :
       n.toLocaleString('fr-FR')+' lieu'+(n>1?'x':'')+' trouvé'+(n>1?'s':'')+(currentTab==='list' ? ', page 1 sur '+pages.toLocaleString('fr-FR') : ', affichés sur la carte')+'.', 700);
@@ -820,16 +833,24 @@
   var searchInput = document.getElementById('searchInput');
   var debTimer=null;
   searchInput.addEventListener('input', function(){ clearTimeout(debTimer); debTimer=setTimeout(function(){ state.query=searchInput.value; refresh(); }, 140); });
-  if(DEFER_PLACES){
-    // Page de contenu : les fiches ne sont pas chargées. Une recherche ouvre
-    // l'exploration par une navigation normale, avec la saisie transmise.
-    searchInput.addEventListener('keydown', function(e){
-      if(e.key !== 'Enter') return;
-      e.preventDefault();
-      var q=searchInput.value.trim();
-      location.href='/'+(q?'?q='+encodeURIComponent(q):'');
+  // Recherche depuis une autre page : les résultats vivent dans l'exploration.
+  // La première saisie bascule sur cette section sans rechargement ; sur une page
+  // de contenu, le jeu de données est chargé à ce moment-là (ensurePlaces).
+  var searchSwitching=false;
+  function searchFromOtherPage(){
+    if(currentPage==='explore' || searchSwitching) return;
+    searchSwitching=true;
+    ensurePlaces().then(function(ok){
+      searchSwitching=false;
+      if(!ok) return;
+      state.query=searchInput.value;
+      navigatePage('explore', true);
+      refresh();
+      searchInput.focus({preventScroll:true});
+      try{ searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length); }catch(e){}
     });
   }
+  searchInput.addEventListener('input', searchFromOtherPage);
   document.getElementById('sortSelect').addEventListener('change', function(e){ state.sort = e.target.value; });
   filterGroupsEl.addEventListener('change', function(e){
     var t = e.target;
@@ -2400,6 +2421,73 @@
     // Par sécurité, on remasque le mot de passe quand on change de mode (connexion / création) ou après envoi
     document.querySelectorAll('[data-auth-mode]').forEach(function(b){ b.addEventListener('click',function(){ setPasswordVisible(false); }); });
     if(profileForm) profileForm.addEventListener('submit',function(){ setPasswordVisible(false); });
+  }
+
+  // ---------- Chargement à la demande sur les pages de contenu ----------
+  // Le jeu de données n'y est pas chargé au départ. La première recherche (ou
+  // l'ouverture de l'exploration) le télécharge, puis remplit les mêmes index
+  // que le démarrage normal : la recherche fonctionne sans recharger la page.
+  var placesPromise = null;
+  function ensurePlaces(){
+    if(placesPromise) return placesPromise;
+    if(!DEFER_PLACES) return Promise.resolve(true);
+    announce('Chargement des lieux…', 0);
+    placesPromise = (async function(){
+      var wasDeferred = DEFER_PLACES;
+      DEFER_PLACES = false;
+      try{
+        var loaded = await loadBasePlaces(raw);
+        if(!loaded) throw new Error('jeu de données indisponible');
+        hydratePlaces();
+        if(await loadReviewRatings()) renderRatingOptions();
+        return true;
+      }catch(err){
+        console.warn('Chargement des lieux impossible', err);
+        if(wasDeferred){ DEFER_PLACES = true; placesPromise = null; }
+        announce('Impossible de charger les lieux. Vérifiez votre connexion puis réessayez.', 0);
+        return false;
+      }
+    })();
+    return placesPromise;
+  }
+  function hydratePlaces(){
+    ACTIVITES = raw.activites.slice();
+    getCustomActivitiesEarly().forEach(function(a){ if(ACTIVITES.indexOf(a) < 0) ACTIVITES.push(a); });
+    COMMUNES = raw.communes || [];
+    DATA = raw.data || [];
+    cleanLabels();
+    DATA = DATA.concat(buildCustomRows());
+    for(var qh=0; qh<DATA.length; qh++){
+      var rowH = DATA[qh];
+      if(rowH && rowH._hiliaQualif && rowH[F.QUALIF] == null) applyQualif(rowH, rowH._hiliaQualif);
+    }
+    indexPlacesById();
+    applySavedEdits();
+    // Index de recherche et notes d'accessibilité, comme au démarrage normal.
+    searchIdx = new Array(DATA.length);
+    accessScore = new Int8Array(DATA.length);
+    actCounts = new Array(ACTIVITES.length).fill(0);
+    for(var i=0; i<DATA.length; i++){
+      var r = DATA[i];
+      searchIdx[i] = normalize(r[F.NOM]+' '+r[F.ADR]+' '+COMMUNES[r[F.COM]]+' '+r[F.CP]);
+      var sc = 0;
+      for(var k=0; k<SCORE_FIELDS.length; k++){ if(isTrue(r[SCORE_FIELDS[k]])) sc++; }
+      accessScore[i] = sc;
+      actCounts[r[F.ACT]]++;
+    }
+    document.getElementById('statTotal').textContent = DATA.length.toLocaleString('fr-FR');
+    document.getElementById('statCommunes').textContent = COMMUNES.length.toLocaleString('fr-FR');
+    document.getElementById('statCats').textContent = ACTIVITES.length;
+    order = ACTIVITES.map(function(n,idx){ return idx; }).sort(function(a,b){ return actCounts[b]-actCounts[a]; });
+    communeCounts = new Int32Array(COMMUNES.length);
+    communeOrder = [];
+    for(var cc=0; cc<DATA.length; cc++){
+      var ci = DATA[cc][F.COM];
+      if(typeof ci === 'number' && ci >= 0 && ci < communeCounts.length) communeCounts[ci]++;
+    }
+    for(var ck=0; ck<COMMUNES.length; ck++){ if(communeCounts[ck] > 0) communeOrder.push(ck); }
+    communeOrder.sort(function(a,b){ return communeCounts[b]-communeCounts[a] || COMMUNES[a].localeCompare(COMMUNES[b],'fr'); });
+    renderActivityOptions(); renderCityOptions(); renderTarifHint(); renderRatingOptions();
   }
 
   // Recherche transmise par /?q=… (saisie faite depuis une page de contenu).
