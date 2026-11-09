@@ -1,7 +1,13 @@
 /* HILIA - application : tout le JavaScript du site, chargé en fin de page. */
   // Le jeu de données des fiches (une seule requête, servie par le CDN) part dès
-  // l'analyse de l'en-tête : il est prêt quand le script principal s'exécute.
-  window.__hiliaDataset = fetch('/data/places.json', {cache:'force-cache'})
+  // l'analyse de l'en-tête sur les pages qui en ont besoin : l'exploration et une
+  // fiche. Les pages de contenu (/faq, /mentions-legales, ...) n'affichent aucune
+  // fiche : leurs 2,9 Mo compressés n'y sont pas téléchargés. Un clic vers
+  // l'exploration y passe par une navigation normale (voir navigatePage).
+  var CONTENT_ONLY_PATHS = ['/a-propos','/faq','/mentions-legales','/confidentialite','/cgu','/cookies','/contact','/accessibilite','/plan-du-site'];
+  var BOOT_PATH = String(location.pathname||'/').replace(/\/index\.html$/,'/').replace(/\/+$/,'') || '/';
+  var DEFER_PLACES = CONTENT_ONLY_PATHS.indexOf(BOOT_PATH) !== -1;
+  window.__hiliaDataset = DEFER_PLACES ? Promise.resolve(null) : fetch('/data/places.json', {cache:'force-cache'})
     .then(function(r){ return r.ok ? r.json() : null; })
     .catch(function(){ return null; });
 
@@ -94,6 +100,10 @@
   }
   async function loadBasePlaces(raw){
     function finish(ok){ var b=document.getElementById('baseLoading'); if(ok){ if(b) b.remove(); return true; } baseBanner('Impossible de charger les lieux depuis HILIA. Vérifiez votre connexion, puis rechargez la page.',true); return false; }
+    if(DEFER_PLACES){
+      var deferBanner=document.getElementById('baseLoading'); if(deferBanner) deferBanner.remove();
+      return true;
+    }
     baseBanner('Chargement des lieux…');
     try{
       await loadPlacesFromDataset(raw);
@@ -580,34 +590,35 @@
     : 'Aucune fiche ne renseigne encore ce critère.';
   tarifGroup.appendChild(tarifHint);
 
-  // Avis : seuil de note moyenne. « Toutes les notes » ne restreint rien.
-  var RATING_STEPS = [3, 4, 4.5];
+  // Avis : barre de sélection de 1 à 5 étoiles. La note choisie est la note
+  // minimale ; « Toutes » ne restreint rien.
   var ratingGroup = document.createElement('fieldset'); ratingGroup.className='fgroup';
   var ratingLegend = document.createElement('legend'); ratingLegend.textContent='Avis'; ratingGroup.appendChild(ratingLegend);
-  var ratingList = document.createElement('div'); ratingList.className='rating-list';
+  var ratingList = document.createElement('div');
   ratingGroup.appendChild(ratingList);
   var ratingHint = document.createElement('p'); ratingHint.className='filter-hint'; ratingGroup.appendChild(ratingHint);
 
-  function ratingOptionHtml(value, label, count, checked){
-    return '<label class="filter-option"><input type="radio" name="ratingFilter" value="'+value+'"'+(checked?' checked':'')+'>'+
-      '<span class="fo-name">'+escapeHtml(label)+'</span>'+
-      (count==null?'':'<span class="fo-count">'+countLabel(count)+'</span>')+'</label>';
-  }
   function renderRatingOptions(){
-    var html = ratingOptionHtml('', 'Toutes les notes', null, !state.minRating);
-    RATING_STEPS.forEach(function(step){
-      html += ratingOptionHtml(String(step), ratingThresholdLabel(step), ratedPlacesCount(step), state.minRating === step);
-    });
+    var html = '<div class="rating-bar" role="radiogroup" aria-label="Note minimale des avis, de 1 à 5 étoiles">'+
+      '<label><input type="radio" name="ratingFilter" value=""'+(state.minRating?'':' checked')+'><span>Toutes</span></label>';
+    for(var step=1; step<=5; step++){
+      html += '<label><input type="radio" name="ratingFilter" value="'+step+'" aria-label="'+step+' sur 5 et plus"'+(state.minRating===step?' checked':'')+'>'+
+        '<span>'+step+'<span class="rating-star" aria-hidden="true">★</span></span></label>';
+    }
+    html += '</div>';
     ratingList.innerHTML = html;
     var withReviews = ratedPlacesCount(0);
-    if(withReviews){
-      ratingHint.textContent = countLabel(withReviews)+' fiche'+(withReviews>1?'s':'')+' '+(withReviews>1?'ont':'a')+' au moins un avis. Les fiches sans avis sont écartées dès qu’un seuil est choisi.';
-    }else if(ratingsFailed){
-      ratingHint.textContent = 'Les notes n’ont pas pu être chargées. Rechargez la page pour réessayer.';
-    }else if(!ratingsLoaded){
-      ratingHint.textContent = 'Chargement des notes…';
+    if(!withReviews){
+      ratingHint.textContent = ratingsFailed
+        ? 'Les notes n’ont pas pu être chargées. Rechargez la page pour réessayer.'
+        : ((ratingsLoaded || DEFER_PLACES) ? 'Aucun avis publié pour l’instant : ce filtre s’activera dès le premier avis.' : 'Chargement des notes…');
+      return;
+    }
+    if(state.minRating > 0){
+      var matched = ratedPlacesCount(state.minRating);
+      ratingHint.textContent = countLabel(matched)+' fiche'+(matched>1?'s':'')+' sur '+countLabel(withReviews)+' '+(matched>1?'atteignent':'atteint')+' '+ratingThresholdLabel(state.minRating)+'.';
     }else{
-      ratingHint.textContent = 'Aucun avis publié pour l’instant : ce filtre s’activera dès le premier avis.';
+      ratingHint.textContent = countLabel(withReviews)+' fiche'+(withReviews>1?'s':'')+' '+(withReviews>1?'ont':'a')+' au moins un avis. Choisissez une note pour ne garder que les mieux notées.';
     }
   }
 
@@ -690,6 +701,16 @@
     if(state.sort === 'name'){ out.sort(function(a,b){ return DATA[a][F.NOM].localeCompare(DATA[b][F.NOM],'fr'); }); }
     else if(state.sort === 'commune'){ out.sort(function(a,b){ return COMMUNES[DATA[a][F.COM]].localeCompare(COMMUNES[DATA[b][F.COM]],'fr'); }); }
     else if(state.sort === 'access'){ out.sort(function(a,b){ return accessScore[b]-accessScore[a] || DATA[a][F.NOM].localeCompare(DATA[b][F.NOM],'fr'); }); }
+    else if(state.sort === 'rating'){
+      // Meilleure moyenne d'abord ; les fiches sans avis passent en dernier.
+      var avgCache={};
+      var avgOf=function(di){ var s=ratingOf(di); return s && s.count ? s.sum/s.count : -1; };
+      out.sort(function(a,b){
+        if(!(a in avgCache)) avgCache[a]=avgOf(a);
+        if(!(b in avgCache)) avgCache[b]=avgOf(b);
+        return avgCache[b]-avgCache[a] || DATA[a][F.NOM].localeCompare(DATA[b][F.NOM],'fr');
+      });
+    }
     filtered = out;
     document.getElementById('resultCount').textContent = filtered.length.toLocaleString('fr-FR');
   }
@@ -799,6 +820,16 @@
   var searchInput = document.getElementById('searchInput');
   var debTimer=null;
   searchInput.addEventListener('input', function(){ clearTimeout(debTimer); debTimer=setTimeout(function(){ state.query=searchInput.value; refresh(); }, 140); });
+  if(DEFER_PLACES){
+    // Page de contenu : les fiches ne sont pas chargées. Une recherche ouvre
+    // l'exploration par une navigation normale, avec la saisie transmise.
+    searchInput.addEventListener('keydown', function(e){
+      if(e.key !== 'Enter') return;
+      e.preventDefault();
+      var q=searchInput.value.trim();
+      location.href='/'+(q?'?q='+encodeURIComponent(q):'');
+    });
+  }
   document.getElementById('sortSelect').addEventListener('change', function(e){ state.sort = e.target.value; });
   filterGroupsEl.addEventListener('change', function(e){
     var t = e.target;
@@ -820,7 +851,7 @@
     if(tarif) parts.push('Tarif réduit');
     var n = state.access.filter(function(f){ return f !== F.Q_TARIF_AVANT; }).length;
     if(n) parts.push(n+' critère'+(n>1?'s':'')+' d’accessibilité');
-    if(state.sort !== 'name') parts.push('Tri : '+(state.sort === 'commune' ? 'commune' : 'accessibilité'));
+    if(state.sort !== 'name') parts.push('Tri : '+(state.sort === 'commune' ? 'commune' : state.sort === 'rating' ? 'note des avis' : 'accessibilité'));
     return parts.filter(Boolean);
   }
   function updateFilterDot(){
@@ -2229,6 +2260,9 @@
   function setPageActiveButtons(page){ document.querySelectorAll('[data-nav-page]').forEach(function(b){ var active=b.dataset.navPage===page; b.classList.toggle('active',active); if(b.tagName==='A'){ if(active)b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); } }); }
   function navigatePage(page, push){
     page=page||'explore'; if(['explore','about','faq','prestataires','profile','legal','privacy','cgu','cookies','contact','accessibility','sitemap'].indexOf(page)===-1) page='explore';
+    // Depuis une page de contenu, le jeu de données n'est pas chargé : on rejoint
+    // l'exploration par une navigation normale plutôt que d'afficher une liste vide.
+    if(DEFER_PLACES && page==='explore'){ location.href=pagePath('explore'); return; }
     currentPage=page;
     syncPageMeta(page);
     document.getElementById('explorePage').style.display = page==='explore' ? '' : 'none';
@@ -2368,14 +2402,18 @@
     if(profileForm) profileForm.addEventListener('submit',function(){ setPasswordVisible(false); });
   }
 
+  // Recherche transmise par /?q=… (saisie faite depuis une page de contenu).
+  var bootQuery=new URLSearchParams(location.search).get('q');
+  if(bootQuery){ searchInput.value=bootQuery; state.query=bootQuery; }
+
   // initial
   updateTabIndex();
   refresh();
   initialized = true;
   // Notes des avis : chargées après le premier rendu, pour ne pas retarder la liste.
-  loadReviewRatings().then(function(ok){
+  (DEFER_PLACES ? Promise.resolve(false) : loadReviewRatings()).then(function(ok){
     renderRatingOptions();
-    if(ok && state.minRating > 0) refresh();
+    if(ok && (state.minRating > 0 || state.sort === 'rating')) refresh();
   });
   restoreSupabaseSession();
   var bootSlug=slugFromPath(location.pathname), bootPage=pageFromPath(location.pathname), bootHash=location.hash||'';
