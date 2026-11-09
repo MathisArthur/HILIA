@@ -1030,8 +1030,6 @@
     window.addEventListener('orientationchange', function(){ setTimeout(function(){ if(leafletMap) leafletMap.invalidateSize({pan:false,animate:false}); },120); });
 
     clusterGroup = L.markerClusterGroup({
-      chunkedLoading:true,
-      chunkInterval:120,
       maxClusterRadius:function(zoom){ return zoom >= 12 ? 42 : 54; },
       spiderfyOnMaxZoom:true,
       disableClusteringAtZoom:15,
@@ -1063,6 +1061,34 @@
     });
   }
 
+  // Info-bulle et fenêtre construites au moment de l'ouverture, et non pour
+  // chaque repère : les 54 350 fiches ne doivent pas être rendues à l'avance.
+  function popupHtmlFor(di){
+    var r = DATA[di];
+    return '<div class="hilia-popup"><h4>'+escapeHtml(r[F.NOM])+'</h4><p>'+escapeHtml(COMMUNES[r[F.COM]])+' · '+r[F.CP]+'<br>'+escapeHtml(ACTIVITES[r[F.ACT]])+'</p><div class="popup-review">'+reviewSummaryHtml(di,'mini')+'</div><button type="button" data-di="'+di+'" aria-label="Voir la fiche de '+escapeAttr(r[F.NOM])+'">Voir la fiche</button></div>';
+  }
+  // Repères créés une seule fois puis réutilisés : sans ce cache, chaque
+  // affichage de la carte reconstruisait les 54 350 repères, ce qui laissait
+  // une carte presque vide le temps du remplissage.
+  var markerCache = {};
+  function markerFor(di){
+    var cached = markerCache[di];
+    if(cached) return cached;
+    var r = DATA[di];
+    var m = L.marker([Number(r[F.LAT]), Number(r[F.LON])], { icon: pinIcon(colorFor(r[F.ACT])) });
+    m.on('add', function(){ var el = m.getElement && m.getElement(); if(el) el.setAttribute('aria-label', r[F.NOM]+', '+COMMUNES[r[F.COM]]+', '+ACTIVITES[r[F.ACT]]+' : ouvrir le résumé'); });
+    m.bindTooltip(function(){ return r[F.NOM]+' · '+COMMUNES[r[F.COM]]; }, {direction:'top', offset:[0,-14]});
+    m.bindPopup(function(){ return popupHtmlFor(di); });
+    m.on('popupopen', function(e){
+      var pop = e.popup.getElement();
+      var cb = pop.querySelector('.leaflet-popup-close-button');
+      if(cb){ cb.setAttribute('aria-label','Fermer la fenêtre d’information'); cb.setAttribute('title','Fermer la fenêtre d’information'); }
+      var btn = pop.querySelector('button[data-di]');
+      if(btn){ btn.addEventListener('click', function(){ openDetail(parseInt(btn.dataset.di,10)); }); btn.focus(); }
+    });
+    markerCache[di] = m;
+    return m;
+  }
   function drawMap(){
     if(!leafletMap || !clusterGroup) return;
     clusterGroup.clearLayers();
@@ -1074,24 +1100,10 @@
     for(var k=0;k<validIdx.length;k++){
       var di = validIdx[k];
       if(!showAll && !filteredSet.has(di)) continue;
-      var r = DATA[di];
-      var color = colorFor(r[F.ACT]);
-      var m = L.marker([Number(r[F.LAT]), Number(r[F.LON])], { icon: pinIcon(color) });
-      (function(marker, label){ marker.on('add', function(){ var el=marker.getElement && marker.getElement(); if(el) el.setAttribute('aria-label', label); }); })(m, r[F.NOM]+', '+COMMUNES[r[F.COM]]+', '+ACTIVITES[r[F.ACT]]+' : ouvrir le résumé');
-      m.bindTooltip(r[F.NOM]+' · '+COMMUNES[r[F.COM]], {direction:'top', offset:[0,-14]});
-      m.bindPopup(
-        '<div class="hilia-popup"><h4>'+escapeHtml(r[F.NOM])+'</h4><p>'+escapeHtml(COMMUNES[r[F.COM]])+' · '+r[F.CP]+'<br>'+escapeHtml(ACTIVITES[r[F.ACT]])+'</p><div class="popup-review">'+reviewSummaryHtml(di,'mini')+'</div><button type="button" data-di="'+di+'" aria-label="Voir la fiche de '+escapeAttr(r[F.NOM])+'">Voir la fiche</button></div>'
-      );
-      m.on('popupopen', function(e){
-        var pop = e.popup.getElement();
-        var cb = pop.querySelector('.leaflet-popup-close-button');
-        if(cb){ cb.setAttribute('aria-label','Fermer la fenêtre d’information'); cb.setAttribute('title','Fermer la fenêtre d’information'); }
-        var btn = pop.querySelector('button[data-di]');
-        if(btn){ btn.addEventListener('click', function(){ openDetail(parseInt(btn.dataset.di,10)); }); btn.focus(); }
-      });
+      var m = markerFor(di);
       markerByIdx[di] = m;
       markers.push(m);
-      visibleBounds.push([Number(r[F.LAT]),Number(r[F.LON])]);
+      visibleBounds.push([Number(DATA[di][F.LAT]),Number(DATA[di][F.LON])]);
     }
     clusterGroup.addLayers(markers);
     document.getElementById('mapHint').textContent = markers.length.toLocaleString('fr-FR')+' lieu(x) affiché(s) · carte HILIA';
@@ -2487,6 +2499,11 @@
     }
     for(var ck=0; ck<COMMUNES.length; ck++){ if(communeCounts[ck] > 0) communeOrder.push(ck); }
     communeOrder.sort(function(a,b){ return communeCounts[b]-communeCounts[a] || COMMUNES[a].localeCompare(COMMUNES[b],'fr'); });
+    // Index des points de la carte : construit au démarrage normal, il doit
+    // l'être aussi après un chargement à la demande, sinon la carte reste vide.
+    validIdx = [];
+    markerCache = {};
+    for(var vp=0; vp<DATA.length; vp++){ if(rDataHasCoords(DATA[vp])) validIdx.push(vp); }
     renderActivityOptions(); renderCityOptions(); renderTarifHint(); renderRatingOptions();
   }
 
