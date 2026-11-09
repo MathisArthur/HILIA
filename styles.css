@@ -269,7 +269,12 @@
   .footer-links button:hover,.footer-links a:hover{text-decoration:underline;color:#fff;}
   .socials{display:flex;gap:8px;flex-wrap:wrap;}
   .social{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:34px;border:1px solid rgba(255,255,255,.24);border-radius:50%;color:#fff;font:800 .72rem "Archivo",sans-serif;text-decoration:none;}
-  .social:hover{background:rgba(255,255,255,.10);}.social[aria-label]{cursor:default;}
+  .social:hover{background:rgba(255,255,255,.10);}
+  .social:focus-visible{outline:2px solid var(--amber); outline-offset:2px;}
+  .social svg{width:17px; height:17px; display:block; fill:currentColor;}
+  .socials--paper .social{border-color:var(--line-strong); color:var(--teal);}
+  .socials--paper .social:hover{background:var(--cream);}
+  .rating-list{display:flex; flex-direction:column; gap:1px;}
   .footer-bottom{border-top:1px solid rgba(255,255,255,.16);padding-top:18px;display:flex;justify-content:space-between;gap:15px;flex-wrap:wrap;color:#B9CFCA;font-size:.72rem;line-height:1.5;}
   .footer-bottom a{color:inherit;text-decoration:none;}
   .footer-bottom a:hover{text-decoration:underline;color:#fff;}

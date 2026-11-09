@@ -355,7 +355,64 @@
   // ---------- État des filtres ----------
   // Déclaré avant la construction du panneau « Filtres & tri » : les listes
   // d'activités et de villes lisent cet état pour se dessiner.
-  var state = { query:'', activity:'', commune:'', access:[], sort:'name' };
+  var state = { query:'', activity:'', commune:'', access:[], sort:'name', minRating:0 };
+
+  // ---------- Notes des avis (filtre « Avis ») ----------
+  // Les avis vivent dans Supabase (hilia_reviews). Pour filtrer sur la moyenne
+  // sans interroger chaque fiche, les notes sont chargées en une fois, en tâche
+  // de fond, et seuls l'identifiant de fiche et la note sont demandés.
+  var ratingStats = {};      // { idFiche: { count, sum } }
+  var ratingsLoaded = false, ratingsFailed = false;
+  function ratingOf(di){
+    var ref = placeRef(di);
+    return ref && ratingStats[ref] ? ratingStats[ref] : null;
+  }
+  function ratedPlacesCount(min){
+    var n = 0;
+    for(var ref in ratingStats){
+      var s = ratingStats[ref];
+      if(s && s.count && s.sum/s.count >= min) n++;
+    }
+    return n;
+  }
+  function ratingThresholdLabel(v){ return String(v).replace('.', ',')+'/5 et plus'; }
+  async function loadReviewRatings(){
+    if(!supabaseClient) return false;
+    var pageSize = 1000, from = 0, next = {};
+    try{
+      for(;;){
+        var res = await supabaseClient.from('hilia_reviews').select('place_id,rating').order('id',{ascending:true}).range(from, from+pageSize-1);
+        if(res.error){ console.warn('Chargement des notes des avis impossible', res.error.message); ratingsFailed = true; ratingsLoaded = true; return false; }
+        var rows = res.data || [];
+        rows.forEach(function(row){
+          var ref = row.place_id == null ? '' : String(row.place_id);
+          var v = Number(row.rating);
+          if(!ref || !isFinite(v) || v <= 0) return;
+          var s = next[ref] || (next[ref] = {count:0, sum:0});
+          s.count++; s.sum += v;
+        });
+        if(rows.length < pageSize) break;
+        from += pageSize;
+        if(from > 500000) break; // garde-fou
+      }
+    }catch(err){
+      console.warn('Chargement des notes des avis impossible', err);
+      ratingsFailed = true; ratingsLoaded = true; return false;
+    }
+    ratingStats = next;
+    ratingsLoaded = true; ratingsFailed = false;
+    return true;
+  }
+  // Un avis vient d'être publié ou retiré : la moyenne de cette fiche est recalculée
+  // à partir des avis déjà chargés pour elle.
+  function syncRatingFromLoaded(di){
+    var ref = placeRef(di); if(!ref) return;
+    var list = reviewsFor(di), sum = 0, n = 0;
+    list.forEach(function(rv){ var v = Number(rv.rating); if(isFinite(v) && v > 0){ sum += v; n++; } });
+    if(n) ratingStats[ref] = {count:n, sum:sum}; else delete ratingStats[ref];
+    renderRatingOptions();
+    if(state.minRating > 0) refresh();
+  }
 
   // ---------- Filter groups (drawer) ----------
   var FILTER_GROUPS = [
@@ -523,9 +580,41 @@
     : 'Aucune fiche ne renseigne encore ce critère.';
   tarifGroup.appendChild(tarifHint);
 
-  // Ordre final : activité, ville, tarif, puis les critères d'accessibilité.
+  // Avis : seuil de note moyenne. « Toutes les notes » ne restreint rien.
+  var RATING_STEPS = [3, 4, 4.5];
+  var ratingGroup = document.createElement('fieldset'); ratingGroup.className='fgroup';
+  var ratingLegend = document.createElement('legend'); ratingLegend.textContent='Avis'; ratingGroup.appendChild(ratingLegend);
+  var ratingList = document.createElement('div'); ratingList.className='rating-list';
+  ratingGroup.appendChild(ratingList);
+  var ratingHint = document.createElement('p'); ratingHint.className='filter-hint'; ratingGroup.appendChild(ratingHint);
+
+  function ratingOptionHtml(value, label, count, checked){
+    return '<label class="filter-option"><input type="radio" name="ratingFilter" value="'+value+'"'+(checked?' checked':'')+'>'+
+      '<span class="fo-name">'+escapeHtml(label)+'</span>'+
+      (count==null?'':'<span class="fo-count">'+countLabel(count)+'</span>')+'</label>';
+  }
+  function renderRatingOptions(){
+    var html = ratingOptionHtml('', 'Toutes les notes', null, !state.minRating);
+    RATING_STEPS.forEach(function(step){
+      html += ratingOptionHtml(String(step), ratingThresholdLabel(step), ratedPlacesCount(step), state.minRating === step);
+    });
+    ratingList.innerHTML = html;
+    var withReviews = ratedPlacesCount(0);
+    if(withReviews){
+      ratingHint.textContent = countLabel(withReviews)+' fiche'+(withReviews>1?'s':'')+' '+(withReviews>1?'ont':'a')+' au moins un avis. Les fiches sans avis sont écartées dès qu’un seuil est choisi.';
+    }else if(ratingsFailed){
+      ratingHint.textContent = 'Les notes n’ont pas pu être chargées. Rechargez la page pour réessayer.';
+    }else if(!ratingsLoaded){
+      ratingHint.textContent = 'Chargement des notes…';
+    }else{
+      ratingHint.textContent = 'Aucun avis publié pour l’instant : ce filtre s’activera dès le premier avis.';
+    }
+  }
+
+  // Ordre final : activité, ville, tarif, avis, puis les critères d'accessibilité.
   var firstAccessGroup = filterGroupsEl.firstChild;
   filterGroupsEl.insertBefore(tarifGroup, firstAccessGroup);
+  filterGroupsEl.insertBefore(ratingGroup, firstAccessGroup);
   filterGroupsEl.insertBefore(cityFilter.group, tarifGroup);
   filterGroupsEl.insertBefore(actFilter.group, cityFilter.group);
 
@@ -533,6 +622,7 @@
   cityFilter.search.addEventListener('input', renderCityOptions);
   renderActivityOptions();
   renderCityOptions();
+  renderRatingOptions();
 
   // ---------- Formulaire d'accessibilité (création / modification de lieux) ----------
   var ACCESS_NUM_FIELDS = [[F.CHEMIN_MARCHES,'Nombre de marches sur le cheminement'],[F.ENTREE_MARCHES,'Nombre de marches à l’entrée'],[F.ENTREE_LARGEUR,'Largeur minimale de l’entrée (cm)']];
@@ -587,6 +677,10 @@
       var r = DATA[idx];
       if(act !== '' && String(r[F.ACT]) !== act) continue;
       if(com !== '' && String(r[F.COM]) !== com) continue;
+      if(state.minRating > 0){
+        var rs = ratingOf(idx);
+        if(!rs || !rs.count || rs.sum/rs.count < state.minRating) continue;
+      }
       if(q && searchIdx[idx].indexOf(q) === -1) continue;
       var ok = true;
       for(var a=0;a<acc.length;a++){ if(!isTrue(r[acc[a]])){ ok=false; break; } }
@@ -712,6 +806,7 @@
     if(t && t.type === 'radio'){
       if(t.name === 'actFilter') state.activity = t.value;
       if(t.name === 'cityFilter') state.commune = t.value;
+      if(t.name === 'ratingFilter') state.minRating = t.value ? Number(t.value) : 0;
     }
     var boxes = filterGroupsEl.querySelectorAll('input[type=checkbox]:checked');
     state.access = Array.from(boxes).map(function(cb){ return parseInt(cb.dataset.field,10); });
@@ -720,6 +815,7 @@
     var parts = [];
     if(state.activity !== '') parts.push(ACTIVITES[Number(state.activity)] || '');
     if(state.commune !== '') parts.push('Ville : '+(COMMUNES[Number(state.commune)] || ''));
+    if(state.minRating > 0) parts.push('Avis '+ratingThresholdLabel(state.minRating));
     var tarif = state.access.indexOf(F.Q_TARIF_AVANT) !== -1;
     if(tarif) parts.push('Tarif réduit');
     var n = state.access.filter(function(f){ return f !== F.Q_TARIF_AVANT; }).length;
@@ -737,11 +833,11 @@
     if(summary) summary.textContent = parts.join(' · ');
   }
   document.getElementById('resetBtn').addEventListener('click', function(){
-    state.access=[]; state.sort='name'; state.activity=''; state.commune='';
+    state.access=[]; state.sort='name'; state.activity=''; state.commune=''; state.minRating=0;
     document.getElementById('sortSelect').value='name';
     filterGroupsEl.querySelectorAll('input[type=checkbox]').forEach(function(cb){ cb.checked=false; });
     actFilter.search.value=''; cityFilter.search.value='';
-    renderActivityOptions(); renderCityOptions();
+    renderActivityOptions(); renderCityOptions(); renderRatingOptions();
     refresh(); closeDrawer(); announce('Filtres réinitialisés.',900);
   });
   document.getElementById('applyBtn').addEventListener('click', function(){ refresh(); closeDrawer(); });
@@ -1438,7 +1534,7 @@
     var payload={place_id:ref,user_id:p.id,author_name:p.name||p.email.split('@')[0],rating:Number(rating),comment:comment.trim()};
     var result=await supabaseClient.from('hilia_reviews').upsert(payload,{onConflict:'place_id,user_id'});
     if(result.error){ console.error('Publication de l’avis impossible',result.error); announce('Impossible de publier l’avis : '+result.error.message,0); return false; }
-    invalidateReviews(ref); await fetchReviews([ref]); return true;
+    invalidateReviews(ref); await fetchReviews([ref]); syncRatingFromLoaded(di); return true;
   }
   async function removeReview(di,email,date){
     var p=getProfile(); if(!p || !supabaseClient || !p.id) return false;
@@ -1447,7 +1543,7 @@
     if(!target) return false;
     var result=await supabaseClient.from('hilia_reviews').delete().eq('id',target.id);
     if(result.error){ console.error('Suppression de l’avis impossible',result.error); announce('Impossible de supprimer cet avis.',0); return false; }
-    invalidateReviews(ref); await fetchReviews([ref]); return true;
+    invalidateReviews(ref); await fetchReviews([ref]); syncRatingFromLoaded(di); return true;
   }
   async function saveSuggestion(di,textValue){
     var p=getProfile(); if(!p || !supabaseClient || !textValue.trim()) return false;
@@ -2276,6 +2372,11 @@
   updateTabIndex();
   refresh();
   initialized = true;
+  // Notes des avis : chargées après le premier rendu, pour ne pas retarder la liste.
+  loadReviewRatings().then(function(ok){
+    renderRatingOptions();
+    if(ok && state.minRating > 0) refresh();
+  });
   restoreSupabaseSession();
   var bootSlug=slugFromPath(location.pathname), bootPage=pageFromPath(location.pathname), bootHash=location.hash||'';
   if(bootSlug){
