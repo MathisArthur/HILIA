@@ -359,8 +359,8 @@
     accessScore[i] = sc;
     actCounts[r[F.ACT]]++;
   }
-  document.getElementById('statTotal').textContent = DATA.length.toLocaleString('fr-FR');
-  document.getElementById('statCommunes').textContent = COMMUNES.length.toLocaleString('fr-FR');
+  document.getElementById('statTotal').textContent = DATA.length.toLocaleString('fr-FR').replace(/\u202f/g,'\u00a0');
+  document.getElementById('statCommunes').textContent = COMMUNES.length.toLocaleString('fr-FR').replace(/\u202f/g,'\u00a0');
   document.getElementById('statCats').textContent = ACTIVITES.length;
 
   // ---------- Ordre des activités (les plus représentées d'abord) ----------
@@ -724,6 +724,8 @@
     }
     filtered = out;
     document.getElementById('resultCount').textContent = filtered.length.toLocaleString('fr-FR');
+    var resultCountLabel = document.getElementById('resultCountLabel');
+    if(resultCountLabel) resultCountLabel.textContent = filtered.length > 1 ? 'lieux trouvés' : 'lieu trouvé';
   }
 
   // ---------- List: paginated results (real <ul>, predictable focus, no virtual scroll) ----------
@@ -740,8 +742,6 @@
   }
   function cardHtml(di){
     var r = DATA[di];
-    var color = colorFor(r[F.ACT]);
-    var tmpl = getTemplate(ACTIVITES[r[F.ACT]]);
     var badgesHtml =
       amenityLi(r[F.ENTREE_PLAIN_PIED],'wheelchair','Entrée de plain-pied')+
       amenityLi(r[F.SANITAIRES_PMR],'wc','Sanitaires adaptés PMR')+
@@ -749,8 +749,8 @@
       amenityLi(r[F.ENTREE_RAMPE],'ramp','Rampe d’accès');
     return (
       '<article class="ticket-card" data-idx="'+di+'">'+
-        '<div class="tc-illus">'+illustrationSVG(tmpl)+'<span class="tc-cat-badge" style="background:'+color+';color:'+contrastText(color)+'">'+escapeHtml(ACTIVITES[r[F.ACT]])+'</span></div>'+
         '<div class="tc-body">'+
+          '<p class="tc-kicker">'+escapeHtml(ACTIVITES[r[F.ACT]])+'</p>'+
           '<h3 class="tc-name"><button type="button" class="tc-open">'+escapeHtml(r[F.NOM])+'</button></h3>'+
           '<p class="tc-loc">'+escapeHtml(COMMUNES[r[F.COM]])+' · '+escapeHtml(r[F.CP])+'</p>'+
           '<div class="tc-foot"><ul class="tc-amenities" aria-label="Critères d’accessibilité principaux">'+badgesHtml+'</ul><div class="review-mini" data-review-mini-index="'+di+'">'+reviewSummaryHtml(di,'mini')+'</div><span class="tc-chev" aria-hidden="true">'+icon('chevron')+'</span></div>'+
@@ -960,6 +960,18 @@
     e.preventDefault(); tabButtons[n].focus(); tabButtons[n].click();
   });
   document.getElementById('mapToListBtn').addEventListener('click', function(){ setListTab(); tabListBtn.focus(); });
+  // Accueil : « Explorer les lieux » amène aux résultats sans rechargement.
+  var heroExploreBtn = document.getElementById('heroExploreBtn');
+  if(heroExploreBtn) heroExploreBtn.addEventListener('click', function(){
+    var target = document.getElementById('resultsHeading');
+    if(!target) return;
+    target.scrollIntoView({block:'start'});
+    target.focus({preventScroll:true});
+  });
+  // Le menu mobile se referme après le choix d’une page.
+  document.querySelectorAll('.nav-mobile-panel a').forEach(function(a){
+    a.addEventListener('click', function(){ var d=a.closest('details'); if(d) d.open=false; });
+  });
 
   // ---------- Map (Leaflet + HILIA visual basemap, no external tiles) ----------
   var leafletMap = null, clusterGroup = null, markerByIdx = {}, validIdx = [], franceLayer = null;
@@ -1106,7 +1118,7 @@
       visibleBounds.push([Number(DATA[di][F.LAT]),Number(DATA[di][F.LON])]);
     }
     clusterGroup.addLayers(markers);
-    document.getElementById('mapHint').textContent = markers.length.toLocaleString('fr-FR')+' lieu(x) affiché(s) · carte HILIA';
+    document.getElementById('mapHint').textContent = markers.length.toLocaleString('fr-FR')+(markers.length > 1 ? ' lieux affichés' : ' lieu affiché')+' · carte HILIA';
 
     // When a search/filter isolates a small or off-mainland set, bring it into view.
     if(!showAll && visibleBounds.length && visibleBounds.length <= 2500){
@@ -1797,9 +1809,7 @@
     if(leafletMap) leafletMap.closePopup();
     var r = DATA[di];
     var color = colorFor(r[F.ACT]);
-    var tmpl = getTemplate(ACTIVITES[r[F.ACT]]);
     var html='';
-    html += '<div class="d-illus">'+illustrationSVG(tmpl)+'</div>';
     html += '<h2 id="detailDialogTitle">'+escapeHtml(r[F.NOM])+'</h2>';
     html += '<div class="d-addr">'+escapeHtml(r[F.ADR])+', '+r[F.CP]+' '+escapeHtml(COMMUNES[r[F.COM]])+'</div>';
     html += '<div class="audio-desc" id="audioDesc" role="group" aria-label="Description audio du lieu"><div class="audio-desc-actions">'
