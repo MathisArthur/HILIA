@@ -33,7 +33,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4" integrity="sha384-GFr3yTh5lJznCbZfpTtXnwboFsxqtTQoeTZCRHhE0579KrRmlCzen5AA8ohaB5ug" crossorigin="anonymous"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Work+Sans:wght@400;500;600;700&family=Gochi+Hand&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css" integrity="sha384-uIZNAcoEHVWMk8LrCSX95DJk6FQzH6zG00LQC9BykRY1UKKpkDzDhbDLYQ1Ho3mI" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.min.css" integrity="sha384-NyCa0nBOjmCqS9HwLKpE7yqy2HVG6PN/cDyAAIdPijDlUH6jCfqX6ydzXFTA/L/l" crossorigin="anonymous">
@@ -54,6 +54,15 @@
 <header class="topnav">
   <div class="topnav-inner">
     <a class="brand" href="/" data-nav-target="explore"><img class="brand-logo" alt="HILIA - retour à l’accueil" src="/logo-hilia.png" width="190" height="180"></a>
+    <details class="nav-mobile">
+      <summary class="nav-mobile-btn">Menu</summary>
+      <nav class="nav-mobile-panel" aria-label="Navigation mobile">
+        <a href="/" data-nav-page="explore">Explorer les lieux</a>
+        <a href="/a-propos" data-nav-page="about">À propos</a>
+        <a href="/faq" data-nav-page="faq">Questions fréquentes</a>
+        <a href="/prestataires" data-nav-page="prestataires">Référencer mon activité</a>
+      </nav>
+    </details>
     <div class="nav-search" role="search" aria-label="Recherche de lieux">
       <label class="sr-only" for="searchInput">Rechercher un lieu, une ville ou un code postal</label>
       <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -66,7 +75,7 @@
       <a class="topnav-link" href="/prestataires" data-nav-page="prestataires">Référencer mon activité</a>
     </nav>
     <a class="nav-cta" id="profileNavBtn" href="/mon-profil">Mon profil</a>
-    <button class="settings-btn" id="accessibilitySettingsBtn" type="button" aria-haspopup="dialog" aria-controls="accessibilitySettings" aria-expanded="false">Accessibilité</button>
+    <button class="settings-btn" id="accessibilitySettingsBtn" type="button" aria-haspopup="dialog" aria-controls="accessibilitySettings" aria-expanded="false" aria-label="Réglages d’accessibilité"><span class="settings-glyph" aria-hidden="true">Aa</span><span class="settings-text">Accessibilité</span></button>
   </div>
   <div class="tabbar" id="mainTabbar">
     <div class="tabbar-inner" role="tablist" aria-label="Affichage des résultats">
@@ -80,14 +89,24 @@
   <section id="explorePage">
 <header class="hero">
   <div class="hero-inner">
-    <h1 class="display">Le loisir accessible,<br><em>partout en France.</em></h1>
-    <span class="tag brand-tagline">Rendre le loisir accessible à tous</span>
-    <p class="lede">Salles de sport, musées, médiathèques, piscines, théâtres&nbsp;: chaque lieu référencé indique ses conditions d'accès réelles - stationnement, cheminement, entrée, accueil, sanitaires - pour sortir sans mauvaise surprise.</p>
-    <div class="stat-strip">
-      <div class="stat-chip"><b id="statTotal">-</b><span>lieux référencés</span></div>
-      <div class="stat-chip"><b id="statCommunes">-</b><span>communes couvertes</span></div>
-      <div class="stat-chip"><b id="statCats">65</b><span>familles d'activités</span></div>
+    <div class="hero-copy">
+      <p class="hero-eyebrow">Annuaire national de l’accessibilité</p>
+      <h1 class="display">Le loisir accessible,<br><em>partout en France.</em></h1>
+      <p class="lede">Salles de sport, musées, piscines, théâtres&nbsp;: retrouvez les conditions d’accès réelles de chaque lieu — stationnement, entrée, accueil, sanitaires — avant de sortir.</p>
+      <div class="hero-actions">
+        <button class="btn btn-primary" id="heroExploreBtn" type="button">Explorer les lieux</button>
+        <a class="btn btn-secondary" href="/prestataires" data-nav-page="prestataires">Référencer mon activité</a>
+      </div>
+      <p class="hero-note"><span class="hero-note-icon" aria-hidden="true">✓</span> Informations déclaratives&nbsp;: un critère non renseigné n’est jamais supposé accessible.</p>
     </div>
+    <aside class="hero-panel" aria-label="Chiffres clés de HILIA">
+      <div class="stat-strip">
+        <div class="stat-chip"><b id="statTotal">-</b><span>lieux référencés</span></div>
+        <div class="stat-chip"><b id="statCommunes">-</b><span>communes couvertes</span></div>
+        <div class="stat-chip"><b id="statCats">65</b><span>familles d’activités</span></div>
+      </div>
+      <p class="hero-panel-note">Chaque fiche précise ce qui est renseigné, sans extrapoler.</p>
+    </aside>
   </div>
 </header>
 
@@ -95,7 +114,7 @@
   <div class="subbar-inner">
     <button class="filter-btn" id="filterBtn" type="button" aria-haspopup="dialog"><span class="dot" id="filterDot" aria-hidden="true"></span>
       <svg aria-hidden="true" focusable="false" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
-      Filtres &amp; tri<span class="sr-only" id="filterCountSr"></span>
+      Filtrer et trier<span class="sr-only" id="filterCountSr"></span>
     </button>
     <p class="filter-summary" id="filterSummary"></p>
   </div>
@@ -103,7 +122,7 @@
 
 <h2 class="sr-only" id="resultsHeading" tabindex="-1">Résultats de la recherche</h2>
 <div class="results-line">
-  <div><b id="resultCount">0</b> lieu(x) trouvé(s)</div>
+  <div class="results-count"><b id="resultCount">0</b> <span id="resultCountLabel">lieux trouvés</span></div>
 </div>
 
 <div class="grid-wrap" id="gridWrap" role="tabpanel" aria-labelledby="tabListBtn">
@@ -477,7 +496,7 @@
   <button class="drawer-close" id="drawerClose" aria-label="Fermer les filtres">
     <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
   </button>
-  <h2 id="drawerTitle">Filtres & tri</h2>
+  <h2 id="drawerTitle">Filtrer et trier</h2>
   <p class="sub">Activité, ville, tarif, avis et critères d'accessibilité. Ces derniers viennent des fiches déclarées par chaque établissement.</p>
   <div class="fgroup">
     <label class="flabel" for="sortSelect">Trier les résultats par</label>
