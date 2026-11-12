@@ -302,6 +302,19 @@
   function hexToRgb(h){ h=h.replace('#',''); return [parseInt(h.substr(0,2),16),parseInt(h.substr(2,2),16),parseInt(h.substr(4,2),16)]; }
   function relLum(rgb){ var c=rgb.map(function(v){ v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055,2.4); }); return 0.2126*c[0]+0.7152*c[1]+0.0722*c[2]; }
   function contrastText(bg){ var L=relLum(hexToRgb(bg)), dark='#10302F'; var cw=1.05/(L+0.05), cd=(L+0.05)/(relLum(hexToRgb(dark))+0.05); return cw>=cd ? '#FFFFFF' : dark; }
+  function rgbToHex(rgb){ return '#'+rgb.map(function(v){ var h=Math.max(0,Math.min(255,Math.round(v))).toString(16); return h.length===1?'0'+h:h; }).join('').toUpperCase(); }
+  function tagPalette(bg){
+    // Le texte du badge est petit : on garantit 4,5:1, quitte à foncer
+    // légèrement la teinte de catégorie pour conserver son repère visuel.
+    var text = contrastText(bg);
+    if(contrastRatio(bg,text) >= 4.5) return {bg:bg, text:text};
+    var rgb = hexToRgb(bg);
+    for(var mix=0.05; mix<=0.7; mix+=0.05){
+      var candidate = rgbToHex(rgb.map(function(v){ return v*(1-mix); }));
+      if(contrastRatio(candidate,'#FFFFFF') >= 4.5) return {bg:candidate, text:'#FFFFFF'};
+    }
+    return {bg:'#062B28', text:'#FFFFFF'};
+  }
   var liveEl=document.getElementById('liveRegion'), liveTimer=null, toastTimer=null;
   var toastEl=document.getElementById('hilToast'), toastText=document.getElementById('hilToastText');
   function hideToast(){ if(toastEl) toastEl.classList.remove('is-visible'); if(toastTimer) clearTimeout(toastTimer); }
@@ -342,23 +355,53 @@
     return '<svg aria-hidden="true" focusable="false" viewBox="0 0 240 78" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg"><rect width="240" height="78" fill="'+bg+'"/>'+(scenes[key]||scenes.general)+'</svg>';
   }
 
-  // ---------- Search index & access score ----------
-  var searchIdx = new Array(DATA.length);
-  var accessScore = new Int8Array(DATA.length);
+  // ---------- Index de recherche et indice d'accessibilité ----------
+  // Le tri « accessibilité » ne compte pas les critères indifféremment :
+  // il couvre six dimensions pondérées selon leur impact sur une visite.
+  // Une dimension compte dès qu'au moins un de ses critères est déclaré.
   var SCORE_FIELDS = [F.TRANSPORT,F.STATIONNEMENT,F.STATIONNEMENT_PMR,F.STATIONNEMENT_EXT,F.STATIONNEMENT_EXT_PMR,
     F.CHEMIN_PLAIN_PIED,F.CHEMIN_TERRAIN_STABLE,F.CHEMIN_REPERAGE,F.CHEMIN_MAIN_COURANTE,F.CHEMIN_RAMPE,F.CHEMIN_BANDE_GUIDAGE,
     F.ENTREE_REPERABLE,F.ENTREE_PLAIN_PIED,F.ENTREE_ASCENSEUR,F.ENTREE_RAMPE,F.ENTREE_DISPOSITIF_APPEL,F.ENTREE_BALISE_SONORE,
     F.ENTREE_AIDE_HUMAINE,F.ENTREE_SPECIFIQUE_PMR,F.ACCUEIL_PERSONNEL,F.ACCUEIL_AUDIODESCR,F.ACCUEIL_EQUIP_MALENT,
     F.ACCUEIL_PLAIN_PIED,F.ACCUEIL_SIGNALETIQUE,F.SANITAIRES_DISPO,F.SANITAIRES_PMR];
+  var ACCESS_DIMENSIONS = [
+    {label:'Entrée accessible', weight:3, fields:[F.ENTREE_PLAIN_PIED,F.ENTREE_RAMPE,F.ENTREE_ASCENSEUR,F.ENTREE_AIDE_HUMAINE]},
+    {label:'Cheminement', weight:2, fields:[F.CHEMIN_PLAIN_PIED,F.CHEMIN_TERRAIN_STABLE,F.CHEMIN_RAMPE]},
+    {label:'Sanitaires adaptés', weight:2, fields:[F.SANITAIRES_PMR]},
+    {label:'Stationnement adapté', weight:1, fields:[F.STATIONNEMENT_PMR,F.STATIONNEMENT_EXT_PMR]},
+    {label:'Accueil', weight:1, fields:[F.ACCUEIL_PERSONNEL,F.ACCUEIL_PLAIN_PIED,F.ACCUEIL_SIGNALETIQUE]},
+    {label:'Confort sensoriel', weight:1, fields:[F.ACCUEIL_AUDIODESCR,F.ACCUEIL_EQUIP_MALENT,F.ENTREE_BALISE_SONORE]}
+  ];
+  var searchIdx = new Array(DATA.length);
+  var accessScore = new Int8Array(DATA.length);
+  var accessIndex = new Uint8Array(DATA.length);
   var actCounts = new Array(ACTIVITES.length).fill(0);
-  for(var i=0;i<DATA.length;i++){
-    var r = DATA[i];
-    searchIdx[i] = normalize(r[F.NOM] + " " + r[F.ADR] + " " + COMMUNES[r[F.COM]] + " " + r[F.CP]);
-    var sc = 0;
-    for(var k=0;k<SCORE_FIELDS.length;k++){ if(isTrue(r[SCORE_FIELDS[k]])) sc++; }
-    accessScore[i] = sc;
-    actCounts[r[F.ACT]]++;
+  function accessIndexFor(r){
+    var points = 0;
+    for(var d=0; d<ACCESS_DIMENSIONS.length; d++){
+      var fields = ACCESS_DIMENSIONS[d].fields;
+      for(var f=0; f<fields.length; f++){
+        if(isTrue(r[fields[f]])){ points += ACCESS_DIMENSIONS[d].weight; break; }
+      }
+    }
+    return points;
   }
+  function buildSearchIndex(){
+    searchIdx = new Array(DATA.length);
+    accessScore = new Int8Array(DATA.length);
+    accessIndex = new Uint8Array(DATA.length);
+    actCounts = new Array(ACTIVITES.length).fill(0);
+    for(var i=0;i<DATA.length;i++){
+      var r = DATA[i];
+      searchIdx[i] = normalize(r[F.NOM] + " " + r[F.ADR] + " " + COMMUNES[r[F.COM]] + " " + r[F.CP]);
+      var sc = 0;
+      for(var k=0;k<SCORE_FIELDS.length;k++){ if(isTrue(r[SCORE_FIELDS[k]])) sc++; }
+      accessScore[i] = sc;
+      accessIndex[i] = accessIndexFor(r);
+      actCounts[r[F.ACT]]++;
+    }
+  }
+  buildSearchIndex();
   document.getElementById('statTotal').textContent = DATA.length.toLocaleString('fr-FR').replace(/\u202f/g,'\u00a0');
   document.getElementById('statCommunes').textContent = COMMUNES.length.toLocaleString('fr-FR').replace(/\u202f/g,'\u00a0');
   document.getElementById('statCats').textContent = ACTIVITES.length;
@@ -371,7 +414,7 @@
   // ---------- État des filtres ----------
   // Déclaré avant la construction du panneau « Filtres & tri » : les listes
   // d'activités et de villes lisent cet état pour se dessiner.
-  var state = { query:'', activity:'', commune:'', access:[], sort:'name', minRating:0 };
+  var state = { query:'', activity:'', commune:'', access:[], sort:'access', minRating:0 };
 
   // ---------- Notes des avis (filtre « Avis ») ----------
   // Les avis vivent dans Supabase (hilia_reviews). Pour filtrer sur la moyenne
@@ -711,7 +754,12 @@
     }
     if(state.sort === 'name'){ out.sort(function(a,b){ return DATA[a][F.NOM].localeCompare(DATA[b][F.NOM],'fr'); }); }
     else if(state.sort === 'commune'){ out.sort(function(a,b){ return COMMUNES[DATA[a][F.COM]].localeCompare(COMMUNES[DATA[b][F.COM]],'fr'); }); }
-    else if(state.sort === 'access'){ out.sort(function(a,b){ return accessScore[b]-accessScore[a] || DATA[a][F.NOM].localeCompare(DATA[b][F.NOM],'fr'); }); }
+    else if(state.sort === 'access'){
+      // Priorité aux dimensions essentielles, puis à la richesse de la fiche.
+      out.sort(function(a,b){
+        return (accessIndex[b]-accessIndex[a]) || (accessScore[b]-accessScore[a]) || DATA[a][F.NOM].localeCompare(DATA[b][F.NOM],'fr');
+      });
+    }
     else if(state.sort === 'rating'){
       // Meilleure moyenne d'abord ; les fiches sans avis passent en dernier.
       var avgCache={};
@@ -742,15 +790,20 @@
   }
   function cardHtml(di){
     var r = DATA[di];
+    var color = colorFor(r[F.ACT]);
+    var idx = accessIndex[di];
     var badgesHtml =
       amenityLi(r[F.ENTREE_PLAIN_PIED],'wheelchair','Entrée de plain-pied')+
       amenityLi(r[F.SANITAIRES_PMR],'wc','Sanitaires adaptés PMR')+
       amenityLi(r[F.STATIONNEMENT_PMR],'parking','Stationnement PMR')+
       amenityLi(r[F.ENTREE_RAMPE],'ramp','Rampe d’accès');
     return (
-      '<article class="ticket-card" data-idx="'+di+'">'+
+      '<article class="ticket-card" data-idx="'+di+'" data-access-index="'+idx+'" style="--place-color:'+color+'">'+
         '<div class="tc-body">'+
-          '<p class="tc-kicker">'+escapeHtml(ACTIVITES[r[F.ACT]])+'</p>'+
+          '<div class="tc-head">'+
+            '<p class="tc-kicker"><span class="tc-dot" aria-hidden="true"></span>'+escapeHtml(ACTIVITES[r[F.ACT]])+'</p>'+
+            '<span class="tc-score" title="Indice d’accessibilité déclaré : '+idx+' sur 10"><span aria-hidden="true">'+idx+'/10</span><span class="sr-only">Indice d’accessibilité déclaré : '+idx+' sur 10</span></span>'+
+          '</div>'+
           '<h3 class="tc-name"><button type="button" class="tc-open">'+escapeHtml(r[F.NOM])+'</button></h3>'+
           '<p class="tc-loc">'+escapeHtml(COMMUNES[r[F.COM]])+' · '+escapeHtml(r[F.CP])+'</p>'+
           '<div class="tc-foot"><ul class="tc-amenities" aria-label="Critères d’accessibilité principaux">'+badgesHtml+'</ul><div class="review-mini" data-review-mini-index="'+di+'">'+reviewSummaryHtml(di,'mini')+'</div><span class="tc-chev" aria-hidden="true">'+icon('chevron')+'</span></div>'+
@@ -872,7 +925,7 @@
     if(tarif) parts.push('Tarif réduit');
     var n = state.access.filter(function(f){ return f !== F.Q_TARIF_AVANT; }).length;
     if(n) parts.push(n+' critère'+(n>1?'s':'')+' d’accessibilité');
-    if(state.sort !== 'name') parts.push('Tri : '+(state.sort === 'commune' ? 'commune' : state.sort === 'rating' ? 'note des avis' : 'accessibilité'));
+    if(state.sort !== 'access') parts.push('Tri : '+(state.sort === 'name' ? 'nom' : state.sort === 'commune' ? 'commune' : 'note des avis'));
     return parts.filter(Boolean);
   }
   function updateFilterDot(){
@@ -885,8 +938,8 @@
     if(summary) summary.textContent = parts.join(' · ');
   }
   document.getElementById('resetBtn').addEventListener('click', function(){
-    state.access=[]; state.sort='name'; state.activity=''; state.commune=''; state.minRating=0;
-    document.getElementById('sortSelect').value='name';
+    state.access=[]; state.sort='access'; state.activity=''; state.commune=''; state.minRating=0;
+    document.getElementById('sortSelect').value='access';
     filterGroupsEl.querySelectorAll('input[type=checkbox]').forEach(function(cb){ cb.checked=false; });
     actFilter.search.value=''; cityFilter.search.value='';
     renderActivityOptions(); renderCityOptions(); renderRatingOptions();
@@ -1809,6 +1862,7 @@
     if(leafletMap) leafletMap.closePopup();
     var r = DATA[di];
     var color = colorFor(r[F.ACT]);
+    var idx = accessIndex[di];
     var html='';
     html += '<h2 id="detailDialogTitle">'+escapeHtml(r[F.NOM])+'</h2>';
     html += '<div class="d-addr">'+escapeHtml(r[F.ADR])+', '+r[F.CP]+' '+escapeHtml(COMMUNES[r[F.COM]])+'</div>';
@@ -1816,7 +1870,9 @@
       + '<button type="button" class="primary-btn audio-btn" id="audioPlayBtn" aria-label="Écouter la description du lieu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg><span id="audioPlayLabel" aria-hidden="true">Écouter la description du lieu</span></button>'
       + '<button type="button" class="secondary-btn audio-btn" id="audioStopBtn" hidden>Arrêter la lecture</button></div>'
       + '<p class="audio-note">Lecture à voix de synthèse, générée à partir des informations de cette fiche.</p></div>';
-    html += '<span class="d-tag" style="background:'+color+';color:'+contrastText(color)+'">'+escapeHtml(ACTIVITES[r[F.ACT]])+'</span><br>';
+    var tag = tagPalette(color);
+    html += '<span class="d-tag" style="background:'+tag.bg+';color:'+tag.text+'">'+escapeHtml(ACTIVITES[r[F.ACT]])+'</span><br>';
+    html += '<div class="d-access-score"><strong>'+idx+'/10</strong><span>Indice d’accessibilité déclaré</span></div>';
     if(r[F.SITE]) html += '<a class="d-link" href="'+escapeAttr(safeExternalUrl(r[F.SITE]))+'" target="_blank" rel="noopener noreferrer" title="Voir le site de '+escapeAttr(r[F.NOM])+' (nouvelle fenêtre)">'+icon('link')+' Voir le site du lieu<span class="sr-only"> '+escapeHtml(r[F.NOM])+' (s’ouvre dans une nouvelle fenêtre)</span></a>';
     if(profileState && roleOf(profileState)==='admin'){
       var remotePlace=null;
@@ -2485,18 +2541,8 @@
     }
     indexPlacesById();
     applySavedEdits();
-    // Index de recherche et notes d'accessibilité, comme au démarrage normal.
-    searchIdx = new Array(DATA.length);
-    accessScore = new Int8Array(DATA.length);
-    actCounts = new Array(ACTIVITES.length).fill(0);
-    for(var i=0; i<DATA.length; i++){
-      var r = DATA[i];
-      searchIdx[i] = normalize(r[F.NOM]+' '+r[F.ADR]+' '+COMMUNES[r[F.COM]]+' '+r[F.CP]);
-      var sc = 0;
-      for(var k=0; k<SCORE_FIELDS.length; k++){ if(isTrue(r[SCORE_FIELDS[k]])) sc++; }
-      accessScore[i] = sc;
-      actCounts[r[F.ACT]]++;
-    }
+    // Index de recherche et indice d'accessibilité, comme au démarrage normal.
+    buildSearchIndex();
     document.getElementById('statTotal').textContent = DATA.length.toLocaleString('fr-FR');
     document.getElementById('statCommunes').textContent = COMMUNES.length.toLocaleString('fr-FR');
     document.getElementById('statCats').textContent = ACTIVITES.length;

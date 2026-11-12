@@ -501,11 +501,12 @@
   <div class="fgroup">
     <label class="flabel" for="sortSelect">Trier les résultats par</label>
     <select id="sortSelect">
-      <option value="name">Nom (A → Z)</option>
-      <option value="commune">Commune (A → Z)</option>
-      <option value="access">Accessibilité (la plus complète)</option>
+      <option value="access" selected>Accessibilité (meilleure d'abord)</option>
       <option value="rating">Note des avis (meilleures d'abord)</option>
+      <option value="commune">Commune (A → Z)</option>
+      <option value="name">Nom (A → Z)</option>
     </select>
+    <p class="filter-hint">L’indice d’accessibilité privilégie l’entrée, le cheminement et les sanitaires adaptés, puis le stationnement, l’accueil et le confort sensoriel. Il s’appuie sur les informations déclarées par les établissements.</p>
   </div>
   <div id="filterGroups"></div>
   <button class="apply-btn" id="applyBtn" type="button">Voir les résultats</button>
