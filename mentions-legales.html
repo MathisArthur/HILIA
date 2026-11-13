@@ -125,6 +125,14 @@
 <div class="results-line">
   <div class="results-count"><b id="resultCount">0</b> <span id="resultCountLabel">lieux trouvés</span></div>
 </div>
+<details class="results-method">
+  <summary><span><strong>Couverture déclarée, pas accessibilité complète.</strong> 10/10 = au moins un critère déclaré dans chaque dimension. <span class="rm-toggle">Voir la méthode</span></span></summary>
+  <div class="rm-body">
+    <p><strong>Calcul de l’indice :</strong> entrée accessible 3 points, cheminement 2, sanitaires adaptés 2, stationnement 1, accueil 1, confort sensoriel 1. Une dimension compte dès qu’au moins un de ses critères est déclaré accessible.</p>
+    <p><strong>Départage :</strong> à indice égal, le nombre total de critères déclarés accessibles, puis les critères essentiels d’entrée, de cheminement, de sanitaires, de stationnement et d’accueil, le label officiel (Tourisme &amp; Handicap, Handiplage, Mobalib, Destination pour tous) et le nombre de familles de handicap couvertes. Le nom ne sert qu’en dernier recours.</p>
+    <p>Données déclaratives, non vérifiées sur place : un critère non renseigné n’est jamais supposé accessible.</p>
+  </div>
+</details>
 
 <div class="grid-wrap" id="gridWrap" role="tabpanel" aria-labelledby="tabListBtn">
   <div class="virtual-viewport" id="viewport"></div>
@@ -507,7 +515,7 @@
       <option value="commune">Commune (A → Z)</option>
       <option value="name">Nom (A → Z)</option>
     </select>
-    <p class="filter-hint">L’indice d’accessibilité privilégie l’entrée, le cheminement et les sanitaires adaptés, puis le stationnement, l’accueil et le confort sensoriel. Il s’appuie sur les informations déclarées par les établissements.</p>
+    <p class="filter-hint">Le classement s’appuie sur un indice de couverture déclarée : entrée, cheminement, sanitaires, stationnement, accueil et confort sensoriel. Il ne garantit pas une accessibilité complète.</p>
   </div>
   <div id="filterGroups"></div>
   <button class="apply-btn" id="applyBtn" type="button">Voir les résultats</button>

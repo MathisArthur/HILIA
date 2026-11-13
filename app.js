@@ -372,10 +372,32 @@
     {label:'Accueil', weight:1, fields:[F.ACCUEIL_PERSONNEL,F.ACCUEIL_PLAIN_PIED,F.ACCUEIL_SIGNALETIQUE]},
     {label:'Confort sensoriel', weight:1, fields:[F.ACCUEIL_AUDIODESCR,F.ACCUEIL_EQUIP_MALENT,F.ENTREE_BALISE_SONORE]}
   ];
+  // Critères qui pèsent le plus lourd dans une visite réelle. Ils servent
+  // seulement à départager deux lieux qui ont le même indice de couverture.
+  var ACCESS_ESSENTIAL_FIELDS = [F.ENTREE_PLAIN_PIED,F.ENTREE_RAMPE,F.ENTREE_ASCENSEUR,F.ENTREE_AIDE_HUMAINE,
+    F.CHEMIN_PLAIN_PIED,F.CHEMIN_TERRAIN_STABLE,F.CHEMIN_RAMPE,F.SANITAIRES_PMR,
+    F.STATIONNEMENT_PMR,F.STATIONNEMENT_EXT_PMR,F.ACCUEIL_PERSONNEL,F.ACCUEIL_PLAIN_PIED,F.ACCUEIL_SIGNALETIQUE];
   var searchIdx = new Array(DATA.length);
   var accessScore = new Int8Array(DATA.length);
   var accessIndex = new Uint8Array(DATA.length);
+  var accessEssential = new Uint8Array(DATA.length);
+  var accessLabelRank = new Uint8Array(DATA.length);
+  var accessFamilies = new Uint8Array(DATA.length);
   var actCounts = new Array(ACTIVITES.length).fill(0);
+  function listFrom(value){
+    if(Array.isArray(value)) return value;
+    if(value == null || value === '') return [];
+    if(typeof value === 'string'){
+      try{ var parsed=JSON.parse(value); return Array.isArray(parsed) ? parsed : []; }catch(e){ return []; }
+    }
+    return [];
+  }
+  function labelRankFor(r){
+    var labels = listFrom(r[F.LABELS]).map(function(v){ return String(v).toLowerCase(); });
+    if(labels.indexOf('th') >= 0 || labels.indexOf('handiplage') >= 0) return 2;
+    if(labels.indexOf('mobalib') >= 0 || labels.indexOf('dpt') >= 0) return 1;
+    return 0;
+  }
   function accessIndexFor(r){
     var points = 0;
     for(var d=0; d<ACCESS_DIMENSIONS.length; d++){
@@ -390,6 +412,9 @@
     searchIdx = new Array(DATA.length);
     accessScore = new Int8Array(DATA.length);
     accessIndex = new Uint8Array(DATA.length);
+    accessEssential = new Uint8Array(DATA.length);
+    accessLabelRank = new Uint8Array(DATA.length);
+    accessFamilies = new Uint8Array(DATA.length);
     actCounts = new Array(ACTIVITES.length).fill(0);
     for(var i=0;i<DATA.length;i++){
       var r = DATA[i];
@@ -398,6 +423,11 @@
       for(var k=0;k<SCORE_FIELDS.length;k++){ if(isTrue(r[SCORE_FIELDS[k]])) sc++; }
       accessScore[i] = sc;
       accessIndex[i] = accessIndexFor(r);
+      var essential = 0;
+      for(var e=0; e<ACCESS_ESSENTIAL_FIELDS.length; e++){ if(isTrue(r[ACCESS_ESSENTIAL_FIELDS[e]])) essential++; }
+      accessEssential[i] = essential;
+      accessLabelRank[i] = labelRankFor(r);
+      accessFamilies[i] = listFrom(r[F.FAMILLES]).length;
       actCounts[r[F.ACT]]++;
     }
   }
@@ -755,9 +785,15 @@
     if(state.sort === 'name'){ out.sort(function(a,b){ return DATA[a][F.NOM].localeCompare(DATA[b][F.NOM],'fr'); }); }
     else if(state.sort === 'commune'){ out.sort(function(a,b){ return COMMUNES[DATA[a][F.COM]].localeCompare(COMMUNES[DATA[b][F.COM]],'fr'); }); }
     else if(state.sort === 'access'){
-      // Priorité aux dimensions essentielles, puis à la richesse de la fiche.
+      // Indice, nombre de critères déclarés, critères essentiels, label
+      // officiel, familles de handicap, puis nom en dernier recours.
       out.sort(function(a,b){
-        return (accessIndex[b]-accessIndex[a]) || (accessScore[b]-accessScore[a]) || DATA[a][F.NOM].localeCompare(DATA[b][F.NOM],'fr');
+        return (accessIndex[b]-accessIndex[a]) ||
+          (accessScore[b]-accessScore[a]) ||
+          (accessEssential[b]-accessEssential[a]) ||
+          (accessLabelRank[b]-accessLabelRank[a]) ||
+          (accessFamilies[b]-accessFamilies[a]) ||
+          DATA[a][F.NOM].localeCompare(DATA[b][F.NOM],'fr');
       });
     }
     else if(state.sort === 'rating'){
@@ -802,7 +838,7 @@
         '<div class="tc-body">'+
           '<div class="tc-head">'+
             '<p class="tc-kicker"><span class="tc-dot" aria-hidden="true"></span>'+escapeHtml(ACTIVITES[r[F.ACT]])+'</p>'+
-            '<span class="tc-score" title="Indice d’accessibilité déclaré : '+idx+' sur 10"><span aria-hidden="true">'+idx+'/10</span><span class="sr-only">Indice d’accessibilité déclaré : '+idx+' sur 10</span></span>'+
+            '<span class="tc-score" title="Couverture déclarée : '+idx+' sur 10"><span class="tc-score-label">Couverture<span class="sr-only"> déclarée</span></span> <span class="tc-score-value">'+idx+'/10</span></span>'+
           '</div>'+
           '<h3 class="tc-name"><button type="button" class="tc-open">'+escapeHtml(r[F.NOM])+'</button></h3>'+
           '<p class="tc-loc">'+escapeHtml(COMMUNES[r[F.COM]])+' · '+escapeHtml(r[F.CP])+'</p>'+
@@ -1872,7 +1908,7 @@
       + '<p class="audio-note">Lecture à voix de synthèse, générée à partir des informations de cette fiche.</p></div>';
     var tag = tagPalette(color);
     html += '<span class="d-tag" style="background:'+tag.bg+';color:'+tag.text+'">'+escapeHtml(ACTIVITES[r[F.ACT]])+'</span><br>';
-    html += '<div class="d-access-score"><strong>'+idx+'/10</strong><span>Indice d’accessibilité déclaré</span></div>';
+    html += '<div class="d-access-score"><strong>'+idx+'/10</strong> <span><b>Couverture déclarée</b> des 6 dimensions d’accessibilité.<br><span class="d-access-score-note">Ce n’est pas une garantie d’accessibilité complète.</span></span></div>';
     if(r[F.SITE]) html += '<a class="d-link" href="'+escapeAttr(safeExternalUrl(r[F.SITE]))+'" target="_blank" rel="noopener noreferrer" title="Voir le site de '+escapeAttr(r[F.NOM])+' (nouvelle fenêtre)">'+icon('link')+' Voir le site du lieu<span class="sr-only"> '+escapeHtml(r[F.NOM])+' (s’ouvre dans une nouvelle fenêtre)</span></a>';
     if(profileState && roleOf(profileState)==='admin'){
       var remotePlace=null;
