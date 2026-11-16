@@ -198,6 +198,9 @@ npm run data
 npm run dev
 ```
 
+Si le port 8787 est déjà utilisé, lancer `PORT=8788 npm run dev` et ouvrir
+`http://127.0.0.1:8788`. Le port est indépendant de la cible Supabase.
+
 Ouvrir `http://127.0.0.1:8787` dans une fenêtre de navigation privée. Dans la
 console du navigateur, vérifier la ligne
 `HILIA : Supabase local ciblé sur …` et, dans l'onglet Réseau, que les requêtes
