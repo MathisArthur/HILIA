@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Écrit les onze pages du site (/a-propos.html, /faq.html, ...) à partir de
+ * Écrit les pages du site (/a-propos.html, /faq.html, /agenda.html, ...) à partir de
  * index.html, en y injectant le titre, la description et l'adresse canonique
  * propres à chacune.
  *
@@ -62,7 +62,7 @@ if (staticDescription !== home.description) {
   throw new Error(`index.html : description différente de PAGE_META.`);
 }
 
-// ---------- Écriture des onze pages ----------
+// ---------- Écriture des pages ----------
 const written = [];
 for (const [page, path] of pages) {
   if (path === '/') continue;

@@ -1205,3 +1205,109 @@ body.large-pointer,body.large-pointer *{cursor:url("data:image/svg+xml,%3Csvg xm
   .topnav{position:relative;}
   html{scroll-padding-top:12px;}
 }
+/* ---------------------------------------------------------------------
+   20. FICHES ENRICHIES ET AGENDA
+   --------------------------------------------------------------------- */
+.d-enrichment{margin:0 0 4px;}
+.d-description p{margin:0 0 10px;font-size:.92rem;line-height:1.62;color:var(--ink);}
+.d-description p:last-child{margin-bottom:0;}
+.d-source-line{margin:8px 0 0;font-size:.78rem;line-height:1.5;color:var(--muted);}
+.d-source-line a{color:var(--green-700);}
+.d-source-line strong{color:var(--ink);}
+.d-muted{color:var(--muted);font-size:.78rem;}
+.d-gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;}
+.media-card{position:relative;margin:0;overflow:hidden;border:1px solid var(--line);border-radius:12px;background:var(--surface);}
+.media-card img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:var(--surface);}
+.media-card figcaption{padding:7px 9px;font-size:.7rem;line-height:1.35;color:var(--muted);}
+.media-card.is-unavailable::after{display:none;}
+.media-card.is-unavailable img{display:none;}
+.media-card.is-unavailable svg{display:block;width:100%;height:auto;aspect-ratio:4/3;background:var(--surface);}
+.media-credit-note{margin:8px 0 0;font-size:.72rem;line-height:1.45;color:var(--muted);}
+.d-hours,.d-prices,.d-contacts{margin:0;padding:0;list-style:none;}
+.d-hours li,.d-prices li,.d-contacts li{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line);font-size:.86rem;line-height:1.45;}
+.d-hours li:last-child,.d-prices li:last-child,.d-contacts li:last-child{border-bottom:0;}
+.d-prices li span:first-child,.d-contacts li span:first-child{flex:1;min-width:120px;color:var(--muted);}
+.d-prices li b{color:var(--ink);font-family:var(--font-display);}
+.d-price-summary{margin:0 0 8px;font-size:.86rem;font-weight:700;color:var(--green-900);}
+.d-contacts a{overflow-wrap:anywhere;color:var(--green-700);}
+
+.agenda-toolbar{margin:0 0 16px;}
+.agenda-filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end;}
+.agenda-filters .field{margin:0;}
+.agenda-filters .field label{display:block;margin-bottom:6px;font-family:var(--font-display);font-size:.78rem;font-weight:800;color:var(--green-900);}
+.agenda-filters input,.agenda-filters select{width:100%;min-height:44px;padding:9px 11px;border:1.5px solid var(--input-border);border-radius:12px;background:var(--paper);color:var(--ink);font:inherit;font-size:.9rem;}
+.agenda-free{grid-column:1/-1;display:inline-flex;align-items:center;gap:9px;width:max-content;max-width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface);font-size:.86rem;font-weight:700;cursor:pointer;}
+.agenda-free input{width:18px;height:18px;margin:0;}
+.agenda-note{margin:12px 0 0;font-size:.76rem;line-height:1.5;color:var(--muted);}
+.agenda-summary{margin:0 0 8px;font-size:.92rem;color:var(--muted);}
+.agenda-summary b{font-family:var(--font-display);font-size:1.25rem;color:var(--ink);}
+.agenda-status{margin:0 0 16px;font-size:.86rem;color:var(--muted);}
+.agenda-status[data-kind="error"]{color:#8C2C24;font-weight:700;}
+.agenda-list{display:flex;flex-direction:column;gap:12px;}
+.agenda-card{display:grid;grid-template-columns:76px minmax(0,1fr);gap:16px;padding:16px;background:var(--paper);border:1px solid var(--line);border-radius:16px;}
+.agenda-date{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:9px 6px;border-radius:12px;background:var(--surface);color:var(--green-900);line-height:1.05;text-transform:uppercase;}
+.agenda-date span{font-size:.65rem;font-weight:800;letter-spacing:.06em;}
+.agenda-date b{font-family:var(--font-display);font-size:1.75rem;line-height:1.05;margin-top:3px;}
+.agenda-card-main h2{margin:0 0 4px;font-family:var(--font-display);font-size:1.08rem;line-height:1.3;color:var(--green-900);}
+.agenda-meta{margin:0 0 8px;font-size:.82rem;line-height:1.45;color:var(--muted);}
+.agenda-tags{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:0 0 10px;}
+.agenda-free-badge{background:#FFF9EC;border-color:#EEDCB4;color:#5B4517;}
+.agenda-toggle{min-height:38px;padding:7px 12px;font-size:.8rem;}
+.agenda-event-detail{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);}
+.agenda-event-detail[hidden]{display:none;}
+.agenda-event-detail .d-section{margin-top:10px;}
+.agenda-more{margin-top:16px;}
+.agenda-credit{margin:18px 0 0;font-size:.74rem;line-height:1.5;color:var(--muted);}
+
+[data-theme="dark"] .agenda-card,[data-theme="dark"] .agenda-date,
+[data-theme="dark"] .agenda-toolbar,[data-theme="dark"] .media-card{background:var(--paper);border-color:var(--line);}
+[data-theme="dark"] .agenda-free-badge{background:#2A2417;border-color:#5C4A24;color:#F1E3C4;}
+[data-theme="dark"] .media-card img{background:var(--surface);}
+[data-theme="high-light"] .agenda-card,[data-theme="high-light"] .agenda-date,
+[data-theme="high-light"] .agenda-toolbar,[data-theme="high-light"] .media-card{background:#fff;border-color:#222;}
+[data-theme="high-dark"] .agenda-card,[data-theme="high-dark"] .agenda-date,
+[data-theme="high-dark"] .agenda-toolbar,[data-theme="high-dark"] .media-card{background:#000;border-color:#fff;}
+
+@media (max-width:900px){
+  .agenda-filters{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+.tc-score-unknown{background:#FFF6E8;color:#704516;border-color:#E8D3AC;}
+.d-access-unknown{background:#FFF9EC;border-color:#EEDCB4;}
+.d-access-unknown strong{color:#704516;}
+.admin-review-intro,.admin-review-note,.admin-review-muted{font-size:.78rem;line-height:1.5;color:var(--muted);}
+.admin-review-toolbar{display:flex;flex-wrap:wrap;align-items:end;gap:10px;margin:8px 0 12px;}
+.admin-review-toolbar .field{min-width:150px;margin:0;}
+.admin-review-toolbar label{display:block;margin-bottom:4px;font-size:.75rem;font-weight:800;color:var(--green-900);}
+.admin-review-toolbar select{min-height:38px;padding:6px 9px;border:1.5px solid var(--input-border);border-radius:10px;background:var(--paper);color:var(--ink);font:inherit;font-size:.82rem;}
+.admin-review-summary{margin:6px 0;color:var(--ink);font-size:.84rem;}
+.admin-review-list{display:grid;gap:8px;margin-top:10px;}
+.admin-review-item{display:grid;grid-template-columns:26px minmax(0,1fr);gap:9px;padding:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;}
+.admin-review-check{display:inline-flex;align-items:center;gap:7px;font-size:.78rem;color:var(--muted);}
+.admin-review-check input{width:18px;height:18px;}
+.admin-review-title{display:flex;flex-wrap:wrap;align-items:center;gap:7px;}
+.admin-review-title strong{color:var(--teal);font-size:.84rem;}
+.admin-review-kind,.admin-review-level,.admin-review-reason{display:inline-block;padding:2px 7px;border-radius:999px;font-size:.68rem;font-weight:750;}
+.admin-review-kind{background:var(--surface-2,#F2F6F4);color:var(--green-900);}
+.admin-review-level.batch{background:#E8F5EC;color:#245B35;}
+.admin-review-level.manual{background:#FFF2E2;color:#704516;}
+.admin-review-reasons{margin:5px 0 0;line-height:1.7;}
+.admin-review-reason{background:#FFF6E8;color:#704516;}
+.admin-review-ok{color:#245B35;font-size:.74rem;font-weight:700;}
+.admin-review-meta,.admin-review-source{margin:4px 0 0;color:var(--muted);font-size:.72rem;line-height:1.45;overflow-wrap:anywhere;}
+.admin-review-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line);}
+.admin-review-actions .admin-review-check{margin-right:auto;}
+.admin-review-error{color:#8C2C24;font-weight:700;font-size:.82rem;}
+@media (max-width:600px){
+  .admin-review-toolbar{display:grid;grid-template-columns:1fr 1fr;}
+  .admin-review-toolbar .field{min-width:0;}
+  .admin-review-toolbar .small-btn{grid-column:1/-1;}
+  .admin-review-item{grid-template-columns:22px minmax(0,1fr);}
+  .admin-review-actions .small-btn{flex:1 1 100%;}
+  .admin-review-actions .admin-review-check{margin-right:0;}
+  .d-gallery{grid-template-columns:1fr;}
+  .agenda-filters{grid-template-columns:1fr;}
+  .agenda-card{grid-template-columns:58px minmax(0,1fr);gap:12px;padding:13px;}
+  .agenda-date b{font-size:1.45rem;}
+  .agenda-card-main h2{font-size:1rem;}
+  .agenda-free{grid-column:auto;width:100%;border-radius:12px;}
+}

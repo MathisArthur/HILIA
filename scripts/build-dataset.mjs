@@ -145,7 +145,7 @@ const xml = (body) => `<?xml version="1.0" encoding="UTF-8"?>\n${body}\n`;
 const urlEntry = (loc, priority) => `<url><loc>${esc(loc)}</loc><lastmod>${today}</lastmod><priority>${priority}</priority></url>`;
 
 const PAGES = [
-  ['/', '1.0'], ['/prestataires', '0.8'], ['/a-propos', '0.6'], ['/faq', '0.6'],
+  ['/', '1.0'], ['/agenda', '0.7'], ['/prestataires', '0.8'], ['/a-propos', '0.6'], ['/faq', '0.6'],
   ['/contact', '0.4'], ['/accessibilite', '0.4'], ['/mentions-legales', '0.3'],
   ['/confidentialite', '0.3'], ['/cgu', '0.3'], ['/cookies', '0.3'], ['/plan-du-site', '0.3'],
 ];

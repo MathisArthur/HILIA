@@ -4,7 +4,7 @@
   // fiche. Les pages de contenu (/faq, /mentions-legales, ...) n'affichent aucune
   // fiche : leurs 2,9 Mo compressés n'y sont pas téléchargés. Une recherche ou
   // un clic vers l'exploration les charge à la demande (voir ensurePlaces).
-  var CONTENT_ONLY_PATHS = ['/a-propos','/faq','/mentions-legales','/confidentialite','/cgu','/cookies','/contact','/accessibilite','/plan-du-site'];
+  var CONTENT_ONLY_PATHS = ['/agenda','/a-propos','/faq','/mentions-legales','/confidentialite','/cgu','/cookies','/contact','/accessibilite','/plan-du-site'];
   var BOOT_PATH = String(location.pathname||'/').replace(/\/index\.html$/,'/').replace(/\/+$/,'') || '/';
   var DEFER_PLACES = CONTENT_ONLY_PATHS.indexOf(BOOT_PATH) !== -1;
   window.__hiliaDataset = DEFER_PLACES ? Promise.resolve(null) : fetch('/data/places.json', {cache:'force-cache'})
@@ -52,7 +52,19 @@
     }
     if(!ds) throw new Error('data/places.json : téléchargement impossible');
     if(!Array.isArray(ds.rows) || !ds.rows.length) throw new Error('data/places.json : format inattendu');
-    if(Array.isArray(ds.activites) && ds.activites.length) raw.activites=ds.activites.slice();
+    var actRemap=null;
+    if(Array.isArray(ds.activites) && ds.activites.length){
+      var seenAct=Object.create(null);
+      actRemap=[];
+      raw.activites=[];
+      ds.activites.forEach(function(a,i){
+        var label=canonicalActivityName(a);
+        var key=normalize(label);
+        var idx=seenAct[key];
+        if(idx===undefined){ idx=raw.activites.length; seenAct[key]=idx; raw.activites.push(label); }
+        actRemap[i]=idx;
+      });
+    }
     if(Array.isArray(ds.communes)) raw.communes=ds.communes.slice();
     var accessById=ds.access||{}, qualifById=ds.qualif||{};
     raw.data=ds.rows.map(function(row){
@@ -62,8 +74,9 @@
       var id=row[0];
       x._hiliaPlaceId=id;
       var extra=accessById[id];
-      if(extra && typeof extra==='object') Object.keys(extra).forEach(function(k){ var ki=Number(k); if(ki>=8&&ki<=36&&x[ki]==='') x[ki]=extra[k]; });
+      if(extra && typeof extra==='object'){ if(extra._unknown) x._accessUnknown=true; Object.keys(extra).forEach(function(k){ var ki=Number(k); if(ki>=8&&ki<=36&&x[ki]==='') x[ki]=extra[k]; }); }
       x._hiliaQualif=qualifById[id]||null;
+      if(actRemap && x[4]!=='' && actRemap[Number(x[4])]!=null) x[4]=actRemap[Number(x[4])];
       return x;
     });
     return true;
@@ -94,9 +107,10 @@
     raw.data=rows.map(function(o){
       var x=BASE_COLS.map(function(c){return o[c]==null?'':o[c];});
       var ci=cIdx.get(o.commune||''); if(ci===undefined){ci=raw.communes.length;raw.communes.push(o.commune||'');cIdx.set(o.commune||'',ci);} x[3]=ci;
-      var ai=aIdx.get(o.activity||''); if(ai===undefined){ai=raw.activites.length;raw.activites.push(o.activity||'');aIdx.set(o.activity||'',ai);} x[4]=ai;
+      var activityName=canonicalActivityName(o.activity);
+      var ai=aIdx.get(activityName); if(ai===undefined){ai=raw.activites.length;raw.activites.push(activityName);aIdx.set(activityName,ai);} x[4]=ai;
       // Les colonnes détaillées sont prioritaires ; access/qualif restent prises en charge pour les fiches ajoutées manuellement.
-      if(o.access && typeof o.access==='object') Object.keys(o.access).forEach(function(k){var ki=Number(k);if(ki>=8&&ki<=36&&x[ki]==='')x[ki]=o.access[k];});
+      if(o.access && typeof o.access==='object'){ if(o.access._unknown) x._accessUnknown=true; Object.keys(o.access).forEach(function(k){var ki=Number(k);if(ki>=8&&ki<=36&&x[ki]==='')x[ki]=o.access[k];}); }
       x._hiliaPlaceId=o.id;
       x._hiliaQualif=o.qualif||null;
       return x;
@@ -179,7 +193,7 @@
     getApprovedPlaces().forEach(function(p){
       // Évite les doublons si un ancien cache navigateur contient encore les lieux importés.
       if(p && p.id && DATA.some(function(existing){return String(existing._hiliaPlaceId||'')===String(p.id);})) return;
-      var actIdx=ACTIVITES.indexOf(p.activity); if(actIdx<0) return;
+      var actIdx=ACTIVITES.indexOf(canonicalActivityName(p.activity)); if(actIdx<0) return;
       var commune=(p.commune||'').trim()||'Commune à préciser';
       var comIdx=COMMUNES.indexOf(commune); if(comIdx<0){ COMMUNES.push(commune); comIdx=COMMUNES.length-1; }
       var row=new Array(40).fill(null);
@@ -187,6 +201,7 @@
       // ne doivent pas dépendre d’une comparaison exacte des champs de la fiche.
       row._hiliaPlaceId=p.id||null;
       row[F.NOM]=p.name||'Lieu sans nom'; row[F.ADR]=p.address||''; row[F.CP]=p.cp||''; row[F.COM]=comIdx; row[F.ACT]=actIdx; row[F.SITE]=p.site||'';
+      if(p.access && p.access._unknown) row._accessUnknown=true;
       row[F.LAT]=p.lat!=='' && p.lat!=null ? Number(p.lat) : null; row[F.LON]=p.lon!=='' && p.lon!=null ? Number(p.lon) : null;
       if(p.access && typeof p.access==='object') Object.keys(p.access).forEach(function(k){ var ki=Number(k); if(ki>=8 && ki<=36) row[ki]=p.access[k]; });
       if(p.qualif && typeof p.qualif==='object') applyQualif(row,p.qualif);
@@ -248,6 +263,9 @@
     }catch(e){ return ''; }
   }
   function normalize(s){ if(!s) return ""; return s.toString().replace(/[\u2010-\u2015\u2212]/g,' ').replace(/\s+/g,' ').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+  // Catégorie historique mal encodée (« Th��âtre ») : même libellé, sans
+  // toucher aux index déjà stockés dans le catalogue.
+  function canonicalActivityName(value){ var label=String(value||''); var key=normalize(label); return (key==='theatre' || /^th.*atre$/.test(key)) ? 'Théâtre' : label; }
 
   // ---------- Category -> illustration template mapping ----------
   var CATEGORY_TEMPLATE = {
@@ -828,6 +846,9 @@
     var r = DATA[di];
     var color = colorFor(r[F.ACT]);
     var idx = accessIndex[di];
+    var accessBadge = r._accessUnknown
+      ? '<span class="tc-score tc-score-unknown" title="Accessibilité non renseignée"><span class="tc-score-label">Accessibilité<span class="sr-only"> non renseignée</span></span> <span class="tc-score-value">?</span></span>'
+      : '<span class="tc-score" title="Couverture déclarée : '+idx+' sur 10"><span class="tc-score-label">Couverture<span class="sr-only"> déclarée</span></span> <span class="tc-score-value">'+idx+'/10</span></span>';
     var badgesHtml =
       amenityLi(r[F.ENTREE_PLAIN_PIED],'wheelchair','Entrée de plain-pied')+
       amenityLi(r[F.SANITAIRES_PMR],'wc','Sanitaires adaptés PMR')+
@@ -838,7 +859,7 @@
         '<div class="tc-body">'+
           '<div class="tc-head">'+
             '<p class="tc-kicker"><span class="tc-dot" aria-hidden="true"></span>'+escapeHtml(ACTIVITES[r[F.ACT]])+'</p>'+
-            '<span class="tc-score" title="Couverture déclarée : '+idx+' sur 10"><span class="tc-score-label">Couverture<span class="sr-only"> déclarée</span></span> <span class="tc-score-value">'+idx+'/10</span></span>'+
+            accessBadge+
           '</div>'+
           '<h3 class="tc-name"><button type="button" class="tc-open">'+escapeHtml(r[F.NOM])+'</button></h3>'+
           '<p class="tc-loc">'+escapeHtml(COMMUNES[r[F.COM]])+' · '+escapeHtml(r[F.CP])+'</p>'+
@@ -1659,9 +1680,11 @@
     html+='</div>';
     html+='<h3>Qualifications prestataires</h3><div class="admin-list" id="provSubList"><div class="admin-item"><div class="admin-item-main"><p>Chargement…</p></div></div></div>';
     html+='<h3>Familles d’activités</h3><div class="admin-item"><div class="admin-item-main"><strong>Ajouter une activité</strong><p>Une nouvelle famille sera disponible dans les filtres et dans les formulaires de contribution.</p><form id="newActivityForm" class="inline-form" style="margin-top:9px"><div class="field"><label for="newActivityName">Nom de l’activité</label><input id="newActivityName" name="name" required maxlength=80 placeholder="Ex. Escape game accessible"></div><button class="small-btn primary" type="submit">Ajouter l’activité</button><div class="auth-note" id="newActivityStatus"></div></form></div></div>';
+    html+='<h3>Nouveaux contenus importés</h3><p class="admin-review-intro">Aucun nouveau lieu, activité ou itinéraire n’est publié automatiquement. Les enrichissements de fiches déjà publiques sont automatiques. Cette file montre les candidats, leurs sources et les motifs de blocage. Une accessibilité absente reste explicitement inconnue.</p><div id="importReviewPanel" class="import-review-panel"><p class="admin-review-muted">Chargement de la file de revue…</p></div>';
     html+='</div></div>';
     box.innerHTML=html;
     loadProvSubs(box);
+    loadImportReview(box);
     var activityForm=box.querySelector('#newActivityForm');
     if(activityForm) activityForm.addEventListener('submit',async function(e){
       e.preventDefault();
@@ -1692,6 +1715,76 @@
     }); });
     box.querySelectorAll('[data-edit-from-suggestion]').forEach(function(btn){ btn.addEventListener('click',function(){ navigatePage('explore'); setListTab(); openDetail(parseInt(btn.dataset.editFromSuggestion,10)); }); });
   }
+  // ---------- Revue des nouveaux contenus (administration) ----------
+  var importReviewState={data:null, kind:'', level:'', selected:Object.create(null)};
+  function reviewKindLabel(kind){ return kind==='place'?'Lieu':kind==='activity'?'Activité':kind==='route'?'Itinéraire':kind; }
+  function reviewLevelLabel(level){ return level==='batch'?'Lot rapide':'Revue individuelle'; }
+  function reviewSourceLabel(sources){
+    if(!Array.isArray(sources) || !sources.length) return 'Source absente';
+    return sources.map(function(s){ return s.label || s.source || 'Source'; }).join(', ');
+  }
+  function reviewReasonsHtml(reasons){
+    if(!Array.isArray(reasons) || !reasons.length) return '<span class="admin-review-ok">Aucun blocage automatique</span>';
+    return reasons.map(function(r){ return '<span class="admin-review-reason">'+escapeHtml(r.label||r.code||'À vérifier')+'</span>'; }).join(' ');
+  }
+  function renderImportReview(panel, payload){
+    var items=payload.items||[], counts=payload.counts||{};
+    var html='<div class="admin-review-toolbar"><div class="field"><label for="reviewKind">Type</label><select id="reviewKind"><option value="">Tous</option><option value="place"'+(importReviewState.kind==='place'?' selected':'')+'>Lieux</option><option value="activity"'+(importReviewState.kind==='activity'?' selected':'')+'>Activités</option><option value="route"'+(importReviewState.kind==='route'?' selected':'')+'>Itinéraires</option></select></div><div class="field"><label for="reviewLevel">Niveau</label><select id="reviewLevel"><option value="">Tous</option><option value="batch"'+(importReviewState.level==='batch'?' selected':'')+'>Lot rapide</option><option value="manual"'+(importReviewState.level==='manual'?' selected':'')+'>Revue individuelle</option></select></div><button class="small-btn" type="button" id="reviewReload">Actualiser</button></div>';
+    html+='<p class="admin-review-summary"><strong>'+Number(payload.total||0).toLocaleString('fr-FR')+'</strong> candidat(s) · '+(counts.place||0)+' lieu(x) · '+(counts.activity||0)+' activité(s) · '+(counts.route||0)+' itinéraire(s)</p>';
+    html+='<p class="admin-review-note">Les lieux approuvés créent une fiche <code>hilia_places</code> avec accessibilité inconnue. Ils ne sont visibles qu’après <code>npm run data</code>. Les activités et itinéraires approuvés restent préparés dans le staging, sans surface publique active.</p>';
+    if(!items.length){
+      html+='<div class="admin-item"><div class="admin-item-main"><strong>Aucun candidat dans ce filtre</strong><p>La file est vide ou la migration 20261114 n’a pas encore été appliquée.</p></div></div>';
+    } else {
+      html+='<div class="admin-review-list">';
+      items.forEach(function(item){
+        var checked=importReviewState.selected[item.id]?' checked':'';
+        var reasons=reviewReasonsHtml(item.review_reasons);
+        var sourceId=item.source_id?'<span class="admin-review-source-id">'+escapeHtml(item.source_id)+'</span>':'';
+        var location=[item.commune,item.postal_code].filter(Boolean).join(' · ');
+        html+='<article class="admin-review-item"><label class="admin-review-check"><input type="checkbox" data-review-id="'+escapeAttr(item.id)+'"'+checked+'><span class="sr-only">Sélectionner '+escapeHtml(item.name||item.id)+'</span></label><div class="admin-review-main"><div class="admin-review-title"><strong>'+escapeHtml(item.name||'Sans nom')+'</strong><span class="admin-review-kind">'+escapeHtml(reviewKindLabel(item.kind))+'</span><span class="admin-review-level '+(item.review_level==='batch'?'batch':'manual')+'">'+escapeHtml(reviewLevelLabel(item.review_level))+'</span></div><p class="admin-review-meta">'+escapeHtml(reviewSourceLabel(item.sources))+(location?' · '+escapeHtml(location):'')+(item.published_place_id?' · publié : '+escapeHtml(item.published_place_id):'')+'</p><p class="admin-review-reasons">'+reasons+'</p><p class="admin-review-source">'+sourceId+'</p></div></article>';
+      });
+      html+='</div>';
+    }
+    html+='<div class="admin-review-actions"><label class="admin-review-check"><input type="checkbox" id="reviewSelectAll"> <span>Tout sélectionner sur cette page</span></label><button class="small-btn primary" type="button" data-review-decision="approve">Approuver la sélection</button><button class="small-btn" type="button" data-review-decision="needs_review">Laisser à revoir</button><button class="small-btn danger" type="button" data-review-decision="reject">Rejeter la sélection</button></div>';
+    panel.innerHTML=html;
+    var kind=panel.querySelector('#reviewKind'), level=panel.querySelector('#reviewLevel');
+    if(kind) kind.addEventListener('change',function(){ importReviewState.kind=kind.value; importReviewState.selected=Object.create(null); loadImportReview(panel); });
+    if(level) level.addEventListener('change',function(){ importReviewState.level=level.value; importReviewState.selected=Object.create(null); loadImportReview(panel); });
+    var reload=panel.querySelector('#reviewReload'); if(reload) reload.addEventListener('click',function(){ loadImportReview(panel); });
+    panel.querySelectorAll('[data-review-id]').forEach(function(cb){ cb.addEventListener('change',function(){ if(cb.checked) importReviewState.selected[cb.dataset.reviewId]=true; else delete importReviewState.selected[cb.dataset.reviewId]; }); });
+    var all=panel.querySelector('#reviewSelectAll'); if(all) all.addEventListener('change',function(){ panel.querySelectorAll('[data-review-id]').forEach(function(cb){ cb.checked=all.checked; if(all.checked) importReviewState.selected[cb.dataset.reviewId]=true; else delete importReviewState.selected[cb.dataset.reviewId]; }); });
+    panel.querySelectorAll('[data-review-decision]').forEach(function(btn){ btn.addEventListener('click',function(){ decideImportReview(panel,btn.dataset.reviewDecision,btn); }); });
+  }
+  async function loadImportReview(box){
+    var panel=box && (box.id==='importReviewPanel' ? box : box.querySelector('#importReviewPanel')); if(!panel) return;
+    if(!supabaseClient){ panel.innerHTML='<p class="admin-review-muted">Connectez-vous avec un compte administrateur pour voir la file.</p>'; return; }
+    panel.innerHTML='<p class="admin-review-muted">Chargement de la file de revue…</p>';
+    try{
+      var result=await supabaseClient.rpc('hilia_admin_review_queue',{p_kind:importReviewState.kind||null,p_level:importReviewState.level||null,p_limit:30,p_offset:0});
+      if(result.error) throw result.error;
+      importReviewState.data=result.data||{total:0,counts:{},items:[]};
+      renderImportReview(panel,importReviewState.data);
+    }catch(err){
+      panel.innerHTML='<p class="admin-review-error">File de revue indisponible : '+escapeHtml(err && err.message || 'erreur inconnue')+'</p><p class="admin-review-muted">Vérifiez que la migration <code>20261114_hilia_review.sql</code> est appliquée et que votre compte a le rôle admin.</p>';
+    }
+  }
+  async function decideImportReview(panel,decision,button){
+    var ids=Object.keys(importReviewState.selected);
+    if(!ids.length){ announce('Sélectionnez au moins un candidat.',300); return; }
+    if(decision==='reject' && !confirm('Rejeter '+ids.length+' candidat(s) ?')) return;
+    button.disabled=true;
+    try{
+      var result=await supabaseClient.rpc('hilia_admin_review_decision',{p_ids:ids,p_decision:decision,p_note:null});
+      if(result.error) throw result.error;
+      importReviewState.selected=Object.create(null);
+      var msg=result.data && result.data.note_published ? result.data.note_published : 'Décision enregistrée.';
+      announce(msg,5000);
+      await loadImportReview(panel.closest('#profileAdminArea')||panel.parentElement);
+    }catch(err){
+      announce('Décision impossible : '+(err && err.message || 'erreur inconnue'),6000);
+    }finally{ button.disabled=false; }
+  }
+
   document.getElementById('prototypeRoleSelect').addEventListener('change',function(){ this.value='user'; if(profileState){profileState.role='user'; localStorage.setItem(PROFILE_KEY,JSON.stringify(profileState)); renderProfilePage();} });
   async function saveReview(di, rating, comment){
     var p=getProfile(); if(!p || !supabaseClient || !p.id) return false;
@@ -1891,7 +1984,141 @@
     if(idx>=0){ navigatePage('explore',false); setListTab(); openDetail(idx,true); return true; }
     return false;
   }
+  // ---------- Détails enrichis, chargés à la demande ----------
+  // Le catalogue de base reste léger. Les descriptions, photos, horaires et
+  // tarifs vivent dans des shards séparés : une fiche ne télécharge que le sien.
+  var detailLoadToken = 0;
+  var placeDetailCache = Object.create(null);
+  var placeDetailPromises = Object.create(null);
+  function detailBucket(id, count){
+    var hash = 2166136261;
+    String(id).split('').forEach(function(ch){ hash ^= ch.codePointAt(0); hash = Math.imul(hash, 16777619); });
+    return (hash >>> 0) % count;
+  }
+  function detailShard(id, count){ return String(detailBucket(id, count)).padStart(3, '0'); }
+  function mediaProxyUrl(url){ return '/api/media?u=' + encodeURIComponent(url); }
+  function paragraphsHtml(text){
+    return String(text || '').split(/\n{2,}/).map(function(block){
+      return '<p>' + escapeHtml(block).replace(/\n/g, '<br>') + '</p>';
+    }).join('');
+  }
+  function formatPriceItem(item){
+    var cur = item.currency ? ' ' + item.currency : '';
+    if (item.price != null) return item.price + cur;
+    if (item.min != null && item.max != null && item.min !== item.max) return item.min + '–' + item.max + cur;
+    if (item.min != null) return item.min + cur;
+    if (item.max != null) return item.max + cur;
+    return '';
+  }
+  function mediaGalleryHtml(media, title, fallbackKey){
+    if(!media || !media.length) return '';
+    var html='<div class="d-section d-gallery-section"><h3>Photos</h3><div class="d-gallery">';
+    media.forEach(function(m, i){
+      html += '<figure class="media-card" data-fallback-key="' + escapeAttr(fallbackKey || 'general') + '"><img data-media-img src="' + escapeAttr(mediaProxyUrl(m.url)) + '" alt="' + escapeAttr(title + ' (photo ' + (i + 1) + ')') + '" loading="lazy" decoding="async"><figcaption><span>' + escapeHtml(m.credit || 'Crédit non précisé') + '</span>';
+      if(m.source) html += ' · ' + escapeHtml(m.source);
+      if(m.licence) html += ' · ' + escapeHtml(m.licence);
+      html += '</figcaption></figure>';
+    });
+    return html + '</div><p class="media-credit-note">Crédit et source conservés sous chaque image. Si une photo ne répond pas, une illustration de catégorie la remplace clairement, sans jamais la présenter comme une photo du lieu.</p></div>';
+  }
+  function bindMediaFallbacks(container){
+    container.querySelectorAll('[data-media-img]').forEach(function(img){
+      img.addEventListener('error', function(){
+        var fig=img.closest('figure'); if(!fig) return;
+        var key=fig.getAttribute('data-fallback-key') || 'general';
+        fig.classList.add('is-unavailable');
+        fig.innerHTML=illustrationSVG(key)+'<figcaption><span>Image indisponible · illustration HILIA</span></figcaption>';
+      });
+    });
+  }
+  function placeSourceLine(src){
+    if(!src) return '';
+    var label = src.label || 'Source';
+    var html = 'Source : ' + escapeHtml(label);
+    if(src.licenceLabel) html += ' · ' + escapeHtml(src.licenceLabel);
+    if(src.updatedAt) html += ' · mise à jour ' + escapeHtml(String(src.updatedAt).slice(0, 10));
+    if(src.url) html += ' · <a href="' + escapeAttr(safeExternalUrl(src.url)) + '" target="_blank" rel="noopener noreferrer">voir la source<span class="sr-only"> (nouvelle fenêtre)</span></a>';
+    return '<p class="d-source-line">' + html + '</p>';
+  }
+  function renderPlaceEnrichment(detail, row){
+    var html='';
+    if(detail.description){
+      html += '<div class="d-section d-description"><h3>À propos</h3>' + paragraphsHtml(detail.description) + placeSourceLine(detail.descriptionSource) + '</div>';
+    }
+    html += mediaGalleryHtml(detail.media, row[F.NOM], CATEGORY_TEMPLATE[ACTIVITES[row[F.ACT]]] || 'general');
+    if(detail.hours && detail.hours.length){
+      html += '<div class="d-section d-practical"><h3>Horaires</h3><ul class="d-hours">';
+      detail.hours.forEach(function(h){
+        if(h.text){ html += '<li>' + escapeHtml(h.text) + '</li>'; return; }
+        var when = (h.days && h.days.length) ? h.days.join(', ') : 'Horaires';
+        var time = h.opens || h.closes ? ' : ' + escapeHtml([h.opens, h.closes].filter(Boolean).join('–')) : '';
+        var period = (h.from || h.to) ? ' <span class="d-muted">(' + escapeHtml([h.from, h.to].filter(Boolean).join(' → ')) + ')</span>' : '';
+        html += '<li><strong>' + escapeHtml(when) + '</strong>' + time + period + (h.note ? ' · ' + escapeHtml(h.note) : '') + '</li>';
+      });
+      html += '</ul><p class="d-source-line">Horaires déclarés par la source. Vérifiez avant de vous déplacer.</p></div>';
+    }
+    if(detail.prices && detail.prices.items && detail.prices.items.length){
+      html += '<div class="d-section d-practical"><h3>Tarifs</h3>';
+      if(detail.prices.free === true) html += '<p class="d-price-summary">Gratuit selon la source.</p>';
+      html += '<ul class="d-prices">';
+      detail.prices.items.forEach(function(item){
+        var amount = formatPriceItem(item);
+        html += '<li>' + (item.label ? '<span>' + escapeHtml(item.label) + '</span>' : '<span>Tarif</span>') + (amount ? '<b>' + escapeHtml(amount) + '</b>' : '') + (item.period ? ' <span class="d-muted">' + escapeHtml(item.period) + '</span>' : '') + '</li>';
+      });
+      html += '</ul><p class="d-source-line">Tarifs déclarés, non garantis au moment de la visite. Aucune disponibilité ni commission n’est déduite.</p></div>';
+    }
+    if(detail.contacts){
+      var c=detail.contacts, hasContact=(c.phones&&c.phones.length)||(c.emails&&c.emails.length)||(c.websites&&c.websites.length);
+      if(hasContact){
+        html += '<div class="d-section d-practical"><h3>Contact</h3><ul class="d-contacts">';
+        (c.phones||[]).forEach(function(p){ html += '<li><span>Téléphone</span><a href="tel:' + escapeAttr(p) + '">' + escapeHtml(p) + '</a></li>'; });
+        (c.emails||[]).forEach(function(m){ html += '<li><span>E-mail</span><a href="mailto:' + escapeAttr(m) + '">' + escapeHtml(m) + '</a></li>'; });
+        (c.websites||[]).forEach(function(u){ var safe=safeExternalUrl(u); if(safe) html += '<li><span>Site</span><a href="' + escapeAttr(safe) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(u) + '<span class="sr-only"> (nouvelle fenêtre)</span></a></li>'; });
+        html += '</ul><p class="d-source-line">Coordonnées issues des sources. Elles peuvent évoluer.</p></div>';
+      }
+    }
+    if(detail.categories && detail.categories.length > 1){
+      html += '<div class="d-section"><h3>Catégories détaillées</h3><div class="d-badges">';
+      detail.categories.forEach(function(c){ html += '<span class="d-badge">' + escapeHtml(c.name) + '</span>'; });
+      html += '</div></div>';
+    }
+    if(detail.accessibility && detail.accessibility.sources && detail.accessibility.sources.length){
+      html += '<div class="d-section"><h3>Sources d’accessibilité</h3><p class="d-source-line">';
+      html += detail.accessibility.sources.map(function(s){ return escapeHtml(s.label + (s.updatedAt ? ' (' + String(s.updatedAt).slice(0, 10) + ')' : '')); }).join(' · ');
+      html += '</p><p class="d-source-line">Données déclaratives, parfois différentes selon les sources. Aucune conclusion n’est déduite d’une information absente.</p></div>';
+    }
+    return html;
+  }
+  function loadPlaceDetail(id){
+    if(!id) return Promise.resolve(null);
+    if(placeDetailCache[id]) return Promise.resolve(placeDetailCache[id]);
+    var bucket = detailShard(id, 256);
+    if(!placeDetailPromises[bucket]){
+      placeDetailPromises[bucket] = fetch('/data/place-details/' + bucket + '.json', {cache:'no-cache'})
+        .then(function(res){ return res.ok ? res.json() : null; })
+        .then(function(ds){
+          if(ds && ds.places) Object.keys(ds.places).forEach(function(k){ placeDetailCache[k]=ds.places[k]; });
+          return true;
+        })
+        .catch(function(){ return false; });
+    }
+    return placeDetailPromises[bucket].then(function(){ return placeDetailCache[id] || null; });
+  }
+  function hydratePlaceDetail(di, row, token){
+    var holder=document.getElementById('detailEnrichment');
+    if(!holder || !row._hiliaPlaceId) return;
+    loadPlaceDetail(String(row._hiliaPlaceId)).then(function(detail){
+      if(token !== detailLoadToken) return;
+      if(!detail){ holder.remove(); return; }
+      holder.removeAttribute('aria-busy');
+      holder.innerHTML = renderPlaceEnrichment(detail, row);
+      bindMediaFallbacks(holder);
+    });
+  }
+
   function openDetail(di, keepOpen){
+    detailLoadToken += 1;
+    var detailToken = detailLoadToken;
     AudioDesc.stop(true);
     var trigger = document.activeElement;
     closeDrawer();
@@ -1908,8 +2135,10 @@
       + '<p class="audio-note">Lecture à voix de synthèse, générée à partir des informations de cette fiche.</p></div>';
     var tag = tagPalette(color);
     html += '<span class="d-tag" style="background:'+tag.bg+';color:'+tag.text+'">'+escapeHtml(ACTIVITES[r[F.ACT]])+'</span><br>';
-    html += '<div class="d-access-score"><strong>'+idx+'/10</strong> <span><b>Couverture déclarée</b> des 6 dimensions d’accessibilité.<br><span class="d-access-score-note">Ce n’est pas une garantie d’accessibilité complète.</span></span></div>';
+    if(r._accessUnknown) html += '<div class="d-access-score d-access-unknown"><strong>?</strong> <span><b>Accessibilité non renseignée</b> pour ce lieu.<br><span class="d-access-score-note">L’absence d’information ne signifie ni accessible ni inaccessible.</span></span></div>';
+    else html += '<div class="d-access-score"><strong>'+idx+'/10</strong> <span><b>Couverture déclarée</b> des 6 dimensions d’accessibilité.<br><span class="d-access-score-note">Ce n’est pas une garantie d’accessibilité complète.</span></span></div>';
     if(r[F.SITE]) html += '<a class="d-link" href="'+escapeAttr(safeExternalUrl(r[F.SITE]))+'" target="_blank" rel="noopener noreferrer" title="Voir le site de '+escapeAttr(r[F.NOM])+' (nouvelle fenêtre)">'+icon('link')+' Voir le site du lieu<span class="sr-only"> '+escapeHtml(r[F.NOM])+' (s’ouvre dans une nouvelle fenêtre)</span></a>';
+    html += '<div id="detailEnrichment" class="d-enrichment" aria-live="polite" aria-busy="true"></div>';
     if(profileState && roleOf(profileState)==='admin'){
       var remotePlace=null;
       if(r._hiliaPlaceId){ remotePlace={id:r._hiliaPlaceId}; }
@@ -1998,6 +2227,7 @@
     // Les avis de cette fiche arrivent à la demande : on rafraîchit l'affichage ensuite.
     ensureReviews([di], function(){ if(reviewsFor(di).length && overlayBg.classList.contains('open') && DATA[di]===r) openDetail(di,true); });
     AudioDesc.bind(di);
+    hydratePlaceDetail(di, r, detailToken);
     if(keepOpen && wasOpen){ var rh = detailContent.querySelector('#reviewsHeading'); if(rh) rh.focus(); }
     else activateModal(detailPanel);
   }
@@ -2306,12 +2536,183 @@
     }); });
   }
 
+  // ---------- Agenda (événements distincts des lieux) ----------
+  var agendaData = null, agendaPromise = null, agendaBound = false, agendaLimit = 40;
+  var eventDetailCache = Object.create(null), eventDetailPromises = Object.create(null);
+  function eventDetailShard(id){ return detailShard(id, 128); }
+  function eventDateLabel(value){
+    if(!value) return '';
+    var p=String(value).split('-').map(Number);
+    if(p.length!==3 || !p[0] || !p[1] || !p[2]) return String(value);
+    return new Date(Date.UTC(p[0],p[1]-1,p[2])).toLocaleDateString('fr-FR',{weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'UTC'});
+  }
+  function eventDateBadge(value){
+    var p=String(value || '').split('-').map(Number);
+    if(p.length!==3) return {day:'',month:''};
+    var d=new Date(Date.UTC(p[0],p[1]-1,p[2]));
+    return {day:String(p[2]),month:d.toLocaleDateString('fr-FR',{month:'short',timeZone:'UTC'})};
+  }
+  function eventRange(dates){
+    if(!dates) return '';
+    var a=eventDateLabel(dates.start), b=eventDateLabel(dates.end);
+    return a===b ? a : 'Du '+a+' au '+b;
+  }
+  function eventCardDateLabel(e){
+    var range=eventRange({start:e.start,end:e.end});
+    var today=new Date().toISOString().slice(0,10);
+    if(e.start && e.end && e.start<today && e.end>=today) return 'En cours · jusqu’au '+eventDateLabel(e.end)+(e.periodCount>1?' · '+e.periodCount+' dates à venir':'');
+    return e.periodCount>1 ? 'Prochaine date : '+range+' · '+e.periodCount+' dates à venir' : range;
+  }
+  function eventRanges(e){
+    return e.periods && e.periods.length ? e.periods : [{start:e.start,end:e.end}];
+  }
+  function eventMatchesDates(e,from,to){
+    return eventRanges(e).some(function(p){
+      return (!from || p.end>=from) && (!to || p.start<=to);
+    });
+  }
+  function loadAgendaData(){
+    if(agendaData) return Promise.resolve(agendaData);
+    if(!agendaPromise){
+      agendaPromise=fetch('/data/events.json',{cache:'no-cache'})
+        .then(function(res){ if(!res.ok) throw new Error('HTTP '+res.status); return res.json(); })
+        .then(function(data){ agendaData=data; return data; })
+        .catch(function(err){ console.warn('HILIA : agenda indisponible',err); agendaPromise=null; return null; });
+    }
+    return agendaPromise;
+  }
+  function loadEventDetail(id){
+    if(!id) return Promise.resolve(null);
+    if(eventDetailCache[id]) return Promise.resolve(eventDetailCache[id]);
+    var bucket=eventDetailShard(id);
+    if(!eventDetailPromises[bucket]){
+      eventDetailPromises[bucket]=fetch('/data/event-details/'+bucket+'.json',{cache:'no-cache'})
+        .then(function(res){ return res.ok ? res.json() : null; })
+        .then(function(ds){ if(ds && ds.events) Object.keys(ds.events).forEach(function(k){ eventDetailCache[k]=ds.events[k]; }); return true; })
+        .catch(function(){ return false; });
+    }
+    return eventDetailPromises[bucket].then(function(){ return eventDetailCache[id] || null; });
+  }
+  function agendaFiltered(){
+    if(!agendaData) return [];
+    var q=normalize(document.getElementById('agendaSearch')?.value || '');
+    var family=document.getElementById('agendaFamily')?.value || '';
+    var from=document.getElementById('agendaFrom')?.value || '';
+    var to=document.getElementById('agendaTo')?.value || '';
+    var free=!!document.getElementById('agendaFree')?.checked;
+    return agendaData.events.filter(function(e){
+      if(family && e.family!==family) return false;
+      if(free && e.free!==true) return false;
+      if((from || to) && !eventMatchesDates(e,from,to)) return false;
+      if(q){
+        var hay=normalize([e.name,e.commune,e.cp,e.address,e.family,(e.categories||[]).join(' ')].join(' '));
+        if(hay.indexOf(q)===-1) return false;
+      }
+      return true;
+    });
+  }
+  function agendaPriceLabel(e){
+    if(e.free===true) return 'Gratuit selon la source';
+    if(e.free===false) return 'Tarifs déclarés';
+    return '';
+  }
+  function agendaCard(e){
+    var b=eventDateBadge(e.start), price=agendaPriceLabel(e);
+    var html='<article class="agenda-card" data-agenda-card="'+escapeAttr(e.id)+'"><div class="agenda-date" aria-hidden="true"><span>'+escapeHtml(b.month)+'</span><b>'+escapeHtml(b.day)+'</b></div><div class="agenda-card-main"><h2>'+escapeHtml(e.name)+'</h2><p class="agenda-meta">'+escapeHtml(eventCardDateLabel(e))+(e.commune?' · '+escapeHtml(e.commune):'')+(e.cp?' ('+escapeHtml(e.cp)+')':'')+'</p><p class="agenda-tags">'+(e.family?'<span class="d-badge">'+escapeHtml(e.family)+'</span>':'')+(price?'<span class="d-badge agenda-free-badge">'+escapeHtml(price)+'</span>':'')+(e.source?'<span class="d-muted">Source : '+escapeHtml(e.source)+'</span>':'')+'</p><button type="button" class="secondary-btn agenda-toggle" data-agenda-toggle="'+escapeAttr(e.id)+'" aria-expanded="false">Voir le détail</button><div class="agenda-event-detail" hidden></div></div></article>';
+    return html;
+  }
+  function renderAgenda(){
+    var list=document.getElementById('agendaList'), status=document.getElementById('agendaStatus'), count=document.getElementById('agendaCount'), label=document.getElementById('agendaCountLabel'), more=document.getElementById('agendaMore');
+    if(!list || !status) return;
+    if(!agendaData){
+      status.textContent='L’agenda n’a pas pu être chargé. Réessayez dans un instant.';
+      status.dataset.kind='error'; return;
+    }
+    var rows=agendaFiltered();
+    if(count) count.textContent=rows.length.toLocaleString('fr-FR');
+    if(label) label.textContent=rows.length>1?'événements':'événement';
+    status.dataset.kind='';
+    status.textContent=rows.length?'':'Aucun événement ne correspond à ces filtres. Élargissez les dates ou la recherche.';
+    list.innerHTML=rows.slice(0,agendaLimit).map(agendaCard).join('');
+    if(more) more.hidden=rows.length<=agendaLimit;
+    list.querySelectorAll('[data-agenda-toggle]').forEach(function(btn){ btn.addEventListener('click',function(){ toggleAgendaEvent(btn); }); });
+  }
+  function renderEventDetail(detail){
+    var html='';
+    if(detail.description) html+='<div class="d-description">'+paragraphsHtml(detail.description)+'</div>';
+    html+='<p class="d-source-line"><strong>'+escapeHtml(eventRange(detail.dates))+'</strong>'+(detail.dates.startTime?' · '+escapeHtml(detail.dates.startTime)+(detail.dates.endTime?'–'+escapeHtml(detail.dates.endTime):''):'')+'</p>';
+    if(detail.dates.periods && detail.dates.periods.length>1){
+      var upcoming=detail.dates.periods.slice(1,13).map(function(p){ return eventRange({start:p.start,end:p.end}); }).join(' · ');
+      html+='<p class="d-source-line">Autres dates : '+escapeHtml(upcoming)+(detail.dates.periodCount>13||detail.dates.periodsTruncated?' · …':'')+'</p>';
+    }
+    if(detail.address || detail.commune) html+='<p class="d-source-line">'+escapeHtml([detail.address,detail.cp,detail.commune].filter(Boolean).join(', '))+'</p>';
+    html+=mediaGalleryHtml(detail.media, detail.name, CATEGORY_TEMPLATE[detail.categories?.[0]?.name] || 'general');
+    if(detail.prices && detail.prices.items && detail.prices.items.length){
+      html+='<div class="d-section d-practical"><h3>Tarifs</h3>'+(detail.prices.free===true?'<p class="d-price-summary">Gratuit selon la source.</p>':'')+'<ul class="d-prices">';
+      detail.prices.items.forEach(function(item){ html+='<li>'+(item.label?'<span>'+escapeHtml(item.label)+'</span>':'<span>Tarif</span>')+(formatPriceItem(item)?'<b>'+escapeHtml(formatPriceItem(item))+'</b>':'')+'</li>'; });
+      html+='</ul><p class="d-source-line">Tarifs déclarés, non garantis. Aucune disponibilité n’est déduite.</p></div>';
+    }
+    if(detail.contacts){
+      var c=detail.contacts, has=(c.phones&&c.phones.length)||(c.emails&&c.emails.length)||(c.websites&&c.websites.length);
+      if(has){ html+='<div class="d-section d-practical"><h3>Contact</h3><ul class="d-contacts">'; (c.phones||[]).forEach(function(p){html+='<li><span>Téléphone</span><a href="tel:'+escapeAttr(p)+'">'+escapeHtml(p)+'</a></li>';}); (c.emails||[]).forEach(function(m){html+='<li><span>E-mail</span><a href="mailto:'+escapeAttr(m)+'">'+escapeHtml(m)+'</a></li>';}); (c.websites||[]).forEach(function(u){var safe=safeExternalUrl(u); if(safe) html+='<li><span>Site</span><a href="'+escapeAttr(safe)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(u)+'</a></li>';}); html+='</ul></div>'; }
+    }
+    if(detail.booking && safeExternalUrl(detail.booking.url)) html+='<p><a class="d-link" href="'+escapeAttr(safeExternalUrl(detail.booking.url))+'" target="_blank" rel="noopener noreferrer">Site ou réservation externe<span class="sr-only"> (nouvelle fenêtre)</span></a></p>';
+    if(detail.accessibility && detail.accessibility.declared && detail.accessibility.declared.length) html+='<div class="d-section"><h3>Accessibilité déclarée</h3><div class="d-badges">'+detail.accessibility.declared.map(function(x){return '<span class="d-badge">'+escapeHtml(x)+'</span>';}).join('')+'</div><p class="d-source-line">Déclaration de la source, non vérifiée par HILIA. Une information absente ne signifie ni accessible ni inaccessible.</p></div>';
+    if(detail.hours && detail.hours.length) html+='<div class="d-section d-practical"><h3>Horaires</h3><ul class="d-hours">'+detail.hours.map(function(h){return '<li>'+(h.text?escapeHtml(h.text):escapeHtml((h.days||[]).join(', ')||'Horaires')+(h.opens?' : '+escapeHtml([h.opens,h.closes].filter(Boolean).join('–')):''))+'</li>';}).join('')+'</ul></div>';
+    html+='<p class="d-source-line">Source : '+escapeHtml(detail.source?.label||detail.source?.source||'non précisée')+' · '+escapeHtml(detail.licence||'licence non précisée')+'</p>';
+    return html;
+  }
+  function syncEventJsonLd(detail){
+    var el=document.getElementById('eventJsonLd');
+    if(!detail){ if(el) el.remove(); return; }
+    if(!el){ el=document.createElement('script'); el.type='application/ld+json'; el.id='eventJsonLd'; document.head.appendChild(el); }
+    var data={'@context':'https://schema.org','@type':'Event',name:detail.name,startDate:detail.dates.start+(detail.dates.startTime?'T'+detail.dates.startTime:''),endDate:detail.dates.end+(detail.dates.endTime?'T'+detail.dates.endTime:''),eventStatus:'https://schema.org/EventScheduled',url:location.href};
+    if(detail.description) data.description=detail.description.slice(0,800);
+    if(detail.media?.[0]) data.image=mediaProxyUrl(detail.media[0].url);
+    if(detail.address||detail.commune) data.location={'@type':'Place',name:detail.name,address:{'@type':'PostalAddress',streetAddress:detail.address||'',postalCode:detail.cp||'',addressLocality:detail.commune||'',addressCountry:'FR'}};
+    if(detail.prices && detail.prices.items && detail.prices.items.length){ var item=detail.prices.items.find(function(x){return x.min!=null||x.max!=null||x.price!=null;}); if(item) data.offers={'@type':'Offer',price:item.min??item.max??item.price,priceCurrency:item.currency||'EUR',url:detail.booking?.url||detail.contacts?.websites?.[0]||undefined}; }
+    el.textContent=JSON.stringify(data);
+  }
+  function toggleAgendaEvent(btn){
+    var card=btn.closest('[data-agenda-card]'), holder=card?.querySelector('.agenda-event-detail');
+    if(!card || !holder) return;
+    if(!holder.hidden){ holder.hidden=true; btn.setAttribute('aria-expanded','false'); btn.textContent='Voir le détail'; syncEventJsonLd(null); return; }
+    var id=btn.dataset.agendaToggle;
+    var show=function(detail){
+      if(!detail){ holder.hidden=false; holder.innerHTML='<p class="d-source-line">Le détail de cet événement n’est pas disponible.</p>'; return; }
+      holder.innerHTML=renderEventDetail(detail); holder.hidden=false; btn.setAttribute('aria-expanded','true'); btn.textContent='Masquer le détail'; bindMediaFallbacks(holder); syncEventJsonLd(detail);
+    };
+    if(eventDetailCache[id]){ show(eventDetailCache[id]); return; }
+    btn.disabled=true; btn.textContent='Chargement…';
+    loadEventDetail(id).then(function(detail){ btn.disabled=false; show(detail); });
+  }
+  function initAgenda(){
+    if(!agendaBound){
+      agendaBound=true;
+      ['agendaSearch','agendaFamily','agendaFrom','agendaTo','agendaFree'].forEach(function(id){
+        var el=document.getElementById(id); if(el) el.addEventListener(id==='agendaSearch'?'input':'change',function(){ agendaLimit=40; renderAgenda(); });
+      });
+      var more=document.getElementById('agendaMore'); if(more) more.addEventListener('click',function(){ agendaLimit+=40; renderAgenda(); });
+    }
+    if(agendaData){ renderAgenda(); return; }
+    var status=document.getElementById('agendaStatus'); if(status) status.textContent='Chargement de l’agenda…';
+    loadAgendaData().then(function(data){
+      if(!data){ renderAgenda(); return; }
+      var select=document.getElementById('agendaFamily');
+      if(select && select.options.length<=1){
+        Object.keys(data.families||{}).sort(function(a,b){return (data.families[b]||0)-(data.families[a]||0)||a.localeCompare(b,'fr');}).forEach(function(f){ var o=document.createElement('option'); o.value=f; o.textContent=f; select.appendChild(o); });
+      }
+      renderAgenda();
+    });
+  }
+
   // ---------- Site pages / lightweight routing ----------
   var currentPage='explore';
   var PAGE_META={
     explore:{title:'HILIA - Rendre le loisir accessible à tous',description:'HILIA référence des lieux de loisirs en France et présente les informations d’accessibilité disponibles pour faciliter les sorties.'},
     about:{title:'À propos - HILIA',description:'Découvrez HILIA, son objectif, ses valeurs et sa démarche autour du loisir accessible.'},
     faq:{title:'FAQ - HILIA',description:'Les réponses aux principales questions sur HILIA, les données d’accessibilité et les avis.'},
+    agenda:{title:'Agenda des sorties - HILIA',description:'Concerts, expositions, visites et ateliers : l’agenda des événements avec dates, tarifs et accessibilité déclarée.'},
     profile:{title:'Mon profil - HILIA',description:'Gérez votre profil HILIA et vos contributions.'},
     legal:{title:'Mentions légales - HILIA',description:'Informations légales relatives au site HILIA.'},
     privacy:{title:'Politique de confidentialité - HILIA',description:'Informations relatives à la protection des données personnelles sur HILIA.'},
@@ -2323,7 +2724,7 @@
     prestataires:{title:'Référencer mon activité - HILIA',description:'Prestataires de loisirs : renseignez l’accessibilité de votre activité pour être référencé sur HILIA.'}
   };
   // ---------- URL réelles : une page = un chemin, une fiche = /lieu/<slug> ----------
-  var PAGE_PATHS={"explore":"/","about":"/a-propos","faq":"/faq","prestataires":"/prestataires","profile":"/mon-profil","legal":"/mentions-legales","privacy":"/confidentialite","cgu":"/cgu","cookies":"/cookies","contact":"/contact","accessibility":"/accessibilite","sitemap":"/plan-du-site"};
+  var PAGE_PATHS={"explore":"/","agenda":"/agenda","about":"/a-propos","faq":"/faq","prestataires":"/prestataires","profile":"/mon-profil","legal":"/mentions-legales","privacy":"/confidentialite","cgu":"/cgu","cookies":"/cookies","contact":"/contact","accessibility":"/accessibilite","sitemap":"/plan-du-site"};
   var PATH_PAGES={}; Object.keys(PAGE_PATHS).forEach(function(k){ PATH_PAGES[PAGE_PATHS[k]]=k; });
   var SITE_ORIGIN='https://www.hilia.fr';
   function pagePath(page){ return PAGE_PATHS[page]||'/'; }
@@ -2390,11 +2791,12 @@
     setCanonical(url);
     ensureMeta('name','robots').setAttribute('content', page==='profile' ? 'noindex,follow' : 'index,follow');
     removePlaceJsonLd();
+    syncEventJsonLd(null);
   }
   function syncChromeOffset(){ var nav=document.querySelector('.topnav'); var h=nav ? nav.offsetHeight : 96; document.documentElement.style.setProperty('--topnav-height',h+'px'); }
   function setPageActiveButtons(page){ document.querySelectorAll('[data-nav-page]').forEach(function(b){ var active=b.dataset.navPage===page; b.classList.toggle('active',active); if(b.tagName==='A'){ if(active)b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); } }); }
   function navigatePage(page, push){
-    page=page||'explore'; if(['explore','about','faq','prestataires','profile','legal','privacy','cgu','cookies','contact','accessibility','sitemap'].indexOf(page)===-1) page='explore';
+    page=page||'explore';     if(['explore','agenda','about','faq','prestataires','profile','legal','privacy','cgu','cookies','contact','accessibility','sitemap'].indexOf(page)===-1) page='explore';
     // Depuis une page de contenu, le jeu de données n'est pas chargé : on rejoint
     // l'exploration par une navigation normale plutôt que d'afficher une liste vide.
     if(DEFER_PLACES && page==='explore'){ location.href=pagePath('explore'); return; }
@@ -2408,6 +2810,7 @@
     if(push!==false){ history.pushState({page:page},'',pagePath(page)); }
     closeDetail(); closeDrawer(); window.scrollTo(0,0); document.getElementById('siteMain')?.focus(); announce(PAGE_META[page].title,200);
     if(page==='profile') renderProfilePage();
+    if(page==='agenda') initAgenda();
     if(page==='prestataires') initProviderForm();
     if(page==='explore'){
       if(currentTab==='map' && leafletMap) setTimeout(function(){ leafletMap.invalidateSize({pan:false,animate:false}); drawMap(); },80); else renderList();

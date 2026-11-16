@@ -11,23 +11,31 @@ que les qualifications déclarées par les prestataires.
 Site statique, **sans étape de build** : les pages sont dans le dépôt telles
 quelles et Vercel les sert directement. Deux scripts les préparent hors ligne, et
 leurs sorties sont versionnées : `npm run data` (jeu de données et sitemaps) et
-`npm run pages` (les onze rubriques). Les deux fonctions de `api/` sont compilées
+`npm run pages` (les rubriques, dont l’agenda). Les deux fonctions de `api/` sont compilées
 par Vercel au déploiement (rien à lancer localement). Chaîne : **GitHub → Vercel
 (statique + fonctions) → Supabase**.
 
 | Élément | Rôle |
 | --- | --- |
 | `index.html` | La structure des pages (HTML seul, ~50 Ko) et le socle des pages. |
-| `a-propos.html`, `faq.html`, … | Les onze rubriques, **générées** depuis `index.html` par `npm run pages` : chacune y ajoute son titre, sa description et son adresse canonique. |
+| `a-propos.html`, `faq.html`, `agenda.html`, … | Les rubriques, **générées** depuis `index.html` par `npm run pages` : chacune y ajoute son titre, sa description et son adresse canonique. |
 | `styles.css` | Toute la feuille de style (~56 Ko). |
 | `app.js` | Toute l'application : chargement des données, recherche, filtres, carte, fiches, comptes, contributions, routeur d'URL (~170 Ko). |
 | `data/places.json` | Jeu de données compact des fiches approuvées, **généré** (voir plus bas) et servi par le CDN. |
+| `data/place-details/` | Détails enrichis des fiches existantes, en 256 shards chargés à l'ouverture d'une fiche. |
+| `data/events.json` | Index de l'agenda, événements à date explicite. |
+| `data/event-details/` | Détails d'événements, en 128 shards chargés au clic. |
 | `data/communes.json` | Liste de secours des communes (le jeu de données la fournit déjà). |
 | `api/place.js` | Fonction qui sert une fiche (`/lieu/<slug>`) avec ses métadonnées de partage. |
 | `api/og.js` | Fonction qui dessine l'image d'aperçu d'une fiche (1200 × 630). |
 | `lib/` | Logique partagée par les fonctions : lecture d'une fiche, métadonnées, carte d'aperçu. |
 | `scripts/build-dataset.mjs` | Régénère `data/places.json` **et** les sitemaps. |
-| `scripts/build-pages.mjs` | Réécrit les onze rubriques depuis `PAGE_META` d'`app.js` et vérifie leur cohérence avec le sitemap. |
+| `scripts/build-pages.mjs` | Réécrit les rubriques depuis `PAGE_META` d'`app.js` et vérifie leur cohérence avec le sitemap. |
+| `scripts/import/` | Audit, simulation, génération des détails et import Supabase par lots. |
+| `supabase/migrations/20261113_hilia_import.sql` | Staging, détails, événements, activités, itinéraires et médias. |
+| `supabase/migrations/20261114_hilia_review.sql` | Revue par lots, historique et rollback des fiches enrichies. |
+| `api/media.js` | Proxy d'images à liste blanche, pour ne pas ouvrir la CSP à tous les domaines. |
+| `docs/INTEGRATION_DONNEES_HILIA.md` | Procédure d'import, de migration et limites connues. |
 | `scripts/dev-server.mjs` | Serveur local qui rejoue les en-têtes, les réécritures et les fonctions de `vercel.json`. |
 | `scripts/preview-card.mjs` | Génère des exemples de cartes de partage, sans déployer. |
 | `scripts/check-card.mjs` | Contrôle que le rendu d'une carte ne lit aucun fichier `.wasm`. |
@@ -66,6 +74,7 @@ page 404, et non l'application avec un code 200 (ce que les moteurs appellent un
 | --- | --- |
 | `/` | Exploration (recherche, filtres, liste, carte) |
 | `/lieu/<slug>` | Fiche d'un lieu (ex. `/lieu/piscine-a-serent-48171`) |
+| `/agenda` | Agenda des événements à date explicite |
 | `/a-propos`, `/faq`, `/prestataires`, `/mon-profil` | Rubriques |
 | `/mentions-legales`, `/confidentialite`, `/cgu`, `/cookies`, `/contact`, `/accessibilite`, `/plan-du-site` | Pages légales et d'information |
 
@@ -131,7 +140,7 @@ l'en-tête `Content-Security-Policy` est bien appliqué à la réponse de la fon
 
 ## Régénérer les pages
 
-Les onze rubriques ne sont pas écrites à la main : elles sont produites depuis
+Les rubriques ne sont pas écrites à la main : elles sont produites depuis
 `index.html` et depuis `PAGE_META` (dans `app.js`, seule source des titres et des
 descriptions).
 
@@ -185,14 +194,31 @@ Bon à savoir :
   main, familles d'activités) ne passent **jamais** par ce fichier : elles restent
   lues en direct dans Supabase.
 
+## Données enrichies
+
+Les descriptions, photos, horaires, tarifs et contacts sont générés hors ligne depuis le paquet source, puis chargés à la demande. Le fichier source de 843 Mo n'est jamais servi au navigateur.
+
+```bash
+npm run import:simulate -- --source <HILIA_DONNEES.jsonl>
+npm run import:build -- --source <HILIA_DONNEES.jsonl>
+npm run test:import
+```
+
+Les nouvelles entités restent en staging. Voir `docs/INTEGRATION_DONNEES_HILIA.md` pour les deux migrations Supabase, la politique de revue par lots, le rollback, le proxy d'images et les limites connues.
+
 ## Ce que fait l'application
 
 - Recherche plein texte (nom, adresse, commune, code postal), filtres par famille
   d'activités et par critères d'accessibilité, tri, pagination accessible.
 - Carte (Leaflet + fond vectoriel MapLibre/OpenFreeMap) avec la liste comme
   équivalent accessible.
-- Fiche détaillée : accessibilité, qualification prestataire, avis, lien de partage.
-  Chaque fiche a son adresse, son titre, sa description, sa canonique et ses
+- Fiche détaillée : description, photos créditées, horaires, tarifs, contacts,
+  accessibilité, qualification prestataire, avis, lien de partage. Les détails
+  sont chargés après l'ouverture, depuis un shard dédié.
+- Agenda `/agenda` : événements à date explicite, recherche, familles, dates,
+  gratuité déclarée et réservation externe. Les événements en revue de calendrier
+  ne sont pas publiés.
+- Chaque fiche a son adresse, son titre, sa description, sa canonique et ses
   données structurées (`LocalBusiness`), mis à jour par le routeur.
 - Comptes Supabase : inscription, connexion, mot de passe oublié, réinitialisation.
 - Rôles : utilisateur, utilisateur certifié (proposer un lieu), admin (valider,

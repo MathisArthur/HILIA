@@ -1,0 +1,1505 @@
+{
+  "generatedAt": "2026-11-13T16:04:46.868Z",
+  "source": "HILIA_DONNEES.jsonl",
+  "records": 239445,
+  "repairedRecords": 90,
+  "counts": {
+    "manifest": 1,
+    "place": 166731,
+    "event": 58279,
+    "route": 5501,
+    "activity": 8803,
+    "category": 130
+  },
+  "publicationStatus": {
+    "(none)": 131,
+    "existing_preserved": 54350,
+    "candidate_declared_accessibility": 815,
+    "review_duplicate": 4069,
+    "review_accessibility": 121801,
+    "review_dates": 33153,
+    "candidate_event": 25126
+  },
+  "kinds": {
+    "manifest": 1,
+    "place": 166731,
+    "event": 58279,
+    "route": 5501,
+    "activity": 8803,
+    "category": 130
+  },
+  "sources": {
+    "hilia": 54350,
+    "acceslibre": 55156,
+    "datatourisme": 182782,
+    "museofile": 1216,
+    "datatourisme_csv": 75,
+    "paris_events": 3188
+  },
+  "licences": {
+    "existing_internal": 54350,
+    "etalab-2.0": 56447,
+    "etalab-open-licence": 182782,
+    "ODbL-1.0": 3188
+  },
+  "categories": {
+    "Événement culturel ou sportif": 27059,
+    "Sports et loisirs": 26960,
+    "Lieu de visite": 12449,
+    "Bibliothèque médiathèque": 11950,
+    "Salle des fêtes": 10043,
+    "Patrimoine religieux à visiter": 9428,
+    "Stade": 8850,
+    "Théâtre": 8633,
+    "Concert": 7805,
+    "Ateliers et activités": 6559,
+    "Musée": 6528,
+    "Prestataire de loisirs": 6491,
+    "Prestataire sportif": 6474,
+    "Office de tourisme": 5766,
+    "Piscine, centre aquatique": 5414,
+    "Architecture et patrimoine": 4919,
+    "Randonnée et promenade": 4698,
+    "Espace vert et naturel": 4686,
+    "Patrimoine industriel et savoir-faire": 4646,
+    "Fête traditionnelle": 4424,
+    "Activité en famille": 4195,
+    "Exposition": 3945,
+    "Dégustation et découverte gastronomique": 3944,
+    "Parc et jardin": 3591,
+    "Atelier": 2328,
+    "Visite guidée": 2282,
+    "Cinéma": 2254,
+    "Aire de pique-nique": 2247,
+    "Aire de jeux": 2184,
+    "Centre équestre": 1936,
+    "Conférence culturelle": 1907,
+    "Sentier pédagogique": 1847,
+    "Festival": 1837,
+    "Château": 1803,
+    "Galerie d'art": 1564,
+    "Plage, zone de baignade": 1505,
+    "Ateliers et activités culturelles": 1462,
+    "Cyclisme": 1375,
+    "Projection et cinéma": 1324,
+    "Lieu de mémoire": 1317,
+    "Complexe de loisirs": 1273,
+    "Information Touristique": 1222,
+    "Tennis": 1159,
+    "Parc d’attraction": 1150,
+    "Événement sportif": 1143,
+    "Jeux et animations": 952,
+    "Gymnase": 944,
+    "Activités nautiques": 875,
+    "Salle de remise en forme": 852,
+    "Site archéologique": 848,
+    "Art, centre d'art": 827,
+    "Escalade": 814,
+    "Club de sport": 810,
+    "Centre culturel": 779,
+    "Croisière et bateau promenade": 767,
+    "Salle de spectacle": 759,
+    "Centre d’interprétation": 759,
+    "Lecture et littérature": 737,
+    "Complexe sportif": 658,
+    "Ferme pédagogique": 609,
+    "Centre de loisirs": 587,
+    "Forêt": 573,
+    "Golf": 567,
+    "Spa et détente": 458,
+    "Loisirs": 451,
+    "Discothèque": 426,
+    "Mini-golf": 421,
+    "Salle multisports": 408,
+    "Lac et plan d’eau": 408,
+    "Parc animalier": 340,
+    "Sports d’hiver": 275,
+    "Equipement sportif": 238,
+    "Activité sportive": 237,
+    "Spectacle musical": 234,
+    "Grotte et site souterrain": 233,
+    "Via ferrata": 221,
+    "Salle de concert": 193,
+    "Casino": 193,
+    "Transport touristique panoramique": 191,
+    "Patrimoine et histoire": 185,
+    "Salle de jeux": 178,
+    "Danse": 178,
+    "Train touristique": 173,
+    "Cascade": 171,
+    "Accrobranche": 168,
+    "Conservatoire et école de musique": 165,
+    "Opéra": 153,
+    "Monument historique": 140,
+    "Patinoire": 125,
+    "Photographie": 116,
+    "Randonnée équestre": 114,
+    "Centre de vacances": 110,
+    "Balade et visite": 109,
+    "Location de matériel de loisirs": 106,
+    "Village de vacances": 95,
+    "Oenotourisme": 94,
+    "Loisirs créatifs": 93,
+    "Arts plastiques": 89,
+    "Bowling": 88,
+    "Salle de danse": 85,
+    "Auditorium et salle de conférence": 72,
+    "Musique": 71,
+    "Plateaux et terrains de jeux extérieurs": 69,
+    "Itinéraire nautique": 65,
+    "Jardin botanique et/ou zoologique": 63,
+    "Salle de combat": 61,
+    "Parc": 59,
+    "Ateliers et savoir-faire": 59,
+    "Humour": 55,
+    "Evénement culturel": 53,
+    "Boulodrome": 53,
+    "Jeux vidéo": 47,
+    "Sortie nocturne": 43,
+    "Cirque": 38,
+    "Ecole de danse": 36,
+    "Circuit sportif deux roues / voiture": 33,
+    "Ateliers et cours artistiques": 33,
+    "Trampoline": 30,
+    "Parc des expositions": 24,
+    "Skatepark": 19,
+    "Randonnées pédestres ou vélos": 16,
+    "Athlétisme": 15,
+    "Aquarium": 15,
+    "Arène": 10,
+    "Ecole de ski et snowboard": 7,
+    "Karaoké": 6,
+    "Refuge animalier": 4,
+    "Observatoire, astronomie": 4,
+    "Escape game": 1,
+    "Itinéraire de découverte": 1
+  },
+  "descriptions": {
+    "total": 174020,
+    "empty": 65294,
+    "chars": 83813429,
+    "max": 16169,
+    "withSource": 174020
+  },
+  "media": {
+    "records": 64568,
+    "items": 169397,
+    "eligibleWithCredit": 149637,
+    "rightsStatus": {
+      "eligible_with_credit": 149637,
+      "review_rights_or_format": 16417,
+      "expired": 118,
+      "not_yet_valid": 37,
+      "review_image_rights": 3188
+    },
+    "scope": {
+      "place": 129062,
+      "event": 27097,
+      "activity": 10268,
+      "route": 2970
+    },
+    "http": 5575,
+    "https": 163822
+  },
+  "practical": {
+    "anyContact": 150756,
+    "email": 85071,
+    "phone": 102590,
+    "website": 101658,
+    "anyHours": 57002,
+    "anyPrice": 79134,
+    "contactByKind": {
+      "place": 59514,
+      "event": 19143,
+      "activity": 5088,
+      "route": 1326
+    },
+    "hoursByKind": {
+      "place": 32805,
+      "event": 19935,
+      "activity": 3232,
+      "route": 1030
+    },
+    "priceByKind": {
+      "place": 41574,
+      "event": 31107,
+      "activity": 5402,
+      "route": 1051
+    }
+  },
+  "accessibility": {
+    "records": 112942,
+    "observations": 168333,
+    "scopes": {
+      "place": 149524,
+      "activity": 4958,
+      "event": 12890,
+      "route": 961
+    },
+    "withHilia": 54350,
+    "withAcceslibre": 55156
+  },
+  "events": {
+    "records": 58279,
+    "withDates": 20571,
+    "withoutDates": 37708,
+    "past": 0,
+    "current": 4372,
+    "future": 16199,
+    "invalidRange": 0,
+    "reviewDates": 33153,
+    "examples": [
+      {
+        "id": "dt:0002e33c47cda4da8a9c6218",
+        "name": "Intelligence artificielle - Accustica",
+        "min": "2026-11-08",
+        "max": "2026-11-30",
+        "status": "candidate_event"
+      },
+      {
+        "id": "dt:00050d945afad1c2269abdeb",
+        "name": "L’ARCHITECTURE DE L’UNIVERS",
+        "min": "2027-04-14",
+        "max": "2027-04-14",
+        "status": "candidate_event"
+      },
+      {
+        "id": "dt:00052d8a7901e93df6ef0d85",
+        "name": "Atelier numérique : Bons plans",
+        "min": "2027-04-07",
+        "max": "2027-04-07",
+        "status": "candidate_event"
+      },
+      {
+        "id": "dt:0006e27a2ea7e384ac56b712",
+        "name": "Atelier Ménopause",
+        "min": "2026-11-28",
+        "max": "2026-11-28",
+        "status": "candidate_event"
+      },
+      {
+        "id": "dt:0007ca6a480ae83d99619d63",
+        "name": "Marché de Noël",
+        "min": "2026-12-14",
+        "max": "2026-12-14",
+        "status": "candidate_event"
+      },
+      {
+        "id": "dt:00090d6968124eb5cdb486be",
+        "name": "Moi Peau : Hanoumat Compagnie",
+        "min": "2026-11-18",
+        "max": "2026-11-18",
+        "status": "candidate_event"
+      },
+      {
+        "id": "dt:000a21ebc2afe337c1969390",
+        "name": "Soirée Humour à la Cité !",
+        "min": "2027-01-09",
+        "max": "2027-01-09",
+        "status": "candidate_event"
+      },
+      {
+        "id": "dt:000d464abbd7c53afbf75389",
+        "name": "Conférence : les traditions méconnues de Noël",
+        "min": "2026-12-04",
+        "max": "2026-12-04",
+        "status": "candidate_event"
+      },
+      {
+        "id": "dt:000dd23b25f45cef23062dd3",
+        "name": "Marché et spectacle de Noël à Aunay-sur-Odon",
+        "min": "2026-12-18",
+        "max": "2026-12-18",
+        "status": "candidate_event"
+      },
+      {
+        "id": "dt:001127fcb43cc26a3ca67eec",
+        "name": "Chantier de réfection de clôtures d'une mise en défens",
+        "min": "2026-11-14",
+        "max": "2026-11-14",
+        "status": "candidate_event"
+      },
+      {
+        "id": "dt:0012c70398e2f97ab3253666",
+        "name": "Visite guidée : \"Belles Villas : architectures de villégiatures, 1850-1930\"",
+        "min": "2026-11-09",
+        "max": "2026-12-27",
+        "status": "candidate_event"
+      },
+      {
+        "id": "dt:0017ff9e9b4ab7e7f622e82f",
+        "name": "ATELIER - LES TSIGANES À TRAVERS LES YEUX DES ENFANTS",
+        "min": "2026-11-22",
+        "max": "2026-11-22",
+        "status": "candidate_event"
+      },
+      {
+        "id": "dt:0018e8330ddb347f0a7558d6",
+        "name": "Marché de Noël",
+        "min": "2026-11-29",
+        "max": "2026-11-29",
+        "status": "candidate_event"
+      },
+      {
+        "id": "dt:0019f40edb9b5d93396a8829",
+        "name": "Le fort de Pugey",
+        "min": "2027-02-14",
+        "max": "2027-04-11",
+        "status": "candidate_event"
+      },
+      {
+        "id": "dt:001ea1498dd072e01ff1a8d9",
+        "name": "Concours de crèches de Noël",
+        "min": "2026-12-18",
+        "max": "2027-01-08",
+        "status": "candidate_event"
+      },
+      {
+        "id": "dt:0024de80405c05f5f153a77b",
+        "name": "Expo objethèque-café",
+        "min": "2026-11-18",
+        "max": "2027-01-01",
+        "status": "candidate_event"
+      },
+      {
+        "id": "dt:0031c717e26207cfd1207080",
+        "name": "Brassens, le farouche humaniste",
+        "min": "2026-12-12",
+        "max": "2026-12-12",
+        "status": "candidate_event"
+      },
+      {
+        "id": "dt:0035943a22dfa82fd7568e66",
+        "name": "Cirque - Par Le Boudu",
+        "min": "2027-03-17",
+        "max": "2027-03-17",
+        "status": "candidate_event"
+      },
+      {
+        "id": "dt:0038477590a667cd972426db",
+        "name": "JM CABROL MOSAIC JAZZ 4TET",
+        "min": "2027-03-07",
+        "max": "2027-03-07",
+        "status": "candidate_event"
+      },
+      {
+        "id": "dt:003ac550e3f93f38c505482d",
+        "name": "ALICE AUX PAYS DES MERVEILLES",
+        "min": "2027-05-13",
+        "max": "2027-05-13",
+        "status": "candidate_event"
+      }
+    ]
+  },
+  "identity": {
+    "ids": 239314,
+    "duplicateIds": 0,
+    "duplicateExamples": [],
+    "existingHiliaId": 54350,
+    "existingSnapshotMatched": 54350,
+    "existingSnapshotMissing": 0,
+    "existingSnapshotNameDiff": 110,
+    "existingSnapshotNameDiffExamples": [
+      {
+        "id": "10297",
+        "snapshot": "THEATRE DE CHARTRES  SCENE CONVENTIONNEE D'INT",
+        "source": "THEATRE DE CHARTRES SCENE CONVENTIONNEE D'INT"
+      },
+      {
+        "id": "10403",
+        "snapshot": "MUSEE  ARSENAL",
+        "source": "MUSEE ARSENAL"
+      },
+      {
+        "id": "10576",
+        "snapshot": "Conservatoire  Jacques Higelin",
+        "source": "Conservatoire Jacques Higelin"
+      },
+      {
+        "id": "11348",
+        "snapshot": "équinoxe -  le cinéma Apollo",
+        "source": "équinoxe - le cinéma Apollo"
+      },
+      {
+        "id": "11938",
+        "snapshot": "Médiathèque de Cluis — Bibliothèque François Bailly",
+        "source": "Médiathèque de Cluis - Bibliothèque François Bailly"
+      },
+      {
+        "id": "12193",
+        "snapshot": "Centre  Social et Culturel Europe",
+        "source": "Centre Social et Culturel Europe"
+      },
+      {
+        "id": "12927",
+        "snapshot": "ALSH (Centre aéré)  VAL ALSH L'Atelier (Cloarec)",
+        "source": "ALSH (Centre aéré) VAL ALSH L'Atelier (Cloarec)"
+      },
+      {
+        "id": "14273",
+        "snapshot": "FORT DE MUTZIG  FESTE KAISER WILHELM II",
+        "source": "FORT DE MUTZIG FESTE KAISER WILHELM II"
+      },
+      {
+        "id": "14663",
+        "snapshot": "TERRE DE ROSE DISTILLERIE  ROSERAIE",
+        "source": "TERRE DE ROSE DISTILLERIE ROSERAIE"
+      },
+      {
+        "id": "14850",
+        "snapshot": "Frac Grand Large —  Hauts-de-France",
+        "source": "Frac Grand Large - Hauts-de-France"
+      },
+      {
+        "id": "15098",
+        "snapshot": "Office de Tourisme  de la Ville d'Enghien les Bains",
+        "source": "Office de Tourisme de la Ville d'Enghien les Bains"
+      },
+      {
+        "id": "15259",
+        "snapshot": "Office de Tourisme du Grand  Ried - Bureau d'accueil d'Erstein",
+        "source": "Office de Tourisme du Grand Ried - Bureau d'accueil d'Erstein"
+      },
+      {
+        "id": "16007",
+        "snapshot": "L'ESTIVE  SCENE NATIONALE DE FOIX ET DE L'ARIEGE",
+        "source": "L'ESTIVE SCENE NATIONALE DE FOIX ET DE L'ARIEGE"
+      },
+      {
+        "id": "16432",
+        "snapshot": "Cinéma  Henri Langlois",
+        "source": "Cinéma Henri Langlois"
+      },
+      {
+        "id": "16586",
+        "snapshot": "Dinan Cap Fréhel Tourisme - Point Information  de Sables d'Or les Pins",
+        "source": "Dinan Cap Fréhel Tourisme - Point Information de Sables d'Or les Pins"
+      },
+      {
+        "id": "16711",
+        "snapshot": "Cinéma de  la Communauté de Commune",
+        "source": "Cinéma de la Communauté de Commune"
+      },
+      {
+        "id": "16924",
+        "snapshot": "LANGO  PARC DES EXPOSITIONS",
+        "source": "LANGO PARC DES EXPOSITIONS"
+      },
+      {
+        "id": "18010",
+        "snapshot": "Salle polyvalente Immeuble B -  Administration",
+        "source": "Salle polyvalente Immeuble B - Administration"
+      },
+      {
+        "id": "18326",
+        "snapshot": "ASSOCIATION  ROCH",
+        "source": "ASSOCIATION ROCH"
+      },
+      {
+        "id": "18393",
+        "snapshot": "Musee forge et marines  amis du vieux guerigny",
+        "source": "Musee forge et marines amis du vieux guerigny"
+      }
+    ],
+    "existingSnapshotTotal": 54350
+  },
+  "duplicates": {
+    "candidatesRecords": 4069,
+    "candidates": 8719,
+    "examples": [
+      {
+        "id": "acceslibre:00d633a3-c7f0-4c36-8600-9b0fabe364ef",
+        "name": "Cinémarine",
+        "candidates": [
+          "hilia:42652",
+          "hilia:42653",
+          "acceslibre:a50efb1d-c35d-4e5d-8d78-cfeb01d4d5cd"
+        ]
+      },
+      {
+        "id": "acceslibre:01711c61-8cc2-4cad-a30a-9088fe052e77",
+        "name": "Musee des ameriques auch",
+        "candidates": [
+          "hilia:2734",
+          "hilia:2735",
+          "acceslibre:48ba33a4-6d58-401f-8d53-608320882f0f"
+        ]
+      },
+      {
+        "id": "acceslibre:01716391-313d-4cfe-a781-945b8d906fe9",
+        "name": "DK Park",
+        "candidates": [
+          "hilia:14846"
+        ]
+      },
+      {
+        "id": "acceslibre:02398cc1-166a-489f-898d-a0215fe303fd",
+        "name": "équinoxe - le cinéma Apollo",
+        "candidates": [
+          "hilia:11347",
+          "hilia:11348"
+        ]
+      },
+      {
+        "id": "acceslibre:02ca49dd-75e7-4435-831b-2520cbe24945",
+        "name": "Office du Tourisme de Rognes",
+        "candidates": [
+          "hilia:40134",
+          "hilia:40135",
+          "hilia:40136"
+        ]
+      },
+      {
+        "id": "acceslibre:02dfd818-e312-437d-8f2a-d27694f67f7a",
+        "name": "Médiathèque Alexandre Breffort",
+        "candidates": [
+          "hilia:16370",
+          "hilia:16371",
+          "acceslibre:6b764930-db6f-4071-ac41-5490a39a85b2"
+        ]
+      },
+      {
+        "id": "acceslibre:030e0b64-2ffb-4d4c-a174-a0ebaf89fd55",
+        "name": "Opéra de Vichy",
+        "candidates": [
+          "hilia:51723",
+          "hilia:51725",
+          "acceslibre:a045ad09-534f-416c-ae0f-d0f8fad68ec8"
+        ]
+      },
+      {
+        "id": "acceslibre:032f8c04-361d-4989-b318-0b1243034cbe",
+        "name": "OPERA NATIONAL DE LORRAINE",
+        "candidates": [
+          "hilia:31947",
+          "hilia:31949"
+        ]
+      },
+      {
+        "id": "acceslibre:03b8db0e-c0a9-4200-97f9-4d77fb641058",
+        "name": "Musée Bernard d'Agesci",
+        "candidates": [
+          "hilia:32919",
+          "hilia:32920",
+          "acceslibre:9c5884a0-4b2d-4fc3-b7d1-b0bf86e07757"
+        ]
+      },
+      {
+        "id": "acceslibre:04003e2b-25a8-43e5-95d1-e2790e06adee",
+        "name": "L'Avant Seine / Théâtre de Colombes",
+        "candidates": [
+          "hilia:12202",
+          "hilia:12204",
+          "acceslibre:72da1a35-73df-4235-bd9c-db877ce53b19"
+        ]
+      },
+      {
+        "id": "acceslibre:04189a00-57e1-46fd-aa2d-124ae3a0663d",
+        "name": "Château La Croizille",
+        "candidates": [
+          "hilia:43384",
+          "hilia:43385",
+          "acceslibre:3a9ebeba-0e87-48d4-862b-e4d5745ff500"
+        ]
+      },
+      {
+        "id": "acceslibre:06c61e89-a045-485e-980b-4e91d8d2d4fe",
+        "name": "Le bouffon bleu",
+        "candidates": [
+          "hilia:1297",
+          "hilia:1302"
+        ]
+      },
+      {
+        "id": "acceslibre:079be376-074a-4bfe-9c96-4f4e1e110015",
+        "name": "Grotte de Tourtoirac",
+        "candidates": [
+          "hilia:49683"
+        ]
+      },
+      {
+        "id": "acceslibre:07f8ef12-7af8-448d-8917-849eb19246c2",
+        "name": "Musee international de la parfumerie",
+        "candidates": [
+          "hilia:17701",
+          "hilia:17702"
+        ]
+      },
+      {
+        "id": "acceslibre:07fda989-a688-46b0-919c-201183419f1c",
+        "name": "LA COMEDIE DE LIMOGES",
+        "candidates": [
+          "hilia:25309",
+          "hilia:25312"
+        ]
+      },
+      {
+        "id": "acceslibre:0814bdcf-cec5-4eec-ac70-99a9dc12158f",
+        "name": "Exploradome",
+        "candidates": [
+          "hilia:53082",
+          "hilia:53083"
+        ]
+      },
+      {
+        "id": "acceslibre:09b297b0-793f-4332-89a1-3d0d79c928e4",
+        "name": "La maison du terroir beaujolais",
+        "candidates": [
+          "hilia:4290",
+          "hilia:4291",
+          "acceslibre:95624b8d-8025-48c1-be8f-bddb8411fac4"
+        ]
+      },
+      {
+        "id": "acceslibre:09bb7a99-b701-473d-885d-ece443415eeb",
+        "name": "La Comédie de Saint-Étienne - CDN",
+        "candidates": [
+          "hilia:45562"
+        ]
+      },
+      {
+        "id": "acceslibre:09d7493a-3e9a-4fbf-aeb9-2cdfcc8ce22a",
+        "name": "Théâtre de Givors",
+        "candidates": [
+          "hilia:17279",
+          "hilia:17280",
+          "acceslibre:3b2ae24f-5df6-480e-b15b-12dbef3d2f67"
+        ]
+      },
+      {
+        "id": "acceslibre:09f1780d-2f70-4c94-a556-94ac06d99f96",
+        "name": "MEDOC EN MER",
+        "candidates": [
+          "hilia:24178",
+          "hilia:24179"
+        ]
+      }
+    ]
+  },
+  "keys": {
+    "details": {
+      "commune": 259078,
+      "postal_code": 204728,
+      "original_id": 182857,
+      "source_updated_at": 182857,
+      "aggregator_updated_at": 182857,
+      "types": 182782,
+      "types.0": 182782,
+      "descriptions": 182782,
+      "details": 181677,
+      "details.hasContact": 176953,
+      "descriptions.0": 170561,
+      "address": 170342,
+      "types.1": 155766,
+      "types.2": 128157,
+      "name": 109581,
+      "id": 109506,
+      "details.location.schema:openingHoursSpecification": 105911,
+      "entree_plain_pied": 105832,
+      "details.hasContact.schema:telephone": 96435,
+      "details.hasTheme": 90921,
+      "stationnement_ext_pmr": 89116,
+      "stationnement_pmr": 87637,
+      "details.schema:offers": 79403,
+      "types.3": 78622,
+      "details.hasContact.schema:email": 74831,
+      "details.hasContact.foaf:homepage": 71505,
+      "entree_dispositif_appel": 62830,
+      "entree_balise_sonore": 62453,
+      "entree_aide_humaine": 62125,
+      "entree_marches": 58841,
+      "entree_ascenseur": 56052,
+      "labels": 56043,
+      "conformite": 55422,
+      "longitude": 55231,
+      "latitude": 55231,
+      "activite": 55156,
+      "rpa": 55156,
+      "details.takesPlaceAt": 55091,
+      "cp": 54350,
+      "activity": 54350,
+      "site": 54350,
+      "lat": 54350,
+      "lon": 54350,
+      "transport": 54350,
+      "stationnement": 54350,
+      "stationnement_ext": 54350,
+      "chemin_plain_pied": 54350,
+      "chemin_terrain_stable": 54350,
+      "chemin_marches": 54350,
+      "chemin_reperage": 54350,
+      "chemin_main_courante": 54350,
+      "chemin_rampe": 54350,
+      "chemin_bande_guidage": 54350,
+      "entree_reperable": 54350,
+      "entree_rampe": 54350,
+      "entree_largeur": 54350,
+      "entree_specifique_pmr": 54350,
+      "accueil_personnel": 54350,
+      "accueil_audiodescr": 54350,
+      "accueil_equip_malent": 54350,
+      "accueil_plain_pied": 54350,
+      "accueil_signaletique": 54350,
+      "sanitaires_dispo": 54350,
+      "sanitaires_pmr": 54350,
+      "familles": 54350,
+      "access": 54350,
+      "qualif": 54350,
+      "status": 54350,
+      "data_origin": 54350,
+      "updated_at": 54350,
+      "voie": 54231,
+      "details.hasBookingContact": 53720,
+      "types.4": 53205,
+      "code_insee": 49806,
+      "descriptions.1": 49701,
+      "entree_porte_presence": 45366,
+      "stationnement_presence": 44095,
+      "details.availableLanguage": 41699,
+      "entree_largeur_mini": 40090,
+      "details.hasContact.schema:legalName": 38197,
+      "details.hasAudience": 37169,
+      "stationnement_ext_presence": 36880,
+      "details.hasTheme.0": 34638,
+      "details.hasTheme.1": 34638,
+      "details.hasFeature": 34518,
+      "numero": 34500,
+      "details.hasBookingContact.schema:telephone": 33937,
+      "details.location.petsAllowed": 33842,
+      "details.schema:offers.schema:priceSpecification": 31969,
+      "details.hasGeographicReach": 31139,
+      "address.0": 31117,
+      "address.1": 31117,
+      "details.location.schema:openingHoursSpecification.schema:validFrom": 29338,
+      "details.location.schema:openingHoursSpecification.schema:validThrough": 29337,
+      "types.5": 28865,
+      "details.location.altInsee": 27907,
+      "details.reducedMobilityAccess": 27885,
+      "csv_metadata_completion": 26985,
+      "csv_metadata_completion.source_file": 26985,
+      "csv_metadata_completion.original_id": 26985,
+      "csv_metadata_completion.updated_at": 26985,
+      "csv_metadata_completion.values": 26985,
+      "details.hasBookingContact.foaf:homepage": 26943,
+      "details.hasBookingContact.schema:legalName": 26702,
+      "site_internet": 26258,
+      "details.isEquippedWith": 25239,
+      "sanitaires_presence": 25213,
+      "rnb_id": 24529,
+      "details.hasBookingContact.schema:email": 23976,
+      "csv_metadata_completion.values.postal_code": 23934,
+      "csv_metadata_completion.values.commune": 23934,
+      "details.location.schema:openingHoursSpecification.0": 22262,
+      "details.location.schema:openingHoursSpecification.1": 22262,
+      "sanitaires_adaptes": 21327,
+      "details.hasContact.0": 19780,
+      "details.hasContact.1": 19780,
+      "details.availableLanguage.0": 17328,
+      "details.availableLanguage.1": 17328,
+      "details.isEquippedWith.0": 16614,
+      "details.isEquippedWith.1": 16614,
+      "details.hasContact.schema:address": 16111,
+      "details.location.schema:openingHoursSpecification.additionalInformation": 15818,
+      "cheminement_ext_presence": 15798,
+      "details.hasNeighborhood": 15697,
+      "types.6": 15651,
+      "details.schema:offers.schema:priceSpecification.0": 15622,
+      "details.schema:offers.schema:priceSpecification.1": 15622,
+      "details.location.schema:openingHoursSpecification.2": 15012,
+      "details.takesPlaceAt.endDate": 14715,
+      "details.takesPlaceAt.startDate": 14715,
+      "details.schema:offers.schema:acceptedPaymentMethod": 14622,
+      "details.schema:offers.schema:acceptedPaymentMethod.0": 13876,
+      "details.schema:offers.schema:acceptedPaymentMethod.1": 13876,
+      "details.hasTheme.2": 13661,
+      "details.location.schema:openingHoursSpecification.0.schema:validFrom": 13463,
+      "details.location.schema:openingHoursSpecification.0.schema:validThrough": 13455,
+      "details.location.schema:openingHoursSpecification.1.schema:validFrom": 13359,
+      "details.location.internetAccess": 13357,
+      "details.location.schema:openingHoursSpecification.1.schema:validThrough": 13351,
+      "details.schema:offers.schema:priceSpecification.schema:priceCurrency": 13340,
+      "details.location.schema:openingHoursSpecification.schema:opens": 12927,
+      "details.location.schema:openingHoursSpecification.3": 12539,
+      "details.takesPlaceAt.startTime": 11718,
+      "details.isEquippedWith.2": 11658,
+      "details.hasContact.1.schema:telephone": 11425,
+      "details.hasContact.0.schema:telephone": 11336,
+      "details.hasReview": 11271,
+      "cheminement_ext_terrain_stable": 11200,
+      "cheminement_ext_plain_pied": 11172,
+      "details.schema:offers.schema:priceSpecification.0.schema:priceCurrency": 11108,
+      "details.schema:offers.schema:priceSpecification.1.schema:priceCurrency": 11106,
+      "details.location.schema:openingHoursSpecification.4": 10991,
+      "details.location.schema:openingHoursSpecification.0.schema:opens": 10951,
+      "details.schema:offers.schema:acceptedPaymentMethod.2": 10896,
+      "details.location.schema:openingHoursSpecification.1.schema:opens": 10892,
+      "cheminement_ext_retrecissement": 10674,
+      "details.schema:offers.schema:priceSpecification.schema:minPrice": 10601,
+      "details.hasContact.schema:telephone.0": 10540,
+      "details.hasContact.schema:telephone.1": 10540,
+      "details.hasContact.1.foaf:homepage": 10446
+    },
+    "sourceDetails": {
+      "hasContact": 176953,
+      "location.schema:openingHoursSpecification": 105911,
+      "hasContact.schema:telephone": 96435,
+      "hasTheme": 90921,
+      "schema:offers": 79403,
+      "hasContact.schema:email": 74831,
+      "hasContact.foaf:homepage": 71505,
+      "takesPlaceAt": 55091,
+      "hasBookingContact": 53720,
+      "availableLanguage": 41699,
+      "hasContact.schema:legalName": 38197,
+      "hasAudience": 37169,
+      "hasTheme.0": 34638,
+      "hasTheme.1": 34638,
+      "hasFeature": 34518,
+      "hasBookingContact.schema:telephone": 33937,
+      "location.petsAllowed": 33842,
+      "schema:offers.schema:priceSpecification": 31969,
+      "hasGeographicReach": 31139,
+      "location.schema:openingHoursSpecification.schema:validFrom": 29338,
+      "location.schema:openingHoursSpecification.schema:validThrough": 29337,
+      "location.altInsee": 27907,
+      "reducedMobilityAccess": 27885,
+      "hasBookingContact.foaf:homepage": 26943,
+      "hasBookingContact.schema:legalName": 26702,
+      "isEquippedWith": 25239,
+      "hasBookingContact.schema:email": 23976,
+      "location.schema:openingHoursSpecification.0": 22262,
+      "location.schema:openingHoursSpecification.1": 22262,
+      "hasContact.0": 19780,
+      "hasContact.1": 19780,
+      "availableLanguage.0": 17328,
+      "availableLanguage.1": 17328,
+      "isEquippedWith.0": 16614,
+      "isEquippedWith.1": 16614,
+      "hasContact.schema:address": 16111,
+      "location.schema:openingHoursSpecification.additionalInformation": 15818,
+      "hasNeighborhood": 15697,
+      "schema:offers.schema:priceSpecification.0": 15622,
+      "schema:offers.schema:priceSpecification.1": 15622,
+      "location.schema:openingHoursSpecification.2": 15012,
+      "takesPlaceAt.endDate": 14715,
+      "takesPlaceAt.startDate": 14715,
+      "schema:offers.schema:acceptedPaymentMethod": 14622,
+      "schema:offers.schema:acceptedPaymentMethod.0": 13876,
+      "schema:offers.schema:acceptedPaymentMethod.1": 13876,
+      "hasTheme.2": 13661,
+      "location.schema:openingHoursSpecification.0.schema:validFrom": 13463,
+      "location.schema:openingHoursSpecification.0.schema:validThrough": 13455,
+      "location.schema:openingHoursSpecification.1.schema:validFrom": 13359,
+      "location.internetAccess": 13357,
+      "location.schema:openingHoursSpecification.1.schema:validThrough": 13351,
+      "schema:offers.schema:priceSpecification.schema:priceCurrency": 13340,
+      "location.schema:openingHoursSpecification.schema:opens": 12927,
+      "location.schema:openingHoursSpecification.3": 12539,
+      "takesPlaceAt.startTime": 11718,
+      "isEquippedWith.2": 11658,
+      "hasContact.1.schema:telephone": 11425,
+      "hasContact.0.schema:telephone": 11336,
+      "hasReview": 11271,
+      "schema:offers.schema:priceSpecification.0.schema:priceCurrency": 11108,
+      "schema:offers.schema:priceSpecification.1.schema:priceCurrency": 11106,
+      "location.schema:openingHoursSpecification.4": 10991,
+      "location.schema:openingHoursSpecification.0.schema:opens": 10951,
+      "schema:offers.schema:acceptedPaymentMethod.2": 10896,
+      "location.schema:openingHoursSpecification.1.schema:opens": 10892,
+      "schema:offers.schema:priceSpecification.schema:minPrice": 10601,
+      "hasContact.schema:telephone.0": 10540,
+      "hasContact.schema:telephone.1": 10540,
+      "hasContact.1.foaf:homepage": 10446,
+      "hasContact.foaf:homepage.0": 10388,
+      "hasContact.foaf:homepage.1": 10388,
+      "hasContact.0.foaf:homepage": 10359,
+      "location.schema:openingHoursSpecification.schema:closes": 10289,
+      "location.schema:openingHoursSpecification.5": 9851,
+      "schema:offers.schema:priceSpecification.0.schema:minPrice": 9815,
+      "schema:offers.schema:priceSpecification.1.schema:minPrice": 9808,
+      "hasContact.schema:address.schema:addressLocality": 9806,
+      "hasContact.schema:address.hasAddressCity": 9784,
+      "location.schema:openingHoursSpecification.0.schema:closes": 9659,
+      "location.schema:openingHoursSpecification.1.schema:closes": 9617,
+      "location.schema:openingHoursSpecification.2.schema:validFrom": 9534,
+      "location.schema:openingHoursSpecification.2.schema:validThrough": 9531,
+      "hasContact.schema:address.schema:postalCode": 9417,
+      "takesPlaceAt.0": 9342,
+      "takesPlaceAt.1": 9342,
+      "hasFeature.0": 9295,
+      "hasFeature.1": 9295,
+      "location.textOpeningHoursSpecification": 9155,
+      "hasContact.schema:address.schema:streetAddress": 8786,
+      "takesPlaceAt.endTime": 8738,
+      "location.schema:openingHoursSpecification.6": 8641,
+      "hasContact.1.schema:legalName": 8599,
+      "schema:offers.schema:priceSpecification.2": 8530,
+      "hasContact.0.schema:legalName": 8517,
+      "isEquippedWith.3": 8227,
+      "schema:offers.schema:priceSpecification.schema:maxPrice": 8220,
+      "location.schema:openingHoursSpecification.2.schema:opens": 8128,
+      "location.schema:openingHoursSpecification.3.schema:validFrom": 8025,
+      "location.schema:openingHoursSpecification.3.schema:validThrough": 8020,
+      "schema:offers.schema:priceSpecification.0.schema:maxPrice": 7845,
+      "schema:offers.schema:priceSpecification.1.schema:maxPrice": 7844,
+      "schema:offers.schema:acceptedPaymentMethod.3": 7780,
+      "hasContact.1.schema:email": 7623,
+      "hasContact.0.schema:email": 7554,
+      "location.schema:openingHoursSpecification.2.schema:closes": 7440,
+      "location.schema:openingHoursSpecification.3.schema:opens": 7180,
+      "location.schema:openingHoursSpecification.0.schema:dayOfWeek": 7094,
+      "location.schema:openingHoursSpecification.1.schema:dayOfWeek": 7086,
+      "hasTheme.3": 7043,
+      "location.schema:openingHoursSpecification.4.schema:validFrom": 7033,
+      "location.schema:openingHoursSpecification.4.schema:validThrough": 7029,
+      "location.schema:openingHoursSpecification.7": 6955,
+      "hasClientTarget": 6818,
+      "location.schema:openingHoursSpecification.3.schema:closes": 6612,
+      "location.schema:openingHoursSpecification.4.schema:opens": 6411,
+      "hasFeature.2": 6397,
+      "schema:offers.schema:priceSpecification.0.name": 6372,
+      "schema:offers.schema:priceSpecification.1.name": 6346,
+      "location.schema:openingHoursSpecification.5.schema:validFrom": 6343,
+      "location.schema:openingHoursSpecification.5.schema:validThrough": 6339,
+      "schema:offers.schema:priceSpecification.2.schema:priceCurrency": 6180,
+      "location.schema:openingHoursSpecification.8": 6064,
+      "availableLanguage.2": 6058,
+      "location.schema:openingHoursSpecification.2.schema:dayOfWeek": 6039,
+      "location.schema:openingHoursSpecification.4.schema:closes": 5950,
+      "location.schema:openingHoursSpecification.5.schema:opens": 5895,
+      "hasAudience.0": 5883,
+      "hasAudience.1": 5883,
+      "isEquippedWith.4": 5787,
+      "schema:offers.schema:priceSpecification.hasEligiblePolicy": 5698,
+      "location.schema:openingHoursSpecification.9": 5663,
+      "schema:offers.schema:priceSpecification.additionalInformation": 5656,
+      "location.schema:openingHoursSpecification.3.schema:dayOfWeek": 5642,
+      "schema:offers.schema:priceSpecification.1.additionalInformation": 5560,
+      "schema:offers.schema:priceSpecification.0.additionalInformation": 5556,
+      "location.schema:openingHoursSpecification.6.schema:validFrom": 5538,
+      "location.schema:openingHoursSpecification.6.schema:validThrough": 5535,
+      "schema:offers.schema:priceSpecification.0.hasEligiblePolicy": 5532,
+      "schema:offers.schema:priceSpecification.1.hasEligiblePolicy": 5489,
+      "schema:offers.schema:priceSpecification.2.schema:minPrice": 5474,
+      "location.schema:openingHoursSpecification.5.schema:closes": 5452,
+      "location.schema:openingHoursSpecification.4.schema:dayOfWeek": 5310,
+      "location.schema:openingHoursSpecification.6.schema:opens": 5180,
+      "location.lifeguarded": 5145,
+      "schema:offers.schema:acceptedPaymentMethod.4": 5083,
+      "location.schema:openingHoursSpecification.5.schema:dayOfWeek": 5024,
+      "hasClientTarget.0": 5013,
+      "hasClientTarget.1": 5013,
+      "location.schema:openingHoursSpecification.10": 5008,
+      "schema:offers.schema:priceSpecification.appliesOnPeriod": 4999,
+      "location.schema:openingHoursSpecification.6.schema:closes": 4816,
+      "schema:offers.schema:priceSpecification.name": 4776,
+      "location.schema:openingHoursSpecification.11": 4698,
+      "location.schema:openingHoursSpecification.7.schema:validThrough": 4662,
+      "location.schema:openingHoursSpecification.7.schema:validFrom": 4661,
+      "takesPlaceAt.1.startDate": 4654,
+      "takesPlaceAt.1.endDate": 4653,
+      "hasNeighborhood.0": 4609,
+      "hasNeighborhood.1": 4609
+    }
+  },
+  "manifest": {
+    "kind": "manifest",
+    "schema_version": "1.0",
+    "built_at": "2026-11-13",
+    "existing_basis": "live approved Supabase public read",
+    "github_commit": "06edae1024278af709dc8a48b964905e3fe6bd90",
+    "unknown": "null or missing key; never infer false",
+    "records_are_import_candidates": true,
+    "separate_licence_partition": "Paris events are ODbL; other sources retain their own licence. No blanket relicensing."
+  },
+  "samples": {
+    "place": {
+      "id": "hilia:0",
+      "kind": "place",
+      "existing_hilia_id": "0",
+      "name": "Le Klube",
+      "postal_code": "21121",
+      "commune": "AHUY",
+      "address": "4 Rue DES FROMENTAUX",
+      "coordinates": {
+        "latitude": 47.3565,
+        "longitude": 5.03824
+      },
+      "categories": [
+        "Sports et loisirs",
+        "Piscine, centre aquatique"
+      ],
+      "publication_status": "existing_preserved",
+      "match_candidates": [],
+      "sources": [
+        {
+          "source": "hilia",
+          "source_id": "0",
+          "source_updated_at": "2026-10-16T12:13:32.671663+00:00",
+          "retrieved_at": "2026-11-13",
+          "creator": "HILIA",
+          "licence": "existing_internal",
+          "match_method": "stable_hilia_id"
+        },
+        {
+          "source": "acceslibre",
+          "source_id": "01bc739b-9fdd-4247-8de2-688e5f693e47",
+          "source_updated_at": null,
+          "retrieved_at": "2026-11-13",
+          "creator": "Acceslibre",
+          "licence": "etalab-2.0",
+          "match_method": "exact_name_postcode_and_distance_or_address"
+        },
+        {
+          "source": "datatourisme",
+          "source_id": "https://data.datatourisme.fr/6/1558f51d-f34b-325a-b0a8-6a8ef72435e6",
+          "source_updated_at": "2026-03-30",
+          "retrieved_at": "2026-11-13",
+          "creator": "https://data.datatourisme.fr/6/841990b4-1c62-31ca-93a4-f584fed7dd21",
+          "licence": "etalab-open-licence",
+          "match_method": "exact_name_postcode_and_distance_or_address"
+        }
+      ],
+      "description": "Le Klube est à la fois le plus grand espace de BALNEOTHERAPIE de Bourgogne, mais aussi une SALLE DE SPORT terrestre (cardio, musculation, Cours collectifs Les Mills, Pilates, RPM, Cross Training...) et aquatique (piscine de 160m², aquagym, aquabiking ...), encadrée par 20 professionnels de la remise en forme à votre service !\n\nVous y trouverez également un SPA Institut pour tous vos soins visage et corps, massages anti-stress, minceur, épilations, UV... Un lieu haut de gamme et raffiné pour vivre des moments d'exception.\n\nLe Klube c'est aussi des terrains (footsalle, squash, badminton), un restaurant et des salles à louer pour tous vos événements !",
+      "description_source": "datatourisme:https://data.datatourisme.fr/6/1558f51d-f34b-325a-b0a8-6a8ef72435e6",
+      "websites": [
+        "https://www.leklube.com/"
+      ],
+      "media": [],
+      "accessibility_observations": [
+        {
+          "source_ref": "hilia:0",
+          "scope": "place",
+          "values": {
+            "transport": 0,
+            "stationnement": 1,
+            "stationnement_pmr": 1,
+            "stationnement_ext": 1,
+            "stationnement_ext_pmr": 1,
+            "chemin_plain_pied": 1,
+            "chemin_terrain_stable": 1,
+            "chemin_bande_guidage": 0,
+            "entree_reperable": 1,
+            "entree_plain_pied": 1,
+            "entree_dispositif_appel": 0,
+            "entree_balise_sonore": 0,
+            "entree_aide_humaine": 1,
+            "entree_largeur": 90,
+            "entree_specifique_pmr": 0,
+            "accueil_plain_pied": 1,
+            "sanitaires_dispo": 1,
+            "sanitaires_pmr": 1,
+            "conformite": 1
+          }
+        },
+        {
+          "source_ref": "acceslibre:01bc739b-9fdd-4247-8de2-688e5f693e47",
+          "scope": "place",
+          "values": {
+            "transport_station_presence": false,
+            "stationnement_presence": true,
+            "stationnement_pmr": true,
+            "stationnement_ext_presence": true,
+            "stationnement_ext_pmr": true,
+            "cheminement_ext_presence": true,
+            "cheminement_ext_terrain_stable": true,
+            "cheminement_ext_plain_pied": true,
+            "cheminement_ext_devers": "aucun",
+            "cheminement_ext_bande_guidage": false,
+            "cheminement_ext_retrecissement": false,
+            "entree_reperage": true,
+            "entree_vitree": true,
+            "entree_vitree_vitrophanie": true,
+            "entree_plain_pied": true,
+            "entree_dispositif_appel": false,
+            "entree_balise_sonore": false,
+            "entree_aide_humaine": true,
+            "entree_largeur_mini": "90.0",
+            "entree_pmr": false,
+            "entree_porte_presence": true,
+            "entree_porte_manoeuvre": "coulissante",
+            "entree_porte_type": "automatique",
+            "accueil_visibilite": true,
+            "accueil_cheminement_plain_pied": true,
+            "accueil_retrecissement": false,
+            "sanitaires_presence": true,
+            "sanitaires_adaptes": true,
+            "conformite": true
+          }
+        }
+      ],
+      "details_by_source": {
+        "hilia:0": {
+          "id": "0",
+          "name": "Le Klube",
+          "address": "4 Rue DES FROMENTAUX",
+          "cp": "21121",
+          "commune": "AHUY",
+          "activity": "Sports et loisirs",
+          "site": "https://www.leklube.com/",
+          "lat": 47.3565,
+          "lon": 5.03824,
+          "transport": 0,
+          "stationnement": 1,
+          "stationnement_pmr": 1,
+          "stationnement_ext": 1,
+          "stationnement_ext_pmr": 1,
+          "chemin_plain_pied": 1,
+          "chemin_terrain_stable": 1,
+          "chemin_marches": null,
+          "chemin_reperage": null,
+          "chemin_main_courante": null,
+          "chemin_rampe": null,
+          "chemin_bande_guidage": 0,
+          "entree_reperable": 1,
+          "entree_plain_pied": 1,
+          "entree_ascenseur": null,
+          "entree_marches": null,
+          "entree_rampe": null,
+          "entree_dispositif_appel": 0,
+          "entree_balise_sonore": 0,
+          "entree_aide_humaine": 1,
+          "entree_largeur": 90,
+          "entree_specifique_pmr": 0,
+          "accueil_personnel": null,
+          "accueil_audiodescr": null,
+          "accueil_equip_malent": null,
+          "accueil_plain_pied": 1,
+          "accueil_signaletique": null,
+          "sanitaires_dispo": 1,
+          "sanitaires_pmr": 1,
+          "labels": null,
+          "familles": null,
+          "conformite": 1,
+          "access": null,
+          "qualif": null,
+          "status": "approved",
+          "data_origin": "import",
+          "updated_at": "2026-10-16T12:13:32.671663+00:00"
+        },
+        "acceslibre:01bc739b-9fdd-4247-8de2-688e5f693e47": {
+          "id": "01bc739b-9fdd-4247-8de2-688e5f693e47",
+          "name": "Le Klube",
+          "postal_code": "21121",
+          "commune": "AHUY",
+          "numero": "4",
+          "voie": "Rue DES FROMENTAUX",
+          "activite": "Sports et loisirs",
+          "site_internet": "https://www.leklube.com/",
+          "longitude": "5.038237273693086",
+          "latitude": "47.35649800387941",
+          "transport_station_presence": false,
+          "stationnement_presence": true,
+          "stationnement_pmr": true,
+          "stationnement_ext_presence": true,
+          "stationnement_ext_pmr": true,
+          "cheminement_ext_presence": true,
+          "cheminement_ext_terrain_stable": true,
+          "cheminement_ext_plain_pied": true,
+          "cheminement_ext_devers": "aucun",
+          "cheminement_ext_bande_guidage": false,
+          "cheminement_ext_retrecissement": false,
+          "entree_reperage": true,
+          "entree_vitree": true,
+          "entree_vitree_vitrophanie": true,
+          "entree_plain_pied": true,
+          "entree_dispositif_appel": false,
+          "entree_balise_sonore": false,
+          "entree_aide_humaine": true,
+          "entree_largeur_mini": "90.0",
+          "entree_pmr": false,
+          "entree_porte_presence": true,
+          "entree_porte_manoeuvre": "coulissante",
+          "entree_porte_type": "automatique",
+          "accueil_visibilite": true,
+          "accueil_cheminement_plain_pied": true,
+          "accueil_retrecissement": false,
+          "sanitaires_presence": true,
+          "sanitaires_adaptes": true,
+          "conformite": true,
+          "rpa": false,
+          "rnb_id": "5ZNFWQRD18CT"
+        },
+        "datatourisme:https://data.datatourisme.fr/6/1558f51d-f34b-325a-b0a8-6a8ef72435e6": {
+          "original_id": "ASCBOU0210000788",
+          "types": [
+            "BalneotherapyCentre",
+            "SportsAndLeisurePlace",
+            "SwimmingPool",
+            "schema:LocalBusiness"
+          ],
+          "address": [
+            "Quartier Toison d'Or  - Parc Technologique",
+            "Rue des Fromenteaux"
+          ],
+          "postal_code": "21121",
+          "commune": "Ahuy",
+          "details": {
+            "schema:offers": "data:9e9e1b42-333e-3fc3-9b35-d06525082774",
+            "hasContact": {
+              "schema:email": "spaoasis@leklube.com",
+              "schema:telephone": "+33 3 80 53 03 00",
+              "foaf:homepage": "https://www.leklube.com/"
+            },
+            "hasBookingContact": {
+              "schema:email": "spaoasis@leklube.com",
+              "schema:telephone": "+33 3 80 53 03 00",
+              "foaf:homepage": "https://www.leklube.com/"
+            },
+            "hasTheme": [
+              "kb:Balneotherapy",
+              "kb:Bathing",
+              "kb:Fitness"
+            ]
+          },
+          "source_updated_at": "2026-03-30",
+          "aggregator_updated_at": "2026-11-03T01:17:55.058Z",
+          "descriptions": [
+            "Le Klube est à la fois le plus grand espace de BALNEOTHERAPIE de Bourgogne, mais aussi une SALLE DE SPORT terrestre (cardio, musculation, Cours collectifs Les Mills, Pilates, RPM, Cross Training...) et aquatique (piscine de 160m², aquagym, aquabiking ...), encadrée par 20 professionnels de la remise en forme à votre service !\n\nVous y trouverez également un SPA Institut pour tous vos soins visage et corps, massages anti-stress, minceur, épilations, UV... Un lieu haut de gamme et raffiné pour vivre des moments d'exception.\n\nLe Klube c'est aussi des terrains (footsalle, squash, badminton), un restaurant et des salles à louer pour tous vos événements !"
+          ]
+        }
+      },
+      "field_sources": {
+        "name": "hilia:0",
+        "postal_code": "hilia:0",
+        "commune": "hilia:0",
+        "address": "hilia:0",
+        "coordinates": "hilia:0",
+        "categories": "hilia:0"
+      }
+    },
+    "event": {
+      "id": "dt:0000918aed17e123e31906e8",
+      "kind": "event",
+      "existing_hilia_id": null,
+      "name": "Concert de Noël",
+      "postal_code": "68000",
+      "commune": "Colmar",
+      "address": "14 rue d'Ostheim",
+      "coordinates": {
+        "latitude": 48.0881556029807,
+        "longitude": 7.36275489999998
+      },
+      "categories": [
+        "Concert"
+      ],
+      "publication_status": "review_dates",
+      "match_candidates": [],
+      "sources": [
+        {
+          "source": "datatourisme",
+          "source_id": "https://data.datatourisme.fr/5/a618b0e2-5fe2-3eca-9d5b-cc859ab37d3e",
+          "source_updated_at": "2026-09-30",
+          "retrieved_at": "2026-11-13",
+          "creator": "data:1d8a838d-3106-384c-8184-2f3ad7dc13b1",
+          "licence": "etalab-open-licence",
+          "match_method": "new_source_uri"
+        }
+      ],
+      "description": "Le groupe vocal ''La Croche Choeur'' de Horbourg-Wihr chante Noël.\n Les choristes, Daniel Husser, pianiste et Marie-Claude Gilg cheffe de choeur présenteront une farandole de chants de Noël d'ici ou d'ailleurs, anciens et actuels.\n\nIls vous invitent à partager avec eux un moment de paix, de sérénité et de joie.",
+      "description_source": "datatourisme:https://data.datatourisme.fr/5/a618b0e2-5fe2-3eca-9d5b-cc859ab37d3e",
+      "websites": [
+        "https://www.paroisseslesrives.com/la-communaut%C3%A9/les-paroisses/st-l%C3%A9on-ix/"
+      ],
+      "media": [],
+      "accessibility_observations": [],
+      "details_by_source": {
+        "datatourisme:https://data.datatourisme.fr/5/a618b0e2-5fe2-3eca-9d5b-cc859ab37d3e": {
+          "original_id": "235017432",
+          "types": [
+            "Concert",
+            "CulturalEvent",
+            "EntertainmentAndEvent",
+            "schema:Event",
+            "schema:MusicEvent"
+          ],
+          "address": "14 rue d'Ostheim",
+          "postal_code": "68000",
+          "commune": "Colmar",
+          "details": {
+            "schema:offers": "data:b1ef2a18-9f82-3bef-b690-c5084a1f66c8",
+            "hasContact": [
+              {
+                "schema:telephone": "+33 3 89 41 32 53",
+                "foaf:homepage": "https://www.paroisseslesrives.com/la-communaut%C3%A9/les-paroisses/st-l%C3%A9on-ix/"
+              },
+              {
+                "schema:legalName": "Groupe vocal La Croche Choeur",
+                "schema:telephone": "+33 3 89 41 32 53",
+                "foaf:homepage": "https://www.paroisseslesrives.com/la-communaut%C3%A9/les-paroisses/st-l%C3%A9on-ix/"
+              }
+            ],
+            "hasBookingContact": {
+              "schema:telephone": "+33 3 89 41 32 53",
+              "foaf:homepage": "https://www.paroisseslesrives.com/la-communaut%C3%A9/les-paroisses/st-l%C3%A9on-ix/"
+            },
+            "hasAudience": "kb:Departmental",
+            "hasTheme": "kb:Christmas",
+            "hasGeographicReach": "kb:Departmental",
+            "takesPlaceAt": "data:74532d48-7354-36c3-be2e-0f6d276476a4"
+          },
+          "source_updated_at": "2026-09-30",
+          "aggregator_updated_at": "2026-11-03T05:16:19.56Z",
+          "descriptions": [
+            "Les choristes, Daniel Husser, pianiste et Marie-Claude Gilg cheffe le Choeur présenteront une farandole de chants de Noël d'ici ou d'ailleurs, anciens et actuels.",
+            "Le groupe vocal ''La Croche Choeur'' de Horbourg-Wihr chante Noël.\n Les choristes, Daniel Husser, pianiste et Marie-Claude Gilg cheffe de choeur présenteront une farandole de chants de Noël d'ici ou d'ailleurs, anciens et actuels.\n\nIls vous invitent à partager avec eux un moment de paix, de sérénité et de joie."
+          ]
+        }
+      },
+      "field_sources": {},
+      "schedule": {
+        "source_ref": "datatourisme:https://data.datatourisme.fr/5/a618b0e2-5fe2-3eca-9d5b-cc859ab37d3e",
+        "periods": "data:74532d48-7354-36c3-be2e-0f6d276476a4",
+        "date_min": null,
+        "date_max": null
+      }
+    },
+    "route": {
+      "id": "dt:0002088147651ee12caec852",
+      "kind": "route",
+      "existing_hilia_id": null,
+      "name": "Villard Reculas en vélo électrique",
+      "postal_code": "38750",
+      "commune": "Huez",
+      "address": null,
+      "coordinates": {
+        "latitude": 45.091105,
+        "longitude": 6.063514
+      },
+      "categories": [
+        "Cyclisme"
+      ],
+      "publication_status": "review_accessibility",
+      "match_candidates": [],
+      "sources": [
+        {
+          "source": "datatourisme",
+          "source_id": "https://data.datatourisme.fr/13/8318766e-d4a0-39ab-b4a6-a347ed87fdf1",
+          "source_updated_at": "2026-10-09",
+          "retrieved_at": "2026-11-13",
+          "creator": "https://data.datatourisme.fr/13/9872ed9f-c22f-3182-9371-c3e9ed316094",
+          "licence": "etalab-open-licence",
+          "match_method": "new_source_uri"
+        }
+      ],
+      "description": "Une petite promenade à vélo, sereine et paisible sur les jolies routes de l'Oisans, autour de la station avec pour seul but : flâner, déguster les produits de terroir, partir à la découverte de l'église et les rues en pentes d'Huez, la belle vie, quoi !",
+      "description_source": "datatourisme:https://data.datatourisme.fr/13/8318766e-d4a0-39ab-b4a6-a347ed87fdf1",
+      "websites": [
+        "https://www.bike-oisans.com/"
+      ],
+      "media": [],
+      "accessibility_observations": [],
+      "details_by_source": {
+        "datatourisme:https://data.datatourisme.fr/13/8318766e-d4a0-39ab-b4a6-a347ed87fdf1": {
+          "original_id": "4658529",
+          "types": [
+            "CyclingTour",
+            "SportsAndLeisurePlace",
+            "Tour",
+            "olo:OrderedList"
+          ],
+          "postal_code": "38750",
+          "commune": "Huez",
+          "details": {
+            "hasContact": {
+              "schema:telephone": "+33 4 76 80 45 69",
+              "foaf:homepage": "https://www.bike-oisans.com/"
+            },
+            "hasTheme": [
+              "kb:Bike",
+              "kb:ElectricallyAssistedBicycle"
+            ],
+            "location.schema:openingHoursSpecification": "data:703a9b65-1297-3088-94e7-afb1b1c7ec33",
+            "location.altInsee": "Alpe d'Huez"
+          },
+          "source_updated_at": "2026-10-09",
+          "aggregator_updated_at": "2026-10-21T09:31:07.944Z",
+          "csv_metadata_completion": {
+            "source_file": "datatourisme.csv",
+            "original_id": "4658529",
+            "updated_at": "2026-10-09T00:00:00.000Z",
+            "values": {
+              "postal_code": "38750",
+              "commune": "Huez"
+            }
+          },
+          "descriptions": [
+            "Une petite promenade à vélo, sereine et paisible sur les jolies routes de l'Oisans, autour de la station avec pour seul but : flâner, déguster les produits de terroir, partir à la découverte de l'église et les rues en pentes d'Huez, la belle vie, quoi !"
+          ]
+        }
+      },
+      "field_sources": {}
+    },
+    "activity": {
+      "id": "dt:0003c385eb5da23a90322dd8",
+      "kind": "activity",
+      "existing_hilia_id": null,
+      "name": "U.C.S Canoë-Kayak, Club Marcel Renaud",
+      "postal_code": "58200",
+      "commune": "Cosne-Cours-sur-Loire",
+      "address": "Ile de Cosne",
+      "coordinates": {
+        "latitude": 47.40867,
+        "longitude": 2.91778
+      },
+      "categories": [
+        "Ateliers et activités"
+      ],
+      "publication_status": "review_accessibility",
+      "match_candidates": [],
+      "sources": [
+        {
+          "source": "datatourisme",
+          "source_id": "https://data.datatourisme.fr/6/f317e824-0775-3f8d-be98-af6679a8bdf4",
+          "source_updated_at": "2025-12-02",
+          "retrieved_at": "2026-11-13",
+          "creator": "https://data.datatourisme.fr/6/7d7b1ee7-569e-3567-b9ba-5752e02f0e7a",
+          "licence": "etalab-open-licence",
+          "match_method": "new_source_uri"
+        }
+      ],
+      "description": "Le Club Marcel Renaud propose des locations de canoë et de kayaks, libres ou encadrées, à la demi-journée ou à la journée. Aux particuliers mais aussi aux groupes sportifs, aux scolaires et aux associations.\nUne journée de canoë c'est un parcours de 19 km et une demi-journée 9 km.",
+      "description_source": "datatourisme:https://data.datatourisme.fr/6/f317e824-0775-3f8d-be98-af6679a8bdf4",
+      "websites": [
+        "http://www.canoecosne.fr/"
+      ],
+      "media": [],
+      "accessibility_observations": [],
+      "details_by_source": {
+        "datatourisme:https://data.datatourisme.fr/6/f317e824-0775-3f8d-be98-af6679a8bdf4": {
+          "original_id": "ASCBOU058103540",
+          "types": [
+            "Practice",
+            "Product",
+            "schema:Product"
+          ],
+          "address": "Ile de Cosne",
+          "postal_code": "58200",
+          "commune": "Cosne-Cours-sur-Loire",
+          "details": {
+            "hasContact": {
+              "schema:email": "ucsck@orange.fr",
+              "schema:telephone": "+33 6 44 23 05 02",
+              "foaf:homepage": "http://www.canoecosne.fr/"
+            },
+            "hasTheme": "kb:CanoeingKayaking",
+            "availableLanguage": "fr"
+          },
+          "source_updated_at": "2025-12-02",
+          "aggregator_updated_at": "2026-10-21T01:55:21.004Z",
+          "descriptions": [
+            "Le Club Marcel Renaud propose des locations de canoë et de kayaks, libres ou encadrées, à la demi-journée ou à la journée. Aux particuliers mais aussi aux groupes sportifs, aux scolaires et aux associations.\nUne journée de canoë c'est un parcours de 19 km et une demi-journée 9 km."
+          ]
+        }
+      },
+      "field_sources": {}
+    },
+    "category": {
+      "kind": "category",
+      "name": "Accrobranche",
+      "record_count": 168,
+      "new_vs_existing": false
+    }
+  },
+  "warnings": []
+}

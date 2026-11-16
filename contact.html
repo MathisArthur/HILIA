@@ -59,6 +59,7 @@
       <summary class="nav-mobile-btn">Menu</summary>
       <nav class="nav-mobile-panel" aria-label="Navigation mobile">
         <a href="/" data-nav-page="explore">Explorer les lieux</a>
+        <a href="/agenda" data-nav-page="agenda">Agenda</a>
         <a href="/a-propos" data-nav-page="about">À propos</a>
         <a href="/faq" data-nav-page="faq">Questions fréquentes</a>
         <a href="/prestataires" data-nav-page="prestataires">Référencer mon activité</a>
@@ -71,6 +72,7 @@
     </div>
     <nav class="topnav-links" aria-label="Navigation principale">
       <a class="topnav-link active" href="/" data-nav-page="explore" aria-current="page">Explorer</a>
+      <a class="topnav-link" href="/agenda" data-nav-page="agenda">Agenda</a>
       <a class="topnav-link" href="/a-propos" data-nav-page="about">À propos</a>
       <a class="topnav-link" href="/faq" data-nav-page="faq">FAQ</a>
       <a class="topnav-link" href="/prestataires" data-nav-page="prestataires">Référencer mon activité</a>
@@ -155,6 +157,26 @@
 </div>
 
   </section>
+
+<section class="site-page" id="agendaPage" data-page="agenda">
+  <a class="page-back" href="/" data-nav-page="explore">← Retour à l’exploration</a>
+  <div class="page-hero"><h1>Agenda des sorties</h1><p>Concerts, expositions, visites, ateliers et fêtes : les événements dont les dates sont explicites. L’accessibilité affichée est déclarative et n’est pas garantie par HILIA. Les événements dont le calendrier reste à vérifier ne sont pas publiés.</p></div>
+  <div class="page-card agenda-toolbar">
+    <div class="agenda-filters">
+      <div class="field"><label for="agendaSearch">Rechercher</label><input id="agendaSearch" type="search" autocomplete="off" placeholder="Un événement, une ville…"></div>
+      <div class="field"><label for="agendaFamily">Famille</label><select id="agendaFamily"><option value="">Toutes les familles</option></select></div>
+      <div class="field"><label for="agendaFrom">À partir du</label><input id="agendaFrom" type="date"></div>
+      <div class="field"><label for="agendaTo">Jusqu’au</label><input id="agendaTo" type="date"></div>
+      <label class="agenda-free"><input id="agendaFree" type="checkbox"> Gratuit uniquement</label>
+    </div>
+    <p class="agenda-note">Sources : DATAtourisme et Que faire à Paris. Les prix, l’accessibilité et les réservations sont ceux déclarés par la source ; vérifiez auprès de l’organisateur.</p>
+  </div>
+  <div class="agenda-summary"><b id="agendaCount">0</b> <span id="agendaCountLabel">événement à venir</span></div>
+  <p id="agendaStatus" class="agenda-status" role="status" aria-live="polite">Chargement de l’agenda…</p>
+  <div id="agendaList" class="agenda-list"></div>
+  <button id="agendaMore" class="secondary-btn agenda-more" type="button" hidden>Afficher plus d’événements</button>
+  <p class="agenda-credit">Les événements sont distincts des lieux. Une affiche illustre l’événement et ne devient jamais la photo du bâtiment.</p>
+</section>
 
 <!-- Additional site pages -->
 <section class="site-page" id="prestatairesPage" data-page="prestataires">
@@ -426,6 +448,7 @@
   <div class="page-hero"><h1>Plan du site</h1><p>Toutes les pages de HILIA en un coup d’œil.</p></div>
   <nav class="page-card" aria-label="Plan du site"><ul class="sitemap-list">
     <li><a href="/" data-nav-page="explore">Explorer les lieux (liste, carte, filtres)</a></li>
+    <li><a href="/agenda" data-nav-page="agenda">Agenda des sorties</a></li>
     <li><a href="/a-propos" data-nav-page="about">À propos</a></li>
     <li><a href="/prestataires" data-nav-page="prestataires">Référencer mon activité (prestataires)</a></li>
     <li><a href="/faq" data-nav-page="faq">Questions fréquentes</a></li>

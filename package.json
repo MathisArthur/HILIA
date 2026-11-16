@@ -8,6 +8,11 @@
     "dev": "node scripts/dev-server.mjs",
     "data": "node scripts/build-dataset.mjs",
     "pages": "node scripts/build-pages.mjs",
+    "import:audit": "node scripts/import/analyze.mjs",
+    "import:simulate": "node scripts/import/build.mjs --dry-run",
+    "import:build": "node scripts/import/build.mjs",
+    "import:push": "node scripts/import/push.mjs",
+    "test:import": "node --test scripts/import/test/*.test.mjs",
     "cards": "node scripts/preview-card.mjs",
     "check:cards": "node scripts/check-card.mjs"
   },
