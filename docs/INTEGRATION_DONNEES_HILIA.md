@@ -70,6 +70,7 @@ contradictoires sont conservées séparément.
 | `data/import-preview/build-report.json` | Rapport de génération publique. |
 | `supabase/migrations/20261113_hilia_import.sql` | Staging, détails, événements, activités, itinéraires, médias, RLS et fonctions. |
 | `supabase/migrations/20261114_hilia_review.sql` | Revue par lots, historique des détails et rollback exact. |
+| `supabase/migrations/20261116_hilia_restore_public_read.sql` | Restaure l'exécution de `hilia_is_admin()` nécessaire aux politiques RLS publiques. |
 | `scripts/import/lib/publication.mjs` | Politique de publication et motifs de revue. |
 | `scripts/import/*.mjs` | Audit, construction, import Supabase, tests. |
 | `api/media.js`, `lib/media-policy.js` | Proxy d'images à liste blanche, sans SSRF ouverte. |
@@ -118,6 +119,11 @@ pour les détails enrichis. `npm run pages` régénère les pages HTML.
 4. Exécuter ensuite **tout** `supabase/migrations/20261114_hilia_review.sql`,
    dans le même projet. Elle ajoute les colonnes de revue, l’historique des
    détails et les RPC d’administration ; elle ne supprime aucune fiche.
+5. Exécuter enfin `supabase/migrations/20261116_hilia_restore_public_read.sql`.
+   Elle rend `hilia_is_admin()` exécutable par `anon`, car les politiques RLS
+   publiques l’appellent ; sans elle, les lectures de `hilia_places` et de
+   `hilia_place_details` répondent 401. La fonction ne renvoie `true` qu’à un
+   administrateur connecté.
 
 La migration crée :
 
@@ -302,7 +308,7 @@ et 5 501 itinéraires laissés en staging.
 
 ## 8. Ce qui reste à vérifier
 
-- Exécuter les deux migrations et l'import sur le projet Supabase réel : aucune
+- Exécuter les trois migrations et l'import sur le projet Supabase réel : aucune
   clé service_role n'était disponible dans cette session, donc **aucune mutation
   de production n'a été faite**. Le test push/reprise/rollback a utilisé un faux
   PostgREST local, pas le projet réel.

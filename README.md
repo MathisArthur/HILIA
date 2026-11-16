@@ -34,6 +34,7 @@ par Vercel au déploiement (rien à lancer localement). Chaîne : **GitHub → V
 | `scripts/import/` | Audit, simulation, génération des détails et import Supabase par lots. |
 | `supabase/migrations/20261113_hilia_import.sql` | Staging, détails, événements, activités, itinéraires et médias. |
 | `supabase/migrations/20261114_hilia_review.sql` | Revue par lots, historique et rollback des fiches enrichies. |
+| `supabase/migrations/20261116_hilia_restore_public_read.sql` | Restaure l'exécution de `hilia_is_admin()` nécessaire aux politiques RLS publiques. |
 | `api/media.js` | Proxy d'images à liste blanche, pour ne pas ouvrir la CSP à tous les domaines. |
 | `docs/INTEGRATION_DONNEES_HILIA.md` | Procédure d'import, de migration et limites connues. |
 | `scripts/dev-server.mjs` | Serveur local qui rejoue les en-têtes, les réécritures et les fonctions de `vercel.json`. |
