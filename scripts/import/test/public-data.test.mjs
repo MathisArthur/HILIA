@@ -25,7 +25,9 @@ test('aucun événement sans date explicite n’est publié', () => {
     ids.add(event.id);
   }
   assert.equal(events.count, report.eventsPublished);
-  assert.equal(events.count, 19024);
+  // Le build courant écarte les occurrences expirées ; le volume exact est
+  // contrôlé par le rapport, sans figer un chiffre qui doit évoluer.
+  assert.ok(events.count > 0);
 });
 
 test('les shards de lieux ne contiennent que des IDs existants et aucune affiche', async () => {

@@ -17,6 +17,7 @@ import path from 'node:path';
 import { readHiliaJsonl } from './lib/read-jsonl.mjs';
 import { bucketName, bucketOf } from './lib/buckets.mjs';
 import { familyOf } from './lib/categories.mjs';
+import { EXCLUDED_PLACE_IDS } from '../../lib/place-exclusions.js';
 import {
   buildEventDetail,
   buildPlaceDetail,
@@ -53,6 +54,7 @@ const stats = {
   kinds: {},
   existingPlaces: 0,
   existingMatched: 0,
+  qualityExcluded: 0,
   placeDetails: 0,
   placeDetailsWithDescription: 0,
   placeDetailsWithMedia: 0,
@@ -96,6 +98,11 @@ for await (const { record } of readHiliaJsonl(SOURCE)) {
   if (reviewStatus === 'duplicate_review') stats.duplicateCandidates += 1;
 
   if (kind === 'place') {
+    if (record.existing_hilia_id && EXCLUDED_PLACE_IDS.has(String(record.existing_hilia_id))) {
+      stats.qualityExcluded += 1;
+      exclude('quality_exclusion');
+      continue;
+    }
     if (record.existing_hilia_id) {
       stats.existingPlaces += 1;
       if (!snapshotIds.has(String(record.existing_hilia_id))) {

@@ -19,6 +19,7 @@ import { readFile } from 'node:fs/promises';
 import { readHiliaJsonl } from './lib/read-jsonl.mjs';
 import { buildPlaceDetail, reviewStatusOf } from './lib/normalize.mjs';
 import { assessCandidate } from './lib/publication.mjs';
+import { EXCLUDED_PLACE_IDS } from '../../lib/place-exclusions.js';
 
 const args = process.argv.slice(2);
 const arg = (name, fallback) => {
@@ -170,6 +171,8 @@ let stopped = false;
 function rowOf(record) {
   const first = record.sources?.[0];
   const review = assessCandidate(record, TODAY);
+  const sourceId = record.existing_hilia_id ? String(record.existing_hilia_id) : String(record.id || '').replace(/^[^:]+:/, '');
+  const qualityExcluded = EXCLUDED_PLACE_IDS.has(sourceId);
   return {
     id: String(record.id),
     kind: record.kind,
@@ -180,10 +183,10 @@ function rowOf(record) {
     commune: record.commune || null,
     postal_code: record.postal_code || null,
     publication_status: record.publication_status || null,
-    review_status: reviewStatusOf(record),
-    auto_publishable: review.autoPublishable,
-    review_level: review.reviewLevel,
-    review_reasons: review.reasons,
+    review_status: qualityExcluded ? 'quality_review' : reviewStatusOf(record),
+    auto_publishable: qualityExcluded ? false : review.autoPublishable,
+    review_level: qualityExcluded ? 'manual' : review.reviewLevel,
+    review_reasons: qualityExcluded ? ['quality_exclusion', 'source_identity_incoherent'] : review.reasons,
     payload: record,
   };
 }

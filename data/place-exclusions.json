@@ -1,0 +1,22 @@
+{
+  "v": 1,
+  "updatedAt": "2026-11-16",
+  "note": "Fiches retirées de la surface publique après contrôle. La source et le motif sont conservés ; aucune fiche n'est supprimée de la base.",
+  "entries": [
+    {
+      "id": "29088",
+      "name": "Direction départementale des finances publiques (DDFIP) - Moselle",
+      "reason": "Fiche manifestement incohérente : un service administratif est classé « Casino », le site renvoie vers Western Union et cnil.fe, et les labels ne correspondent pas à l'identité du lieu.",
+      "evidence": [
+        "Source HILIA 29088 : activity = Casino, site = https://www.westernunion.com/ph",
+        "Source Acceslibre 93cb7b86-273d-4ce1-9746-1d9f3ff2845d : activité = Casino, site_internet = https://www.westernunion.com/ph, contact_url = https://cnil.fe",
+        "Adresse et coordonnées concordent avec la DDFIP de Metz ; la catégorie et les liens ne concordent pas"
+      ],
+      "sources": [
+        "hilia:29088",
+        "acceslibre:93cb7b86-273d-4ce1-9746-1d9f3ff2845d"
+      ],
+      "quarantinedAt": "2026-11-16"
+    }
+  ]
+}

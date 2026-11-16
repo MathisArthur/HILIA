@@ -23,6 +23,8 @@ const SUPABASE_URL = process.env.SUPABASE_URL || 'https://lokplzdkvzilsuuqflsk.s
 const SUPABASE_KEY = process.env.SUPABASE_KEY || 'sb_publishable_86IcrAhzRoOkZZn-KGKe6A_6-_FO0B0';
 const PAGE = 1000; // max-rows par défaut de PostgREST
 const ROOT = new URL('../', import.meta.url);
+const exclusions = JSON.parse(await readFile(new URL('data/place-exclusions.json', ROOT), 'utf8'));
+const excludedIds = new Set((exclusions.entries || []).map((entry) => String(entry.id)));
 
 const HEADERS = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
 
@@ -61,7 +63,9 @@ console.log(`Colonnes : ${BASE_COLS.length} · activités de référence : ${ACT
 const rows = [];
 for (let from = 0; ; from += PAGE) {
   const batch = await page(`id,${BASE_COLS.join(',')}`, '&status=eq.approved', from);
-  rows.push(...batch);
+  // Une fiche écartée après contrôle reste hors du catalogue, même si elle est
+  // encore approuvée dans Supabase. La décision et sa trace sont versionnées.
+  rows.push(...batch.filter((row) => !excludedIds.has(String(row.id))));
   process.stdout.write(`\rFiches récupérées : ${rows.length}`);
   if (batch.length < PAGE) break;
 }
@@ -69,7 +73,13 @@ process.stdout.write('\n');
 if (!rows.length) throw new Error('Aucune fiche approuvée récupérée : arrêt pour ne pas écraser le fichier.');
 
 // ---------- Dictionnaires ----------
-const ACTIVITES = ACTIVITES_BASE.slice();
+// Une ancienne variante mal décodée de « Théâtre » et les doublons de
+// libellés ne doivent pas créer de catégories fantômes dans l'interface.
+const canonicalActivity = (value) => {
+  const text = String(value || '').replace(/\uFFFD/g, '').trim();
+  return /^th.*atre$/i.test(text.normalize('NFD').replace(/[\u0300-\u036f]/g, '')) ? 'Théâtre' : text;
+};
+const ACTIVITES = [...new Set(ACTIVITES_BASE.map(canonicalActivity).filter(Boolean))];
 const actIndex = new Map(ACTIVITES.map((n, i) => [n, i]));
 const communes = [];
 const comIndex = new Map();
@@ -78,9 +88,10 @@ for (const r of rows) {
     comIndex.set(r.commune || '', communes.length);
     communes.push(r.commune || '');
   }
-  if (!actIndex.has(r.activity || '')) {
-    actIndex.set(r.activity || '', ACTIVITES.length);
-    ACTIVITES.push(r.activity || '');
+  const activity = canonicalActivity(r.activity);
+  if (!actIndex.has(activity)) {
+    actIndex.set(activity, ACTIVITES.length);
+    ACTIVITES.push(activity);
   }
 }
 
@@ -90,7 +101,7 @@ const encoded = rows.map((r) => {
   out[0] = r.id;
   for (let i = 0; i < BASE_COLS.length; i++) {
     if (i === I_COM) out[i + 1] = comIndex.get(r.commune || '');
-    else if (i === I_ACT) out[i + 1] = actIndex.get(r.activity || '');
+    else if (i === I_ACT) out[i + 1] = actIndex.get(canonicalActivity(r.activity));
     else {
       const v = r[BASE_COLS[i]];
       out[i + 1] = v === undefined ? null : v;

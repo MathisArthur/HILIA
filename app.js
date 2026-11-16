@@ -10,6 +10,23 @@
   window.__hiliaDataset = DEFER_PLACES ? Promise.resolve(null) : fetch('/data/places.json', {cache:'force-cache'})
     .then(function(r){ return r.ok ? r.json() : null; })
     .catch(function(){ return null; });
+  // Fiches retirées après contrôle qualité. La liste est chargée avant le
+  // catalogue pour qu'une erreur corrigée ne réapparaisse pas à l'écran.
+  var placeExclusionsPromise = null;
+  var placeExclusionIds = new Set();
+  function loadPlaceExclusions(){
+    if(placeExclusionsPromise) return placeExclusionsPromise;
+    placeExclusionsPromise = fetch('/data/place-exclusions.json', {cache:'no-cache'})
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(doc){
+        (doc && Array.isArray(doc.entries) ? doc.entries : []).forEach(function(entry){
+          if(entry && entry.id != null) placeExclusionIds.add(String(entry.id));
+        });
+        return placeExclusionIds;
+      })
+      .catch(function(){ return placeExclusionIds; });
+    return placeExclusionsPromise;
+  }
 
 (async function(){
   "use strict";
@@ -79,6 +96,8 @@
       if(actRemap && x[4]!=='' && actRemap[Number(x[4])]!=null) x[4]=actRemap[Number(x[4])];
       return x;
     });
+    await loadPlaceExclusions();
+    raw.data = raw.data.filter(function(row){ return !placeExclusionIds.has(String(row._hiliaPlaceId)); });
     return true;
   }
   async function loadPlacesFromSupabase(raw){
@@ -115,6 +134,8 @@
       x._hiliaQualif=o.qualif||null;
       return x;
     });
+    await loadPlaceExclusions();
+    raw.data = raw.data.filter(function(row){ return !placeExclusionIds.has(String(row._hiliaPlaceId)); });
     return true;
   }
   async function loadBasePlaces(raw){
@@ -265,7 +286,7 @@
   function normalize(s){ if(!s) return ""; return s.toString().replace(/[\u2010-\u2015\u2212]/g,' ').replace(/\s+/g,' ').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
   // Catégorie historique mal encodée (« Th��âtre ») : même libellé, sans
   // toucher aux index déjà stockés dans le catalogue.
-  function canonicalActivityName(value){ var label=String(value||''); var key=normalize(label); return (key==='theatre' || /^th.*atre$/.test(key)) ? 'Théâtre' : label; }
+  function canonicalActivityName(value){ var label=String(value||'').replace(/\uFFFD/g,'').trim(); var key=normalize(label); return (key==='theatre' || /^th.*atre$/.test(key) || /^th/i.test(key) && /atre$/.test(key)) ? 'Théâtre' : label; }
 
   // ---------- Category -> illustration template mapping ----------
   var CATEGORY_TEMPLATE = {
@@ -398,6 +419,7 @@
   var searchIdx = new Array(DATA.length);
   var accessScore = new Int8Array(DATA.length);
   var accessIndex = new Uint8Array(DATA.length);
+  var completenessKnown = new Uint8Array(DATA.length);
   var accessEssential = new Uint8Array(DATA.length);
   var accessLabelRank = new Uint8Array(DATA.length);
   var accessFamilies = new Uint8Array(DATA.length);
@@ -426,10 +448,30 @@
     }
     return points;
   }
+  // La complétude compte une dimension dès qu'une valeur vraie OU fausse est
+  // déclarée : elle mesure la présence d'informations, jamais l'accessibilité.
+  function completenessFor(r){
+    var known = 0;
+    for(var d=0; d<ACCESS_DIMENSIONS.length; d++){
+      var fields = ACCESS_DIMENSIONS[d].fields;
+      for(var f=0; f<fields.length; f++){
+        var value = r[fields[f]];
+        if(isTrue(value) || isFalse(value)){ known++; break; }
+      }
+    }
+    return known;
+  }
+  function completenessLabel(known){
+    if(known >= 5) return 'Très complète';
+    if(known >= 3) return 'Bien renseignée';
+    if(known >= 1) return 'Partielle';
+    return 'Non renseignée';
+  }
   function buildSearchIndex(){
     searchIdx = new Array(DATA.length);
     accessScore = new Int8Array(DATA.length);
     accessIndex = new Uint8Array(DATA.length);
+    completenessKnown = new Uint8Array(DATA.length);
     accessEssential = new Uint8Array(DATA.length);
     accessLabelRank = new Uint8Array(DATA.length);
     accessFamilies = new Uint8Array(DATA.length);
@@ -441,6 +483,7 @@
       for(var k=0;k<SCORE_FIELDS.length;k++){ if(isTrue(r[SCORE_FIELDS[k]])) sc++; }
       accessScore[i] = sc;
       accessIndex[i] = accessIndexFor(r);
+      completenessKnown[i] = completenessFor(r);
       var essential = 0;
       for(var e=0; e<ACCESS_ESSENTIAL_FIELDS.length; e++){ if(isTrue(r[ACCESS_ESSENTIAL_FIELDS[e]])) essential++; }
       accessEssential[i] = essential;
@@ -588,8 +631,9 @@
   ];
   var filterGroupsEl = document.getElementById('filterGroups');
   FILTER_GROUPS.concat(FILTER_GROUPS_EXTRA).forEach(function(group){
-    var g = document.createElement('fieldset'); g.className='fgroup';
-    var h = document.createElement('legend'); h.textContent = group.title; g.appendChild(h);
+    var g = document.createElement('details'); g.className='fgroup fgroup-collapsible';
+    g.open = group.title==='Entrée';
+    var h = document.createElement('summary'); h.className='fgroup-title'; h.textContent = group.title; g.appendChild(h);
     var cl = document.createElement('div'); cl.className='check-list';
     group.items.forEach(function(item){
       var label = document.createElement('label');
@@ -599,6 +643,15 @@
     });
     g.appendChild(cl); filterGroupsEl.appendChild(g);
   });
+  function syncGroupSummaries(){
+    filterGroupsEl.querySelectorAll('details.fgroup-collapsible').forEach(function(group){
+      var title=group.querySelector('.fgroup-title');
+      if(!title) return;
+      var n=group.querySelectorAll('input[type=checkbox]:checked').length;
+      if(!title.dataset.base) title.dataset.base=title.textContent;
+      title.textContent=title.dataset.base+(n?' · '+n+' sélectionné'+(n>1?'s':''):'');
+    });
+  }
   // ---------- Activité, ville et tarif réduit (en tête du panneau) ----------
   // Deux de ces listes sont longues (65 activités, plus de 13 000 communes) :
   // chacune a sa propre barre de recherche, et la liste des villes s'arrête aux
@@ -803,10 +856,11 @@
     if(state.sort === 'name'){ out.sort(function(a,b){ return DATA[a][F.NOM].localeCompare(DATA[b][F.NOM],'fr'); }); }
     else if(state.sort === 'commune'){ out.sort(function(a,b){ return COMMUNES[DATA[a][F.COM]].localeCompare(COMMUNES[DATA[b][F.COM]],'fr'); }); }
     else if(state.sort === 'access'){
-      // Indice, nombre de critères déclarés, critères essentiels, label
-      // officiel, familles de handicap, puis nom en dernier recours.
+      // Complétude d'abord (informations présentes), puis couverture positive,
+      // critères essentiels, label officiel, familles, puis nom.
       out.sort(function(a,b){
-        return (accessIndex[b]-accessIndex[a]) ||
+        return (completenessKnown[b]-completenessKnown[a]) ||
+          (accessIndex[b]-accessIndex[a]) ||
           (accessScore[b]-accessScore[a]) ||
           (accessEssential[b]-accessEssential[a]) ||
           (accessLabelRank[b]-accessLabelRank[a]) ||
@@ -846,9 +900,10 @@
     var r = DATA[di];
     var color = colorFor(r[F.ACT]);
     var idx = accessIndex[di];
+    var known = completenessKnown[di];
     var accessBadge = r._accessUnknown
-      ? '<span class="tc-score tc-score-unknown" title="Accessibilité non renseignée"><span class="tc-score-label">Accessibilité<span class="sr-only"> non renseignée</span></span> <span class="tc-score-value">?</span></span>'
-      : '<span class="tc-score" title="Couverture déclarée : '+idx+' sur 10"><span class="tc-score-label">Couverture<span class="sr-only"> déclarée</span></span> <span class="tc-score-value">'+idx+'/10</span></span>';
+      ? '<span class="tc-score tc-score-unknown" title="Informations d’accessibilité non renseignées"><span class="tc-score-label">Complétude</span> <span class="tc-score-value">Non renseignée</span></span>'
+      : '<span class="tc-score" title="Complétude des informations : '+completenessLabel(known)+' ('+known+' dimensions sur 6). Cet indicateur ne mesure pas l’accessibilité réelle."><span class="tc-score-label">Complétude</span> <span class="tc-score-value">'+completenessLabel(known)+'</span></span>';
     var badgesHtml =
       amenityLi(r[F.ENTREE_PLAIN_PIED],'wheelchair','Entrée de plain-pied')+
       amenityLi(r[F.SANITAIRES_PMR],'wc','Sanitaires adaptés PMR')+
@@ -972,6 +1027,8 @@
     }
     var boxes = filterGroupsEl.querySelectorAll('input[type=checkbox]:checked');
     state.access = Array.from(boxes).map(function(cb){ return parseInt(cb.dataset.field,10); });
+    syncGroupSummaries();
+    updateFilterDot();
   });
   function activeFilterLabels(){
     var parts = [];
@@ -999,7 +1056,7 @@
     document.getElementById('sortSelect').value='access';
     filterGroupsEl.querySelectorAll('input[type=checkbox]').forEach(function(cb){ cb.checked=false; });
     actFilter.search.value=''; cityFilter.search.value='';
-    renderActivityOptions(); renderCityOptions(); renderRatingOptions();
+    renderActivityOptions(); renderCityOptions(); renderRatingOptions(); syncGroupSummaries();
     refresh(); closeDrawer(); announce('Filtres réinitialisés.',900);
   });
   document.getElementById('applyBtn').addEventListener('click', function(){ refresh(); closeDrawer(); });
@@ -1095,9 +1152,40 @@
   function rDataHasCoords(r){ return r[F.LAT]!=null && r[F.LON]!=null && r[F.LAT]!=='' && r[F.LON]!=='' && isFinite(Number(r[F.LAT])) && isFinite(Number(r[F.LON])); }
 
   function showMapUnavailable(){
-    var el=document.getElementById('leafletMap');
-    el.innerHTML='<div class="empty-state" role="alert"><h3>La carte n’a pas pu être chargée</h3><p>Utilisez la liste des lieux, qui contient les mêmes informations.</p></div>';
+    var empty=document.getElementById('mapEmpty');
+    if(empty){
+      empty.hidden=false;
+      empty.innerHTML='<div class="empty-state" role="alert"><h3>La carte n’a pas pu être chargée</h3><p>La liste des lieux contient les mêmes informations et reste utilisable.</p><button type="button" class="primary-btn" data-map-list>Voir la liste</button></div>';
+    }
   }
+  // maplibre-gl-leaflet 0.1.4 appelle jumpTo() avant que _glMap soit prêt
+  // lorsque Leaflet émet move/zoom pendant l'initialisation. On neutralise
+  // uniquement ces mises à jour prématurées ; les appels normaux restent actifs.
+  function guardMaplibreLeaflet(){
+    if(typeof L==='undefined' || !L.MaplibreGL || !L.MaplibreGL.prototype) return;
+    var proto=L.MaplibreGL.prototype;
+    if(proto.__hiliaGuard) return;
+    ['_update','_transformGL','_pinchZoom','_zoomEnd','_animateZoom','_transitionEnd'].forEach(function(name){
+      var original=proto[name];
+      if(typeof original!=='function') return;
+      proto[name]=function(){
+        if(!this._glMap) return;
+        try { return original.apply(this, arguments); }
+        catch(err){ console.warn('Fond de carte indisponible', err); }
+      };
+    });
+    proto.__hiliaGuard=true;
+  }
+  function updateMapEmptyState(count){
+    var empty=document.getElementById('mapEmpty'); if(!empty) return;
+    if(count>0){ empty.hidden=true; return; }
+    empty.hidden=false;
+    empty.innerHTML='<div class="empty-state" role="status"><h3>Aucun lieu à afficher</h3><p>Modifiez la recherche ou les filtres, ou consultez la liste.</p><button type="button" class="primary-btn" data-map-list>Voir la liste</button></div>';
+  }
+  document.addEventListener('click', function(e){
+    var btn=e.target.closest && e.target.closest('[data-map-list]');
+    if(btn){ setListTab(); var heading=document.getElementById('resultsHeading'); if(heading) heading.focus({preventScroll:true}); }
+  });
   function hardenBasemapA11y(){
     var root=document.getElementById('leafletMap'); if(!root) return;
     function patch(){
@@ -1133,13 +1221,14 @@
     // initial/reset viewport and preserve the existing HILIA data markers.
     try{
       if(L.maplibreGL && window.maplibregl){
+        guardMaplibreLeaflet();
         L.maplibreGL({
           style:'https://tiles.openfreemap.org/styles/positron',
           attributionControl:false
         }).addTo(leafletMap);
         hardenBasemapA11y();
       }
-    }catch(err){ /* fond de carte indisponible : les repères restent utilisables */ }
+    }catch(err){ console.warn('Fond de carte indisponible', err); }
 
     franceLayer = L.geoJSON(FRANCE_GEOJSON, { interactive:false, style:{color:'#7DABA5',weight:1.2,fillColor:'#EAF2EE',fillOpacity:0.12}, className:'france-outline' });
     var bounds = franceLayer.getBounds();
@@ -1229,6 +1318,7 @@
     }
     clusterGroup.addLayers(markers);
     document.getElementById('mapHint').textContent = markers.length.toLocaleString('fr-FR')+(markers.length > 1 ? ' lieux affichés' : ' lieu affiché')+' · carte HILIA';
+    updateMapEmptyState(markers.length);
 
     // When a search/filter isolates a small or off-mainland set, bring it into view.
     if(!showAll && visibleBounds.length && visibleBounds.length <= 2500){
@@ -1251,6 +1341,17 @@
   var detailContent = document.getElementById('detailContent');
   function parseListField(s){ if(!s) return []; try{ var v=JSON.parse(s); return Array.isArray(v)?v:[s]; }catch(e){ return s?[s]:[]; } }
   var FAMILLE_LABELS = {moteur:'Handicap moteur', auditif:'Handicap auditif', visuel:'Handicap visuel', mental:'Handicap mental / psychique', th:'Tous handicaps (label)'};
+  // Libellés publics des labels source. Les codes inconnus ne sont jamais
+  // affichés bruts ; « autre » n'apporte aucune information exploitable.
+  var LABEL_LABELS = {'th':'Tourisme & Handicap', handiplage:'Handiplage', mobalib:'Mobalib', dpt:'Destination pour tous'};
+  function publicLabels(values){
+    var out=[];
+    (values || []).forEach(function(value){
+      var label=LABEL_LABELS[String(value||'').toLowerCase()];
+      if(label && out.indexOf(label)===-1) out.push(label);
+    });
+    return out;
+  }
   function statusOf(v){ return isTrue(v) ? {c:'yes',g:'✓',t:'Oui'} : (isFalse(v) ? {c:'no',g:'✕',t:'Non'} : null); }
   function dItem(v,label){
     // Une donnée inconnue n’est ni affichée comme « non renseigné », ni présentée comme négative.
@@ -1259,7 +1360,7 @@
     return '<div class="d-item" role="listitem"><span class="dot '+s.c+'" aria-hidden="true">'+s.g+'</span><span class="d-label">'+label+'</span><span class="d-status">'+s.t+'</span></div>';
   }
   function dNum(label,value){ return '<div class="d-item" role="listitem"><span class="dot info" aria-hidden="true">i</span><span class="d-label">'+label+'</span><span class="d-status">'+escapeHtml(String(value))+'</span></div>'; }
-  function escapeHtml(s){ return (s||'').toString().replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function escapeHtml(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function escapeAttr(s){ return escapeHtml(s); }
 
   // ---------- Local profile + reviews + permissions (prototype) ----------
@@ -1905,8 +2006,8 @@
       if(sec[2]) out=out.concat(sec[2]());
       if(out.length) parts.push(sec[0]+'. '+out.join(' '));
     });
-    var labels=parseListField(r[F.LABELS]);
-    var familles=parseListField(r[F.FAMILLES]).map(function(f){ return FAMILLE_LABELS[f]||f; });
+    var labels=publicLabels(parseListField(r[F.LABELS]));
+    var familles=parseListField(r[F.FAMILLES]).map(function(f){ return FAMILLE_LABELS[f]||''; }).filter(Boolean);
     var all=labels.concat(familles);
     if(all.length) parts.push('Labels et reconnaissance : '+all.join(', ')+'.');
     if(r[F.CONFORMITE]!=null) parts.push('Conformité réglementaire déclarée par l’établissement : '+(isTrue(r[F.CONFORMITE])?'oui':'non')+'.');
@@ -2014,7 +2115,7 @@
     if(!media || !media.length) return '';
     var html='<div class="d-section d-gallery-section"><h3>Photos</h3><div class="d-gallery">';
     media.forEach(function(m, i){
-      html += '<figure class="media-card" data-fallback-key="' + escapeAttr(fallbackKey || 'general') + '"><img data-media-img src="' + escapeAttr(mediaProxyUrl(m.url)) + '" alt="' + escapeAttr(title + ' (photo ' + (i + 1) + ')') + '" loading="lazy" decoding="async"><figcaption><span>' + escapeHtml(m.credit || 'Crédit non précisé') + '</span>';
+      html += '<figure class="media-card' + (i === 0 ? ' media-main' : '') + '" data-fallback-key="' + escapeAttr(fallbackKey || 'general') + '"><img data-media-img src="' + escapeAttr(mediaProxyUrl(m.url)) + '" alt="' + escapeAttr(title + ' (photo ' + (i + 1) + ')') + '" loading="lazy" decoding="async"><figcaption><span>' + escapeHtml(m.credit || 'Crédit non précisé') + '</span>';
       if(m.source) html += ' · ' + escapeHtml(m.source);
       if(m.licence) html += ' · ' + escapeHtml(m.licence);
       html += '</figcaption></figure>';
@@ -2040,12 +2141,50 @@
     if(src.url) html += ' · <a href="' + escapeAttr(safeExternalUrl(src.url)) + '" target="_blank" rel="noopener noreferrer">voir la source<span class="sr-only"> (nouvelle fenêtre)</span></a>';
     return '<p class="d-source-line">' + html + '</p>';
   }
+  function descriptionBlocks(text){
+    return String(text || '').split(/\n{2,}/).map(function(block){ return block.trim(); }).filter(Boolean);
+  }
+  function descriptionSnippet(text){
+    var blocks=descriptionBlocks(text);
+    var full=paragraphsHtml(text);
+    if(!blocks.length) return {short:'', full:'', expandable:false};
+    var shortBlocks=[], length=0;
+    for(var i=0; i<blocks.length; i++){
+      if(shortBlocks.length && length + blocks[i].length > 460) break;
+      shortBlocks.push(blocks[i]); length += blocks[i].length;
+      if(length > 460) break;
+    }
+    var shortText=shortBlocks.join('\n\n');
+    if(shortText.length > 500) shortText=shortText.slice(0, 500).replace(/\s+\S*$/, '') + '…';
+    var expandable=shortText.replace(/…$/, '') !== blocks.join('\n\n');
+    return {short:paragraphsHtml(shortText), full:full, expandable:expandable};
+  }
+  function bindDescriptionToggle(container){
+    container.querySelectorAll('[data-expand-description]').forEach(function(button){
+      button.addEventListener('click', function(){
+        var full=container.querySelector('[data-description-full]');
+        var short=container.querySelector('[data-description-short]');
+        if(!full || !short) return;
+        var open=full.hasAttribute('hidden');
+        if(open){ full.removeAttribute('hidden'); short.setAttribute('hidden',''); button.textContent='Réduire'; button.setAttribute('aria-expanded','true'); }
+        else { full.setAttribute('hidden',''); short.removeAttribute('hidden'); button.textContent='Lire la suite'; button.setAttribute('aria-expanded','false'); }
+      });
+    });
+  }
   function renderPlaceEnrichment(detail, row){
     var html='';
-    if(detail.description){
-      html += '<div class="d-section d-description"><h3>À propos</h3>' + paragraphsHtml(detail.description) + placeSourceLine(detail.descriptionSource) + '</div>';
-    }
+    // La première photo exploitable sert de visuel principal ; les crédits
+    // restent attachés à chaque image et une indisponibilité est signalée.
     html += mediaGalleryHtml(detail.media, row[F.NOM], CATEGORY_TEMPLATE[ACTIVITES[row[F.ACT]]] || 'general');
+    if(detail.description){
+      var desc=descriptionSnippet(detail.description);
+      html += '<div class="d-section d-description"><h3>À propos</h3><div data-description-short>' + desc.short + '</div>';
+      if(desc.expandable){
+        html += '<div data-description-full hidden>' + desc.full + '</div>';
+        html += '<button type="button" class="d-read-more" data-expand-description aria-expanded="false">Lire la suite</button>';
+      }
+      html += placeSourceLine(detail.descriptionSource) + '</div>';
+    }
     if(detail.hours && detail.hours.length){
       html += '<div class="d-section d-practical"><h3>Horaires</h3><ul class="d-hours">';
       detail.hours.forEach(function(h){
@@ -2113,6 +2252,7 @@
       holder.removeAttribute('aria-busy');
       holder.innerHTML = renderPlaceEnrichment(detail, row);
       bindMediaFallbacks(holder);
+      bindDescriptionToggle(holder);
     });
   }
 
@@ -2126,6 +2266,7 @@
     var r = DATA[di];
     var color = colorFor(r[F.ACT]);
     var idx = accessIndex[di];
+    var known = completenessKnown[di];
     var html='';
     html += '<h2 id="detailDialogTitle">'+escapeHtml(r[F.NOM])+'</h2>';
     html += '<div class="d-addr">'+escapeHtml(r[F.ADR])+', '+r[F.CP]+' '+escapeHtml(COMMUNES[r[F.COM]])+'</div>';
@@ -2135,8 +2276,8 @@
       + '<p class="audio-note">Lecture à voix de synthèse, générée à partir des informations de cette fiche.</p></div>';
     var tag = tagPalette(color);
     html += '<span class="d-tag" style="background:'+tag.bg+';color:'+tag.text+'">'+escapeHtml(ACTIVITES[r[F.ACT]])+'</span><br>';
-    if(r._accessUnknown) html += '<div class="d-access-score d-access-unknown"><strong>?</strong> <span><b>Accessibilité non renseignée</b> pour ce lieu.<br><span class="d-access-score-note">L’absence d’information ne signifie ni accessible ni inaccessible.</span></span></div>';
-    else html += '<div class="d-access-score"><strong>'+idx+'/10</strong> <span><b>Couverture déclarée</b> des 6 dimensions d’accessibilité.<br><span class="d-access-score-note">Ce n’est pas une garantie d’accessibilité complète.</span></span></div>';
+    if(r._accessUnknown || known===0) html += '<div class="d-access-score d-access-unknown"><strong>?</strong> <span><b>Informations non renseignées</b> pour ce lieu.<br><span class="d-access-score-note">L’absence d’information ne signifie ni accessible ni inaccessible.</span></span></div>';
+    else html += '<div class="d-access-score"><strong>'+completenessLabel(known)+'</strong> <span><b>Complétude des informations</b> ('+known+' dimensions sur 6 renseignées).<br><span class="d-access-score-note">Ce nombre décrit les informations présentes, pas les conditions d’accès. Les critères ci-dessous sont ceux déclarés par les sources.</span></span></div>';
     if(r[F.SITE]) html += '<a class="d-link" href="'+escapeAttr(safeExternalUrl(r[F.SITE]))+'" target="_blank" rel="noopener noreferrer" title="Voir le site de '+escapeAttr(r[F.NOM])+' (nouvelle fenêtre)">'+icon('link')+' Voir le site du lieu<span class="sr-only"> '+escapeHtml(r[F.NOM])+' (s’ouvre dans une nouvelle fenêtre)</span></a>';
     html += '<div id="detailEnrichment" class="d-enrichment" aria-live="polite" aria-busy="true"></div>';
     if(profileState && roleOf(profileState)==='admin'){
@@ -2147,8 +2288,8 @@
       if(remotePlace && remotePlace.id) html += '<div class="detail-contrib-actions"><button type="button" class="detail-action-btn" id="copyPlaceLinkBtn">Copier le lien de cette fiche</button><button type="button" class="detail-action-btn" id="deletePlaceBtn" data-place-id="'+escapeAttr(remotePlace.id)+'" style="color:#8C2C24;border-color:#E2AAA4">Supprimer ce lieu</button></div>';
     }
 
-    var labels = parseListField(r[F.LABELS]);
-    var familles = parseListField(r[F.FAMILLES]).map(function(f){ return FAMILLE_LABELS[f]||f; });
+    var labels = publicLabels(parseListField(r[F.LABELS]));
+    var familles = parseListField(r[F.FAMILLES]).map(function(f){ return FAMILLE_LABELS[f]||''; }).filter(Boolean);
     if(labels.length || familles.length){
       html += '<div class="d-section"><h3>Labels & reconnaissance</h3><div class="d-badges">';
       labels.forEach(function(l){ html += '<span class="d-badge">'+escapeHtml(l)+'</span>'; });
@@ -2557,19 +2698,61 @@
     var a=eventDateLabel(dates.start), b=eventDateLabel(dates.end);
     return a===b ? a : 'Du '+a+' au '+b;
   }
-  function eventCardDateLabel(e){
-    var range=eventRange({start:e.start,end:e.end});
-    var today=new Date().toISOString().slice(0,10);
-    if(e.start && e.end && e.start<today && e.end>=today) return 'En cours · jusqu’au '+eventDateLabel(e.end)+(e.periodCount>1?' · '+e.periodCount+' dates à venir':'');
-    return e.periodCount>1 ? 'Prochaine date : '+range+' · '+e.periodCount+' dates à venir' : range;
+  function localTodayIso(){
+    var d=new Date();
+    var m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+    return d.getFullYear()+'-'+m+'-'+day;
   }
   function eventRanges(e){
-    return e.periods && e.periods.length ? e.periods : [{start:e.start,end:e.end}];
+    var periods=e && e.periods && e.periods.length ? e.periods : [{start:e && e.start,end:e && e.end}];
+    return periods.filter(function(p){ return p && (p.start || p.end); }).map(function(p){
+      return {start:p.start || p.end, end:p.end || p.start, startTime:p.startTime || null};
+    });
+  }
+  function eventFuturePeriods(e, today){
+    var day=today || localTodayIso();
+    return eventRanges(e).filter(function(p){ return p.end >= day; }).sort(function(a,b){
+      return a.start.localeCompare(b.start) || a.end.localeCompare(b.end);
+    });
+  }
+  function eventNextPeriod(e, today){
+    return eventFuturePeriods(e, today)[0] || null;
+  }
+  function eventCardDateLabel(e, today){
+    var day=today || localTodayIso();
+    var future=eventFuturePeriods(e, day), next=future[0];
+    if(!next) return 'Événement terminé';
+    var remaining=future.length;
+    if(next.start <= day && next.end >= day){
+      return 'En cours · jusqu’au '+eventDateLabel(next.end)+(remaining>1?' · '+remaining+' dates à venir':'');
+    }
+    return (remaining>1?'Prochaine date : ':'')+eventRange(next)+(remaining>1?' · '+remaining+' dates à venir':'');
   }
   function eventMatchesDates(e,from,to){
     return eventRanges(e).some(function(p){
       return (!from || p.end>=from) && (!to || p.start<=to);
     });
+  }
+  function agendaQuickRange(mode){
+    var today=localTodayIso();
+    if(mode==='all') return {from:'',to:''};
+    if(mode==='today') return {from:today,to:today};
+    if(mode==='week') return {from:today,to:addDaysIso(today,6)};
+    if(mode==='weekend'){
+      var p=today.split('-').map(Number);
+      var d=new Date(Date.UTC(p[0],p[1]-1,p[2]));
+      var dow=d.getUTCDay(); // 0 = dimanche
+      if(dow===0) return {from:today,to:today};
+      if(dow===6) return {from:today,to:addDaysIso(today,1)};
+      var sat=addDaysIso(today,6-dow);
+      return {from:sat,to:addDaysIso(sat,1)};
+    }
+    return {from:'',to:''};
+  }
+  function addDaysIso(iso, days){
+    var p=String(iso).split('-').map(Number);
+    var d=new Date(Date.UTC(p[0],p[1]-1,p[2]+days));
+    return d.toISOString().slice(0,10);
   }
   function loadAgendaData(){
     if(agendaData) return Promise.resolve(agendaData);
@@ -2595,20 +2778,43 @@
   }
   function agendaFiltered(){
     if(!agendaData) return [];
-    var q=normalize(document.getElementById('agendaSearch')?.value || '');
+    var where=normalize(document.getElementById('agendaWhere')?.value || '');
+    var what=normalize(document.getElementById('agendaWhat')?.value || '');
     var family=document.getElementById('agendaFamily')?.value || '';
+    var access=document.getElementById('agendaAccess')?.value || '';
     var from=document.getElementById('agendaFrom')?.value || '';
     var to=document.getElementById('agendaTo')?.value || '';
     var free=!!document.getElementById('agendaFree')?.checked;
+    var today=localTodayIso();
+    if(from && to && from>to){ var swap=from; from=to; to=swap; }
+    var effectiveFrom=from || today;
     return agendaData.events.filter(function(e){
+      // La date de consultation est la référence : un événement dont toutes les
+      // occurrences sont passées n'apparaît jamais dans la vue par défaut.
+      if(!eventFuturePeriods(e, today).length) return false;
       if(family && e.family!==family) return false;
+      if(access==='declared' && e.accessibilityStatus!=='declared') return false;
+      if(access==='unknown' && e.accessibilityStatus!=='unknown') return false;
       if(free && e.free!==true) return false;
-      if((from || to) && !eventMatchesDates(e,from,to)) return false;
-      if(q){
-        var hay=normalize([e.name,e.commune,e.cp,e.address,e.family,(e.categories||[]).join(' ')].join(' '));
-        if(hay.indexOf(q)===-1) return false;
+      if((effectiveFrom || to) && !eventMatchesDates(e,effectiveFrom,to)) return false;
+      if(where){
+        // Une adresse contenant « rue de Paris » ne doit pas faire apparaître
+        // un événement de Morlaix quand le visiteur cherche la ville de Paris.
+        var place=normalize([e.commune,e.cp].filter(Boolean).join(' '));
+        if(place.indexOf(where)===-1) return false;
+      }
+      if(what){
+        // Le nom, la famille et les catégories seulement : une simple mention
+        // dans une description ne fait pas apparaître un événement d'une autre ville.
+        var content=normalize([e.name,e.family,(e.categories||[]).join(' ')].filter(Boolean).join(' '));
+        if(content.indexOf(what)===-1) return false;
       }
       return true;
+    }).sort(function(a,b){
+      var pa=eventNextPeriod(a,today), pb=eventNextPeriod(b,today);
+      var ka=pa ? (pa.start<=today ? '0000-00-00' : pa.start) : '9999-99-99';
+      var kb=pb ? (pb.start<=today ? '0000-00-00' : pb.start) : '9999-99-99';
+      return ka.localeCompare(kb) || String(a.name||'').localeCompare(String(b.name||''),'fr');
     });
   }
   function agendaPriceLabel(e){
@@ -2617,9 +2823,30 @@
     return '';
   }
   function agendaCard(e){
-    var b=eventDateBadge(e.start), price=agendaPriceLabel(e);
-    var html='<article class="agenda-card" data-agenda-card="'+escapeAttr(e.id)+'"><div class="agenda-date" aria-hidden="true"><span>'+escapeHtml(b.month)+'</span><b>'+escapeHtml(b.day)+'</b></div><div class="agenda-card-main"><h2>'+escapeHtml(e.name)+'</h2><p class="agenda-meta">'+escapeHtml(eventCardDateLabel(e))+(e.commune?' · '+escapeHtml(e.commune):'')+(e.cp?' ('+escapeHtml(e.cp)+')':'')+'</p><p class="agenda-tags">'+(e.family?'<span class="d-badge">'+escapeHtml(e.family)+'</span>':'')+(price?'<span class="d-badge agenda-free-badge">'+escapeHtml(price)+'</span>':'')+(e.source?'<span class="d-muted">Source : '+escapeHtml(e.source)+'</span>':'')+'</p><button type="button" class="secondary-btn agenda-toggle" data-agenda-toggle="'+escapeAttr(e.id)+'" aria-expanded="false">Voir le détail</button><div class="agenda-event-detail" hidden></div></div></article>';
+    var today=localTodayIso();
+    var next=eventNextPeriod(e,today) || {start:e.start,end:e.end};
+    var badgeDate=next.start<=today ? next.end : next.start;
+    var b=eventDateBadge(badgeDate), price=agendaPriceLabel(e);
+    var accessBadge=e.accessibilityStatus==='declared'
+      ? '<span class="d-badge agenda-access-badge">Accessibilité déclarée</span>'
+      : '<span class="d-badge agenda-access-unknown">Accessibilité non renseignée</span>';
+    var html='<article class="agenda-card" data-agenda-card="'+escapeAttr(e.id)+'"><div class="agenda-date" aria-hidden="true"><span>'+escapeHtml(b.month)+'</span><b>'+escapeHtml(b.day)+'</b></div><div class="agenda-card-main"><h2>'+escapeHtml(e.name)+'</h2><p class="agenda-meta">'+escapeHtml(eventCardDateLabel(e,today))+(e.commune?' · '+escapeHtml(e.commune):'')+(e.cp?' ('+escapeHtml(e.cp)+')':'')+'</p><p class="agenda-tags">'+(e.family?'<span class="d-badge">'+escapeHtml(e.family)+'</span>':'')+(price?'<span class="d-badge agenda-free-badge">'+escapeHtml(price)+'</span>':'')+accessBadge+(e.source?'<span class="d-muted">Source : '+escapeHtml(e.source)+'</span>':'')+'</p><button type="button" class="secondary-btn agenda-toggle" data-agenda-toggle="'+escapeAttr(e.id)+'" aria-expanded="false">Voir le détail</button><div class="agenda-event-detail" hidden></div></div></article>';
     return html;
+  }
+  function agendaFreshnessLabel(generatedAt){
+    if(!generatedAt) return 'date de mise à jour non fournie';
+    var d=new Date(generatedAt);
+    if(isNaN(d.getTime())) return 'date de mise à jour non fournie';
+    var age=Math.floor((Date.now()-d.getTime())/86400000);
+    return 'le '+d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})+(age>14?' · une actualisation des sources est à prévoir':'');
+  }
+  function syncAgendaQuick(){
+    var from=document.getElementById('agendaFrom')?.value || '';
+    var to=document.getElementById('agendaTo')?.value || '';
+    document.querySelectorAll('[data-agenda-range]').forEach(function(btn){
+      var r=agendaQuickRange(btn.getAttribute('data-agenda-range'));
+      btn.classList.toggle('active', (r.from===from && r.to===to) || (btn.getAttribute('data-agenda-range')==='all' && !from && !to));
+    });
   }
   function renderAgenda(){
     var list=document.getElementById('agendaList'), status=document.getElementById('agendaStatus'), count=document.getElementById('agendaCount'), label=document.getElementById('agendaCountLabel'), more=document.getElementById('agendaMore');
@@ -2628,22 +2855,35 @@
       status.textContent='L’agenda n’a pas pu être chargé. Réessayez dans un instant.';
       status.dataset.kind='error'; return;
     }
+    var freshness=document.getElementById('agendaFreshness');
+    if(freshness) freshness.textContent=agendaFreshnessLabel(agendaData.generatedAt);
     var rows=agendaFiltered();
     if(count) count.textContent=rows.length.toLocaleString('fr-FR');
-    if(label) label.textContent=rows.length>1?'événements':'événement';
+    if(label) label.textContent=rows.length===1?'événement à venir':'événements à venir';
     status.dataset.kind='';
-    status.textContent=rows.length?'':'Aucun événement ne correspond à ces filtres. Élargissez les dates ou la recherche.';
+    status.textContent=rows.length?'':'Aucun événement à venir ne correspond à ces filtres. Élargissez la période ou la recherche.';
     list.innerHTML=rows.slice(0,agendaLimit).map(agendaCard).join('');
     if(more) more.hidden=rows.length<=agendaLimit;
+    syncAgendaQuick();
     list.querySelectorAll('[data-agenda-toggle]').forEach(function(btn){ btn.addEventListener('click',function(){ toggleAgendaEvent(btn); }); });
   }
   function renderEventDetail(detail){
     var html='';
     if(detail.description) html+='<div class="d-description">'+paragraphsHtml(detail.description)+'</div>';
-    html+='<p class="d-source-line"><strong>'+escapeHtml(eventRange(detail.dates))+'</strong>'+(detail.dates.startTime?' · '+escapeHtml(detail.dates.startTime)+(detail.dates.endTime?'–'+escapeHtml(detail.dates.endTime):''):'')+'</p>';
-    if(detail.dates.periods && detail.dates.periods.length>1){
-      var upcoming=detail.dates.periods.slice(1,13).map(function(p){ return eventRange({start:p.start,end:p.end}); }).join(' · ');
-      html+='<p class="d-source-line">Autres dates : '+escapeHtml(upcoming)+(detail.dates.periodCount>13||detail.dates.periodsTruncated?' · …':'')+'</p>';
+    var detailDates=detail.dates || {};
+    var future=eventFuturePeriods(detailDates, localTodayIso());
+    var next=future[0];
+    if(!future.length){
+      html+='<p class="d-source-line"><strong>Événement terminé</strong> · aucune occurrence à venir.</p>';
+    } else {
+      var ongoing=next.start<=localTodayIso() && next.end>=localTodayIso();
+      var nextLabel=ongoing ? 'En cours · jusqu’au '+eventDateLabel(next.end) : 'Prochaine date : '+eventRange(next);
+      html+='<p class="d-source-line"><strong>'+escapeHtml(nextLabel)+'</strong>'+(detailDates.startTime?' · '+escapeHtml(detailDates.startTime)+(detailDates.endTime?'–'+escapeHtml(detailDates.endTime):''):' · horaire non précisé par la source')+'</p>';
+      if(future.length>1){
+        var continuous=future.some(function(p){ return p.start!==p.end; });
+        var upcoming=future.slice(0,13).map(function(p){ return eventRange(p); }).join(' · ');
+        html+='<div class="d-section"><h3>'+(continuous?'Dates et périodes à venir':'Séances à venir')+'</h3><p class="d-source-line">'+escapeHtml(upcoming)+(future.length>13?' · …':'')+'</p><p class="d-source-line">'+(continuous?'Une période continue est distincte de séances ponctuelles.':'Chaque date correspond à une séance ponctuelle.')+'</p></div>';
+      }
     }
     if(detail.address || detail.commune) html+='<p class="d-source-line">'+escapeHtml([detail.address,detail.cp,detail.commune].filter(Boolean).join(', '))+'</p>';
     html+=mediaGalleryHtml(detail.media, detail.name, CATEGORY_TEMPLATE[detail.categories?.[0]?.name] || 'general');
@@ -2657,7 +2897,8 @@
       if(has){ html+='<div class="d-section d-practical"><h3>Contact</h3><ul class="d-contacts">'; (c.phones||[]).forEach(function(p){html+='<li><span>Téléphone</span><a href="tel:'+escapeAttr(p)+'">'+escapeHtml(p)+'</a></li>';}); (c.emails||[]).forEach(function(m){html+='<li><span>E-mail</span><a href="mailto:'+escapeAttr(m)+'">'+escapeHtml(m)+'</a></li>';}); (c.websites||[]).forEach(function(u){var safe=safeExternalUrl(u); if(safe) html+='<li><span>Site</span><a href="'+escapeAttr(safe)+'" target="_blank" rel="noopener noreferrer">'+escapeHtml(u)+'</a></li>';}); html+='</ul></div>'; }
     }
     if(detail.booking && safeExternalUrl(detail.booking.url)) html+='<p><a class="d-link" href="'+escapeAttr(safeExternalUrl(detail.booking.url))+'" target="_blank" rel="noopener noreferrer">Site ou réservation externe<span class="sr-only"> (nouvelle fenêtre)</span></a></p>';
-    if(detail.accessibility && detail.accessibility.declared && detail.accessibility.declared.length) html+='<div class="d-section"><h3>Accessibilité déclarée</h3><div class="d-badges">'+detail.accessibility.declared.map(function(x){return '<span class="d-badge">'+escapeHtml(x)+'</span>';}).join('')+'</div><p class="d-source-line">Déclaration de la source, non vérifiée par HILIA. Une information absente ne signifie ni accessible ni inaccessible.</p></div>';
+    if(detail.accessibility && detail.accessibility.declared && detail.accessibility.declared.length){ html+='<div class="d-section"><h3>Accessibilité déclarée</h3><div class="d-badges">'+detail.accessibility.declared.map(function(x){return '<span class="d-badge">'+escapeHtml(x)+'</span>';}).join('')+'</div><p class="d-source-line">Déclaration de la source, non vérifiée par HILIA. Une information absente ne signifie ni accessible ni inaccessible.</p></div>'; }
+    else { html+='<div class="d-section"><h3>Accessibilité</h3><p class="d-source-line">Non renseignée par la source. Cela ne signifie ni accessible ni inaccessible.</p></div>'; }
     if(detail.hours && detail.hours.length) html+='<div class="d-section d-practical"><h3>Horaires</h3><ul class="d-hours">'+detail.hours.map(function(h){return '<li>'+(h.text?escapeHtml(h.text):escapeHtml((h.days||[]).join(', ')||'Horaires')+(h.opens?' : '+escapeHtml([h.opens,h.closes].filter(Boolean).join('–')):''))+'</li>';}).join('')+'</ul></div>';
     html+='<p class="d-source-line">Source : '+escapeHtml(detail.source?.label||detail.source?.source||'non précisée')+' · '+escapeHtml(detail.licence||'licence non précisée')+'</p>';
     return html;
@@ -2689,8 +2930,18 @@
   function initAgenda(){
     if(!agendaBound){
       agendaBound=true;
-      ['agendaSearch','agendaFamily','agendaFrom','agendaTo','agendaFree'].forEach(function(id){
-        var el=document.getElementById(id); if(el) el.addEventListener(id==='agendaSearch'?'input':'change',function(){ agendaLimit=40; renderAgenda(); });
+      ['agendaWhere','agendaWhat','agendaFamily','agendaFrom','agendaTo','agendaAccess','agendaFree'].forEach(function(id){
+        var el=document.getElementById(id);
+        if(el) el.addEventListener(id==='agendaWhere'||id==='agendaWhat'?'input':'change',function(){ agendaLimit=40; renderAgenda(); });
+      });
+      document.querySelectorAll('[data-agenda-range]').forEach(function(btn){
+        btn.addEventListener('click',function(){
+          var range=agendaQuickRange(btn.getAttribute('data-agenda-range'));
+          var from=document.getElementById('agendaFrom'), to=document.getElementById('agendaTo');
+          if(from) from.value=range.from;
+          if(to) to.value=range.to;
+          agendaLimit=40; renderAgenda();
+        });
       });
       var more=document.getElementById('agendaMore'); if(more) more.addEventListener('click',function(){ agendaLimit+=40; renderAgenda(); });
     }

@@ -17,10 +17,12 @@ Le paquet contient **239 445 enregistrements** :
 | Catégories | 130 |
 | Manifeste | 1 |
 
-Les **54 350** identifiants HILIA existants ont tous été retrouvés dans le
+Les **54 349** identifiants HILIA encore publiés ont tous été retrouvés dans le
 snapshot `data/places.json` : aucun ID n'est renuméroté. Les 110 écarts de nom
 observés sont des espaces multiples ou des caractères invisibles nettoyés à
-l'affichage, pas des changements d'identité.
+l'affichage, pas des changements d'identité. La fiche `29088` a été retirée
+après contrôle qualité (voir ci-dessous), d'où l'écart avec les 54 350 fiches
+initialement mesurées.
 
 Le fichier n'est pas un NDJSON strict : des descriptions contiennent des retours
 à la ligne bruts. `scripts/import/lib/read-jsonl.mjs` recolle ces fragments en
@@ -55,14 +57,36 @@ autre erreur de syntaxe arrête l'import.
 
 Une information absente reste `null`. Elle n'est jamais transformée en
 « accessible » ou « inaccessible ». Les observations HILIA et Acceslibre
-contradictoires sont conservées séparément.
+contradictoires sont conservées séparément. Le nombre de marches est conservé
+comme valeur numérique, y compris `0`.
+
+### Retrait qualité et file de revue
+
+La fiche `29088` (« Direction départementale des finances publiques (DDFIP) -
+Moselle ») a été contrôlée le 16 novembre 2026 : catégorie source `Casino`,
+activité `Casino`, lien `contact_url` vers `cnil.fe` et sources
+`hilia:29088` / `acceslibre:93cb7b86-273d-4ce1-9746-1d9f3ff2845d`. Ces champs
+ne décrivent pas un lieu de loisirs fiable. Le retrait est réversible et tracé
+dans `data/place-exclusions.json` ; `lib/place-exclusions.js` le lit à la
+construction du catalogue et `lib/place.js` renvoie `null` pour l'ID, donc
+l'API et la page de fiche répondent `404`. Le build et le push marquent aussi
+la fiche `quality_review`, `auto_publishable=false` et `review_level=manual`
+si elle revient dans une source : un nouvel import ne peut pas la republier
+automatiquement. Les sources et l'historique restent dans les données
+brutes ; aucune autre fiche n'a été retirée sur simple correspondance de nom.
+
+Les candidats qui ne satisfont pas les règles de publication restent en
+staging. Ils ne sont ni fusionnés avec un événement, ni publiés pour atteindre
+un volume cible. Le dernier build recense **112 381 nouveaux lieux**, **8 803
+activités** et **5 501 itinéraires** en attente d'import/revue ; ils ne font
+pas partie des 54 349 lieux publics.
 
 ## 2. Fichiers produits
 
 | Fichier | Rôle |
 | --- | --- |
 | `data/place-details/NNN.json` | 256 shards de détails pour les fiches existantes, chargés à la demande. |
-| `data/events.json` | Index compact de l'agenda (19 024 événements à occurrence datée et durée plausible). |
+| `data/events.json` | Index compact de l'agenda (17 707 événements à occurrence datée et durée plausible, après retrait des occurrences terminées au 16 novembre 2026). |
 | `data/event-details/NNN.json` | 128 shards de détails d'événements, chargés au clic. |
 | `lib/media-hosts.js` | Allowlist générée des 22 domaines d'images affichés. |
 | `data/import-preview/audit-source.json` | Audit complet, compteurs et chemins de champs. |
@@ -209,6 +233,30 @@ Deux exécutions identiques doivent laisser les mêmes compteurs : l'upsert est
 clé sur `id` et `(source, source_id)`. Les fichiers statiques peuvent être
 régénérés sans double emploi. Une décision humaine `approved` ou `rejected`
 n’est pas annulée par un réimport : le statut de revue est conservé.
+
+### 4.6 État vérifié au 16 novembre 2026
+
+- Le site public statique fonctionne avec **54 349** fiches et **17 707**
+  événements à venir. Ces contenus sont générés dans le dépôt et publiés par
+  le déploiement Vercel ; ils ne dépendent pas de la lecture Supabase.
+- `hilia_places` et `hilia_place_details` répondent encore `401` avec
+  `42501 permission denied for function hilia_is_admin`. La migration
+  `20261116_hilia_restore_public_read.sql` n'a pas été appliquée : aucune clé
+  `SUPABASE_SERVICE_ROLE_KEY` ni `SUPABASE_ACCESS_TOKEN` n'est disponible dans
+  l'environnement de développement.
+- `hilia_user_roles` est vide ; aucun compte administrateur applicatif n'a été
+  confirmé. Les tests de connexion, avis, suggestions et modération n'ont donc
+  pas pu être exécutés réellement.
+- Aucune ligne des **112 381** nouveaux lieux, **8 803** activités et **5 501**
+  itinéraires n'a été importée ou publiée. Le staging est construit, mais
+  l'écriture Supabase exige la clé service_role ci-dessus.
+
+La commande exacte à exécuter, une fois la clé disponible, est celle de la
+section 4.3 (`npm run import:push -- ... --execute`). Pour appliquer seulement
+le correctif de lecture publique, ouvrir le SQL Editor du projet Supabase et
+coller tout le fichier
+`supabase/migrations/20261116_hilia_restore_public_read.sql`, puis vérifier
+avec les requêtes de la section 4.4.
 
 ### 4.5 Politique de publication et revue par lots
 

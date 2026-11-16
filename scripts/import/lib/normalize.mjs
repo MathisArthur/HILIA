@@ -586,5 +586,8 @@ export function eventIndexEntry(detail) {
     ...(detail.media?.[0] ? { thumb: detail.media[0].url, thumbCredit: detail.media[0].credit } : {}),
     ...(detail.source ? { source: detail.source.label } : {}),
     ...(detail.licence ? { licence: detail.licence } : {}),
+    // « unknown » est explicite : le filtre et la carte distinguent une absence
+    // d'information d'une accessibilité affirmative.
+    accessibilityStatus: detail.accessibility?.declared?.length ? 'declared' : 'unknown',
   };
 }

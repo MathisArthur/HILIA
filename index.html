@@ -105,7 +105,7 @@
       <div class="stat-strip">
         <div class="stat-chip"><b id="statTotal">-</b><span>lieux référencés</span></div>
         <div class="stat-chip"><b id="statCommunes">-</b><span>communes couvertes</span></div>
-        <div class="stat-chip"><b id="statCats">65</b><span>familles d’activités</span></div>
+        <div class="stat-chip"><b id="statCats">—</b><span>familles d’activités</span></div>
       </div>
       <p class="hero-panel-note">Chaque fiche précise ce qui est renseigné, sans extrapoler.</p>
     </aside>
@@ -127,11 +127,12 @@
   <div class="results-count"><b id="resultCount">0</b> <span id="resultCountLabel">lieux trouvés</span></div>
 </div>
 <details class="results-method">
-  <summary><span><strong>Couverture déclarée, pas accessibilité complète.</strong> 10/10 = au moins un critère déclaré dans chaque dimension. <span class="rm-toggle">Voir la méthode</span></span></summary>
+  <summary><span><strong>Complétude des informations, pas une note d’accessibilité.</strong> Le tri privilégie les fiches les mieux renseignées, jamais les lieux les plus accessibles. <span class="rm-toggle">Voir la méthode</span></span></summary>
   <div class="rm-body">
-    <p><strong>Calcul de l’indice :</strong> entrée accessible 3 points, cheminement 2, sanitaires adaptés 2, stationnement 1, accueil 1, confort sensoriel 1. Une dimension compte dès qu’au moins un de ses critères est déclaré accessible.</p>
-    <p><strong>Départage :</strong> à indice égal, le nombre total de critères déclarés accessibles, puis les critères essentiels d’entrée, de cheminement, de sanitaires, de stationnement et d’accueil, le label officiel (Tourisme &amp; Handicap, Handiplage, Mobalib, Destination pour tous) et le nombre de familles de handicap couvertes. Le nom ne sert qu’en dernier recours.</p>
-    <p>Données déclaratives, non vérifiées sur place : un critère non renseigné n’est jamais supposé accessible.</p>
+    <p><strong>Complétude :</strong> six dimensions sont examinées (entrée, cheminement, stationnement, accueil, sanitaires, confort). Une dimension compte dès qu’une information vraie ou fausse est déclarée. Le résultat est affiché en clair : « Non renseignée », « Partielle », « Bien renseignée » ou « Très complète ».</p>
+    <p><strong>Conditions d’accès :</strong> les badges Oui / Non viennent des sources et restent séparés de la complétude. Une fiche bien remplie peut signaler une entrée avec marches ou l’absence de rampe ; elle n’est donc pas présentée comme accessible à tous.</p>
+    <p><strong>Départage :</strong> à complétude égale, les critères positifs déclarés, les critères essentiels, le label officiel (Tourisme &amp; Handicap, Handiplage, Mobalib, Destination pour tous), les familles de handicap, puis le nom.</p>
+    <p>Données déclaratives, non vérifiées sur place : une information absente n’est ni « oui » ni « non ».</p>
   </div>
 </details>
 
@@ -144,6 +145,7 @@
   <div class="map-card">
     <div class="map-canvas-wrap" id="mapCanvasWrap">
       <div id="leafletMap" role="region" aria-label="Carte interactive des lieux" aria-describedby="mapHint mapAltText"></div>
+      <div class="map-empty" id="mapEmpty" hidden></div>
       <p class="sr-only" id="mapAltText">Carte interactive à la souris et au clavier. Tous les lieux affichés sur la carte sont aussi disponibles sous forme de liste, dans l’onglet Liste, plus simple à parcourir avec un lecteur d’écran.</p>
       <div class="map-hint" id="mapHint">Carte HILIA · molette ou boutons +/− : zoom · glisser ou flèches du clavier : déplacer · Tab puis Entrée sur un point : détails</div>
       <div class="map-brandmark"><img alt="" src="/logo-hilia.png" width="38" height="36"><span>Rendre le loisir accessible à tous</span></div>
@@ -162,13 +164,22 @@
   <div class="page-hero"><h1>Agenda des sorties</h1><p>Concerts, expositions, visites, ateliers et fêtes : les événements dont les dates sont explicites. L’accessibilité affichée est déclarative et n’est pas garantie par HILIA. Les événements dont le calendrier reste à vérifier ne sont pas publiés.</p></div>
   <div class="page-card agenda-toolbar">
     <div class="agenda-filters">
-      <div class="field"><label for="agendaSearch">Rechercher</label><input id="agendaSearch" type="search" autocomplete="off" placeholder="Un événement, une ville…"></div>
+      <div class="field"><label for="agendaWhere">Où ?</label><input id="agendaWhere" type="search" autocomplete="off" placeholder="Ville, code postal ou zone"></div>
+      <div class="field"><label for="agendaWhat">Quoi ?</label><input id="agendaWhat" type="search" autocomplete="off" placeholder="Nom, activité ou mot-clé"></div>
       <div class="field"><label for="agendaFamily">Famille</label><select id="agendaFamily"><option value="">Toutes les familles</option></select></div>
       <div class="field"><label for="agendaFrom">À partir du</label><input id="agendaFrom" type="date"></div>
       <div class="field"><label for="agendaTo">Jusqu’au</label><input id="agendaTo" type="date"></div>
+      <div class="field"><label for="agendaAccess">Accessibilité</label><select id="agendaAccess"><option value="">Toutes les informations</option><option value="declared">Accessibilité déclarée</option><option value="unknown">Accessibilité non renseignée</option></select></div>
       <label class="agenda-free"><input id="agendaFree" type="checkbox"> Gratuit uniquement</label>
     </div>
-    <p class="agenda-note">Sources : DATAtourisme et Que faire à Paris. Les prix, l’accessibilité et les réservations sont ceux déclarés par la source ; vérifiez auprès de l’organisateur.</p>
+    <div class="agenda-quick" role="group" aria-label="Période rapide">
+      <button type="button" class="agenda-quick-btn" data-agenda-range="all">Toutes les dates à venir</button>
+      <button type="button" class="agenda-quick-btn" data-agenda-range="today">Aujourd’hui</button>
+      <button type="button" class="agenda-quick-btn" data-agenda-range="weekend">Ce week-end</button>
+      <button type="button" class="agenda-quick-btn" data-agenda-range="week">7 prochains jours</button>
+    </div>
+    <p class="agenda-note"><strong>Recherche de l’agenda</strong> : « Où ? » limite à une ville, un code postal ou une zone, tandis que « Quoi ? » cherche dans le nom, la famille et les activités. La recherche de l’en-tête, elle, retrouve des lieux dans tout le catalogue.</p>
+    <p class="agenda-note">Sources : DATAtourisme et Que faire à Paris. Les prix, l’accessibilité et les réservations sont ceux déclarés par la source ; vérifiez auprès de l’organisateur. Données actualisées : <span id="agendaFreshness">chargement…</span>.</p>
   </div>
   <div class="agenda-summary"><b id="agendaCount">0</b> <span id="agendaCountLabel">événement à venir</span></div>
   <p id="agendaStatus" class="agenda-status" role="status" aria-live="polite">Chargement de l’agenda…</p>
@@ -532,12 +543,12 @@
   <div class="fgroup">
     <label class="flabel" for="sortSelect">Trier les résultats par</label>
     <select id="sortSelect">
-      <option value="access" selected>Accessibilité (meilleure d'abord)</option>
+      <option value="access" selected>Informations les plus complètes</option>
       <option value="rating">Note des avis (meilleures d'abord)</option>
       <option value="commune">Commune (A → Z)</option>
       <option value="name">Nom (A → Z)</option>
     </select>
-    <p class="filter-hint">Le classement s’appuie sur un indice de couverture déclarée : entrée, cheminement, sanitaires, stationnement, accueil et confort sensoriel. Il ne garantit pas une accessibilité complète.</p>
+    <p class="filter-hint">Le classement privilégie les fiches dont les six dimensions sont le mieux renseignées. Il ne mesure pas l’accessibilité réelle : consultez les critères Oui / Non de chaque fiche.</p>
   </div>
   <div id="filterGroups"></div>
   <button class="apply-btn" id="applyBtn" type="button">Voir les résultats</button>
