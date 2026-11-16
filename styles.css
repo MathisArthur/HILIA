@@ -698,6 +698,8 @@ select{width:100%;min-height:44px;padding:10px;border:1.5px solid var(--input-bo
 .filter-search::placeholder{color:var(--muted);}
 .filter-search:focus-visible{outline:2px solid var(--ring);outline-offset:1px;}
 .filter-list{display:flex;flex-direction:column;gap:2px;max-height:250px;padding-right:2px;overflow-y:auto;overscroll-behavior:contain;}
+.filter-family{display:flex;flex-direction:column;gap:2px;margin-top:6px;}
+.filter-family-title{margin:6px 10px 2px;color:var(--muted);font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;}
 .filter-option{display:flex;align-items:center;gap:8px;min-height:40px;padding:8px 10px;border-radius:10px;font-size:.93rem;cursor:pointer;}
 .filter-option:hover{background:var(--surface);}
 .filter-option:has(input:checked){background:var(--surface);color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--green-700);}

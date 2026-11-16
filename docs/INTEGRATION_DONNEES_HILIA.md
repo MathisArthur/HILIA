@@ -81,6 +81,16 @@ un volume cible. Le dernier build recense **112 381 nouveaux lieux**, **8 803
 activités** et **5 501 itinéraires** en attente d'import/revue ; ils ne font
 pas partie des 54 349 lieux publics.
 
+Le catalogue public conserve **66 catégories d'activités** détaillées, sans
+plafond codé. Pour l'affichage uniquement, le sélecteur les regroupe en six
+familles : Sport & mouvement, Culture & patrimoine, Plein air & nature,
+Loisirs & détente, Tourisme & découverte et Lieux de réception. Cette
+regroupement ne fusionne aucun identifiant et ne crée aucune catégorie
+supplémentaire ; les compteurs restent calculés sur les fiches publiées.
+`scripts/build-dataset.mjs` normalise les libellés mal décodés avant de
+calculer les index, afin qu'un synonyme d'encodage ne crée pas une catégorie
+fantôme.
+
 ## 2. Fichiers produits
 
 | Fichier | Rôle |

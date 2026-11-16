@@ -501,6 +501,19 @@
   // L'activité ne se choisit plus au-dessus de la liste : elle est filtrée dans
   // le panneau « Filtres & tri », comme la ville et les autres critères.
   var order = ACTIVITES.map(function(n,idx){ return idx; }).sort(function(a,b){ return actCounts[b]-actCounts[a]; });
+  // Les 66 entrées du catalogue sont des catégories détaillées ; ces familles
+  // servent uniquement à les regrouper dans le sélecteur, sans masquer les
+  // catégories ni modifier les identifiants stockés dans les fiches.
+  var ACTIVITY_FAMILY_ORDER = ['Sport & mouvement','Culture & patrimoine','Plein air & nature','Loisirs & détente','Tourisme & découverte','Lieux de réception'];
+  var ACTIVITY_FAMILY = {
+    'sports et loisirs':'Sport & mouvement','salle de remise en forme':'Sport & mouvement','salle multisports':'Sport & mouvement','gymnase':'Sport & mouvement','stade':'Sport & mouvement','complexe sportif':'Sport & mouvement','salle de combat':'Sport & mouvement','club de sport':'Sport & mouvement','centre equestre':'Sport & mouvement','equipement sportif':'Sport & mouvement','tennis':'Sport & mouvement','circuit sportif deux roues voiture':'Sport & mouvement','cyclisme':'Sport & mouvement','patinoire':'Sport & mouvement','boulodrome':'Sport & mouvement','plateaux et terrains de jeux exterieurs':'Sport & mouvement','athletisme':'Sport & mouvement','arene':'Sport & mouvement','skatepark':'Sport & mouvement','ecole de ski et snowboard':'Sport & mouvement','piscine centre aquatique':'Sport & mouvement',
+    'cinema':'Culture & patrimoine','centre culturel':'Culture & patrimoine','bibliotheque mediatheque':'Culture & patrimoine','conservatoire et ecole de musique':'Culture & patrimoine','theatre':'Culture & patrimoine','musee':'Culture & patrimoine','salle de spectacle':'Culture & patrimoine','art centre d art':'Culture & patrimoine','monument historique':'Culture & patrimoine','evenement culturel':'Culture & patrimoine','auditorium et salle de conference':'Culture & patrimoine','salle de concert':'Culture & patrimoine','galerie d art':'Culture & patrimoine','musique':'Culture & patrimoine','chateau':'Culture & patrimoine','opera':'Culture & patrimoine','observatoire astronomie':'Culture & patrimoine','salle de danse':'Culture & patrimoine','ecole de danse':'Culture & patrimoine',
+    'accrobranche':'Plein air & nature','plage zone de baignade':'Plein air & nature','randonnees pedestres ou velos':'Plein air & nature','parc':'Plein air & nature','espace vert et naturel':'Plein air & nature','jardin botanique et ou zoologique':'Plein air & nature','refuge animalier':'Plein air & nature',
+    'bowling':'Loisirs & détente','salle de jeux':'Loisirs & détente','loisirs creatifs':'Loisirs & détente','parc d attraction':'Loisirs & détente','casino':'Loisirs & détente','centre de loisirs':'Loisirs & détente','discotheque':'Loisirs & détente','jeux video':'Loisirs & détente','karaoke':'Loisirs & détente','escape game':'Loisirs & détente',
+    'office de tourisme':'Tourisme & découverte','lieu de visite':'Tourisme & découverte','information touristique':'Tourisme & découverte','centre de vacances':'Tourisme & découverte','village de vacances':'Tourisme & découverte','oenotourisme':'Tourisme & découverte','aquarium':'Tourisme & découverte',
+    'salle des fetes':'Lieux de réception','parc des expositions':'Lieux de réception'
+  };
+  function activityFamily(name){ return ACTIVITY_FAMILY[normalize(canonicalActivityName(name)).replace(/[^a-z0-9]+/g,' ').trim()] || 'Autres activités'; }
 
   // ---------- État des filtres ----------
   // Déclaré avant la construction du panneau « Filtres & tri » : les listes
@@ -689,17 +702,28 @@
     return {group:group, search:search, list:list, hint:hint, name:name};
   }
 
-  var actFilter = buildSearchGroup('Activité', 'actFilter', 'Rechercher une activité…', 'Filtrer par activité');
+  var actFilter = buildSearchGroup('Catégorie d’activité', 'actFilter', 'Rechercher une catégorie…', 'Filtrer par catégorie d’activité');
   var cityFilter = buildSearchGroup('Ville', 'cityFilter', 'Rechercher une ville…', 'Filtrer par ville');
 
   function renderActivityOptions(){
     var q = normalize(actFilter.search.value);
-    var html = optionHtml('actFilter','','Toutes les activités',null,state.activity==='');
-    var shown = 0;
+    var groups = {}, shown = 0;
     order.forEach(function(idx){
       if(q && normalize(ACTIVITES[idx]).indexOf(q) === -1) return;
-      html += optionHtml('actFilter', idx, ACTIVITES[idx], actCounts[idx], String(state.activity)===String(idx));
+      var family=activityFamily(ACTIVITES[idx]);
+      (groups[family]=groups[family]||[]).push(idx);
       shown++;
+    });
+    var html = optionHtml('actFilter','','Toutes les activités',null,state.activity==='');
+    var families=ACTIVITY_FAMILY_ORDER.concat(Object.keys(groups).filter(function(f){ return ACTIVITY_FAMILY_ORDER.indexOf(f)===-1; }));
+    families.forEach(function(family){
+      var list=groups[family];
+      if(!list || !list.length) return;
+      html += '<div class="filter-family" role="group" aria-label="'+escapeAttr(family)+'"><p class="filter-family-title">'+escapeHtml(family)+'</p>';
+      list.forEach(function(idx){
+        html += optionHtml('actFilter', idx, ACTIVITES[idx], actCounts[idx], String(state.activity)===String(idx));
+      });
+      html += '</div>';
     });
     actFilter.list.innerHTML = html;
     actFilter.hint.hidden = shown > 0;
