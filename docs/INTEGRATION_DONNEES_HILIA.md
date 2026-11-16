@@ -106,6 +106,8 @@ fantôme.
 | `supabase/migrations/20261114_hilia_review.sql` | Revue par lots, historique des détails et rollback exact. |
 | `supabase/migrations/20261116_hilia_restore_public_read.sql` | Restaure l'exécution de `hilia_is_admin()` nécessaire aux politiques RLS publiques. |
 | `supabase/migrations/20261117_hilia_review_fixes.sql` | Correctif idempotent : catégories, site/coordonnées, transfert d’enrichissement, publication réelle et cast du rollback. |
+| `supabase/migrations/20261118_hilia_least_privilege.sql` | Réduction des privilèges de `anon` et `authenticated` ; lectures publiques et écritures RLS explicitement accordées. |
+| `supabase/migrations/20261119_hilia_rollback_exact_timestamp.sql` | Restaure exactement `import_applied_at`, y compris `NULL`, lors du rollback. |
 | `scripts/import/lib/publication.mjs` | Politique de publication et motifs de revue. |
 | `scripts/import/*.mjs` | Audit, construction, import Supabase, tests. |
 | `api/media.js`, `lib/media-policy.js` | Proxy d'images à liste blanche, sans SSRF ouverte. |
@@ -166,6 +168,18 @@ pour les détails enrichis. `npm run pages` régénère les pages HTML.
    l’enrichissement et l’état de publication des activités et itinéraires.
    Pour une installation neuve, les fichiers 20261114 et 20261117 sont tous
    deux exécutés ; le second reste la référence corrective.
+7. Exécuter **tout** `supabase/migrations/20261118_hilia_least_privilege.sql`.
+   Cette migration révoque les privilèges trop larges de `anon` et
+   `authenticated`, puis rétablit explicitement les lectures publiques et les
+   écritures autorisées par les politiques RLS. Elle doit être appliquée après
+   `20261117`.
+8. Exécuter enfin **tout** `supabase/migrations/20261119_hilia_rollback_exact_timestamp.sql`.
+   Elle remplace `hilia_import_rollback` pour restaurer `import_applied_at` à
+   l'identique, y compris `NULL`, au lieu de fabriquer un timestamp.
+
+Pour le passage en production, la sauvegarde, l'ordre de déploiement, le petit
+lot et les contrôles post-publication sont détaillés dans
+[`docs/GO_LIVE_HILIA.md`](GO_LIVE_HILIA.md).
 
 La migration crée :
 
@@ -348,21 +362,20 @@ n’est pas annulée par un réimport : le statut de revue est conservé.
   hilia_is_admin`) avant la correction. La migration
   `20261116_hilia_restore_public_read.sql` reste le correctif versionné à
   appliquer sur tout nouvel environnement.
-- Aucune clé `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN` ou
-  `DATABASE_URL` n'est disponible dans l'environnement de développement, donc
-  aucun import ni rollback n'a pu être exécuté sur le projet Supabase réel
-  depuis cette machine. Les migrations, l’approbation et le rollback ont en
-  revanche été exécutés sur un PostgreSQL 18.6 local temporaire (voir section
-  7), sans projet Supabase ni clé.
-- `hilia_user_roles` n'a pas pu être auditée avec la clé service_role ; aucun
-  compte administrateur applicatif n'a été confirmé. Les tests de connexion,
-  avis, suggestions et modération n'ont donc pas pu être exécutés réellement.
+- Le projet `hilia-test` dispose de ses propres variables locales ignorées par
+  Git ; il a reçu les six migrations, un import de validation, une approbation
+  et un rollback. La production n'a reçu **aucune écriture** d'import.
+- Le test `hilia-test` a approuvé **Le Puits salé** (sans média) puis
+  **Ecozonia** (quatre photos) ; la fiche, la recherche anonyme, `/api/media`
+  et les crédits ont été vérifiés dans un navigateur sans session.
 - Aucune ligne des **112 381** nouveaux lieux, **8 803** activités et **5 501**
-  itinéraires n'a été importée ou publiée. Le staging est construit, mais
-  l'écriture Supabase exige la clé service_role ci-dessus.
+  itinéraires n'a été importée ou publiée en production. Le staging est
+  construit et testé, mais l'import massif reste volontairement non lancé.
 
-La commande exacte à exécuter, une fois la clé disponible, est celle de la
-section 4.3 (`npm run import:push -- ... --execute`). Pour appliquer seulement
+Les migrations `20261117`, `20261118` et `20261119` restent à appliquer en
+production. La commande exacte est celle de la section 4.3
+(`npm run import:push -- ... --execute`), après sauvegarde et contrôles du
+runbook [`docs/GO_LIVE_HILIA.md`](GO_LIVE_HILIA.md). Pour appliquer seulement
 le correctif de lecture publique, ouvrir le SQL Editor du projet Supabase et
 coller tout le fichier
 `supabase/migrations/20261116_hilia_restore_public_read.sql`, puis vérifier
@@ -477,13 +490,14 @@ npm install --no-save --package-lock=false embedded-postgres
 node scripts/import/test/postgres-review.mjs
 ```
 
-Ce test applique 20261113, 20261114, 20261116 et 20261117 (puis rejoue la
-dernière pour vérifier son idempotence), approuve deux nouveaux lieux, vérifie
-la catégorie chaîne, le site, les coordonnées, le transfert du détail, la
-partition de licences, l’accessibilité inconnue, les surfaces
-`hilia_places` / `staging_only`, `p_ids = NULL`, puis le rollback. Limite
-explicite : ce test utilise un `hilia_places` minimal, pas le schéma Supabase
-de production complet.
+Ce test applique 20261113, 20261114, 20261116, 20261117, 20261118 et
+20261119 (puis rejoue la dernière pour vérifier son idempotence), approuve deux
+nouveaux lieux, vérifie la catégorie chaîne, le site, les coordonnées, le
+transfert du détail, la partition de licences, l’accessibilité inconnue, les
+surfaces `hilia_places` / `staging_only`, `p_ids = NULL`, puis le rollback et
+la conservation exacte de `import_applied_at` (`NULL` et timestamp non nul).
+Limite explicite : ce test utilise un `hilia_places` minimal et des tables
+historiques stub, pas le schéma Supabase de production complet.
 ```
 
 La simulation et la génération ont été exécutées sur le fichier réel. Résultat :
@@ -492,29 +506,32 @@ publiés, 33 153 événements en revue de dates exclus, 1 535 périodes trop
 longues et 2 dates aberrantes écartées, 112 381 nouveaux lieux, 8 803 activités
 et 5 501 itinéraires laissés en staging.
 
-## 8. Ce qui reste à vérifier
+## 8. État de préparation et ce qui reste
 
-- Exécuter les quatre migrations et l'import sur le projet Supabase réel : aucune
-  clé service_role n'était disponible dans cette session, donc **aucune mutation
-  de production n'a été faite**. Le test push/reprise/rollback a utilisé un faux
-  PostgREST local, et le test SQL un PostgreSQL temporaire, pas le projet réel.
-- Appliquer `20261117_hilia_review_fixes.sql` sur le projet Supabase existant
-  avant tout nouvel import : la correction du cast uuid du rollback et le
-  transfert d’enrichissement ne sont pas encore actifs en production.
+- Le projet `hilia-test` a reçu un import de validation, une approbation et une
+  fiche avec photos ; la production n'a reçu **aucune écriture** d'import.
+- Le test `hilia-test` a validé Le Puits salé (sans média) et Ecozonia (quatre
+  photos autorisées) : recherche, fiche anonyme, `/api/media` et crédits. Le
+  catalogue et les sitemaps de production ont ensuite été restaurés depuis
+  `.tools/catalog-before/`.
+- Les migrations `20261117`, `20261118` et `20261119` sont encore absentes de
+  la production : les appliquer avant tout import, dans cet ordre. Le runbook
+  [`docs/GO_LIVE_HILIA.md`](GO_LIVE_HILIA.md) contient les contrôles et l'ordre
+  de déploiement.
 - Le repli de `app.js` qui lit le détail d’un nouveau lieu `place_imp_…` dans
-  Supabase n’a pas été exercé dans un navigateur : aucun compte de test ni
-  projet Supabase accessible n’était disponible. Le test PostgreSQL couvre la
-  donnée publique, pas la requête RLS du navigateur.
-- Tester les parcours authentifiés (avis, suggestions, administration) avec un
-  compte de test : aucun compte de test n'était disponible.
+  Supabase a été exercé dans un navigateur sur `hilia-test`.
+- Les parcours authentifiés avancés (avis, suggestions, interface
+  d’administration) n’ont pas tous été parcourus dans l’interface ; la décision
+  d’approbation a été vérifiée via la RPC avec un contexte administrateur de
+  test.
 - Vérifier les politiques RLS et le type de `hilia_places.id` sur la base réelle.
 - Contrôler les 4 069 rapprochements incertains avant toute publication de
   nouveaux lieux.
 - Faire relire les 19 024 événements publiés dans l'agenda (dates, gratuité,
   réservation) ; les 33 153 événements `review_dates`, les 1 535 périodes trop
   longues et les 2 dates aberrantes attendent une vérification.
-- Tester la disponibilité et le rendu des URLs d'images ; le proxy les charge à
-  la demande et n'a pas été exercé sur les 149 637 URLs.
+- Tester la disponibilité et le rendu des URLs d'images ; quatre URLs ont été
+  exercées, le proxy n'a pas été exercé sur les 149 637 URLs du paquet.
 - Vérifier les obligations ODbL pour les événements Paris avant toute
   réutilisation de la base dérivée.
 - Vérifier les coordonnées, horaires et tarifs auprès des producteurs : ce sont

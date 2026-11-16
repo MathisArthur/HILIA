@@ -181,7 +181,9 @@ et le type de l'objet en conflit.
 
 Le dump de production peut déjà contenir tout ou partie de `20261113`,
 `20261114` et `20261116`. `20261117` peut aussi avoir été appliquée. Vérifier
-les objets réels avant de choisir les fichiers à exécuter :
+les objets réels avant de choisir les fichiers à exécuter ; les migrations
+`20261118` (moindre privilège) et `20261119` (timestamp exact du rollback)
+complètent la séquence :
 
 ```bash
 psql "$HILIA_TEST_DB_URL" -Atc \
@@ -198,8 +200,8 @@ Décision :
 
 - `hilia_import_runs`, `hilia_import_records` et `hilia_place_details`
   absentes ensemble : le dump ne contient pas l'infrastructure d'import.
-  Appliquer `20261113`, puis `20261114`, `20261116` et `20261117`, après avoir
-  vérifié qu'aucune table existante ne porte ces noms.
+  Appliquer `20261113`, puis `20261114`, `20261116`, `20261117`, `20261118` et
+  `20261119`, après avoir vérifié qu'aucune table existante ne porte ces noms.
 - Seule une partie de ces tables existe : ne pas improviser. Comparer les
   colonnes et les dépendances, puis s'arrêter avant toute migration.
 - `hilia_place_details` existe mais sans `is_public` ou `import_run_id` :
@@ -208,11 +210,16 @@ Décision :
   toute écriture.
 - Tables présentes mais colonnes `auto_publishable`, `review_level` ou
   `published_place_id` absentes : `20261114` n'est pas incluse. Appliquer
-  `20261114`, puis `20261116` et `20261117`.
+  `20261114`, puis `20261116`, `20261117`, `20261118` et `20261119`.
 - Colonnes `approval`, `publication_surface` ou `published_at` absentes, ou
-  fonction `hilia_json_number` absente : appliquer `20261117` seule.
+  fonction `hilia_json_number` absente : appliquer `20261117`, puis `20261118`
+  et `20261119`.
 - `has_function_privilege('anon', …)` vaut `false` : appliquer `20261116`
-  seule, sans réappliquer les autres migrations.
+  seule, puis vérifier les ACL avant d'appliquer `20261118`.
+- Droits trop larges encore accordés à `anon`/`authenticated` (par exemple
+  `UPDATE` sur `hilia_places`) : appliquer `20261118` après `20261117`.
+- `hilia_import_rollback` contient encore `import_applied_at = coalesce(...)` :
+  appliquer `20261119` après `20261118`.
 - Tous les objets attendus sont présents : ne rien appliquer et passer à la
   vérification du schéma.
 
