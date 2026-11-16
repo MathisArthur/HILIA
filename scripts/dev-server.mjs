@@ -33,10 +33,25 @@ const TYPES = {
 // paramètres « :slug » doivent être convertis.
 const toRe = (source) => new RegExp('^' + source.replace(/:([a-zA-Z]+)/g, '(?<$1>[^/]+)') + '$');
 
+function localCsp(value) {
+  if (!value || !testSupabaseUrl) return value;
+  try {
+    const origin = new URL(testSupabaseUrl).origin;
+    return value
+      .replace(/https:\/\/[a-z0-9-]+\.supabase\.co/gi, origin)
+      .replace(/wss:\/\/[a-z0-9-]+\.supabase\.co/gi, origin.replace(/^https:/, 'wss:'));
+  } catch {
+    return value;
+  }
+}
+
 function headersFor(pathname) {
   const out = {};
   for (const rule of cfg.headers || []) {
     if (toRe(rule.source).test(pathname)) for (const h of rule.headers) out[h.key] = h.value;
+  }
+  for (const key of Object.keys(out)) {
+    if (key.toLowerCase() === 'content-security-policy') out[key] = localCsp(out[key]);
   }
   return out;
 }
