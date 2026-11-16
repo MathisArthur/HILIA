@@ -20,6 +20,7 @@ import { readHiliaJsonl } from './lib/read-jsonl.mjs';
 import { buildPlaceDetail, buildStagedPlaceDetail, extractContacts, reviewStatusOf } from './lib/normalize.mjs';
 import { assessCandidate } from './lib/publication.mjs';
 import { EXCLUDED_PLACE_IDS } from '../../lib/place-exclusions.js';
+import { supabaseHeaders } from '../../lib/supabase-key.js';
 
 const args = process.argv.slice(2);
 const arg = (name, fallback) => {
@@ -69,8 +70,7 @@ if (!EXECUTE) {
 }
 
 const headers = {
-  apikey: KEY,
-  authorization: `Bearer ${KEY}`,
+  ...supabaseHeaders(KEY),
   'content-type': 'application/json',
 };
 

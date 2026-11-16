@@ -16,6 +16,7 @@
 
 import { readFile, writeFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
+import { supabaseHeaders } from '../lib/supabase-key.js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://lokplzdkvzilsuuqflsk.supabase.co';
 const TEST_REF = String(process.env.HILIA_TEST_PROJECT_REF || '').trim();
@@ -34,7 +35,7 @@ const ROOT = new URL('../', import.meta.url);
 const exclusions = JSON.parse(await readFile(new URL('data/place-exclusions.json', ROOT), 'utf8'));
 const excludedIds = new Set((exclusions.entries || []).map((entry) => String(entry.id)));
 
-const HEADERS = { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` };
+const HEADERS = supabaseHeaders(SUPABASE_KEY);
 
 async function page(select, extraQuery, from) {
   const url = `${SUPABASE_URL}/rest/v1/hilia_places?select=${encodeURIComponent(select)}${extraQuery}&order=id.asc`;
