@@ -1856,7 +1856,7 @@
     var items=payload.items||[], counts=payload.counts||{};
     var html='<div class="admin-review-toolbar"><div class="field"><label for="reviewKind">Type</label><select id="reviewKind"><option value="">Tous</option><option value="place"'+(importReviewState.kind==='place'?' selected':'')+'>Lieux</option><option value="activity"'+(importReviewState.kind==='activity'?' selected':'')+'>Activités</option><option value="route"'+(importReviewState.kind==='route'?' selected':'')+'>Itinéraires</option></select></div><div class="field"><label for="reviewLevel">Niveau</label><select id="reviewLevel"><option value="">Tous</option><option value="batch"'+(importReviewState.level==='batch'?' selected':'')+'>Lot rapide</option><option value="manual"'+(importReviewState.level==='manual'?' selected':'')+'>Revue individuelle</option></select></div><button class="small-btn" type="button" id="reviewReload">Actualiser</button></div>';
     html+='<p class="admin-review-summary"><strong>'+Number(payload.total||0).toLocaleString('fr-FR')+'</strong> candidat(s) · '+(counts.place||0)+' lieu(x) · '+(counts.activity||0)+' activité(s) · '+(counts.route||0)+' itinéraire(s)</p>';
-    html+='<p class="admin-review-note">Les lieux approuvés créent une fiche <code>hilia_places</code> avec accessibilité inconnue. Ils ne sont visibles qu’après <code>npm run data</code>. Les activités et itinéraires approuvés restent préparés dans le staging, sans surface publique active.</p>';
+    html+='<p class="admin-review-note">Les lieux approuvés créent une fiche <code>hilia_places</code> et y transfèrent l’enrichissement préparé ; une accessibilité absente reste explicitement inconnue. Ils ne sont visibles qu’après <code>npm run data</code>. Les activités et itinéraires approuvés restent uniquement validés en staging (<code>publication_surface = staging_only</code>), sans fiche publique.</p>';
     if(!items.length){
       html+='<div class="admin-item"><div class="admin-item-main"><strong>Aucun candidat dans ce filtre</strong><p>La file est vide ou la migration 20261114 n’a pas encore été appliquée.</p></div></div>';
     } else {
@@ -2115,6 +2115,7 @@
   var detailLoadToken = 0;
   var placeDetailCache = Object.create(null);
   var placeDetailPromises = Object.create(null);
+  var placeDetailRemotePromises = Object.create(null);
   function detailBucket(id, count){
     var hash = 2166136261;
     String(id).split('').forEach(function(ch){ hash ^= ch.codePointAt(0); hash = Math.imul(hash, 16777619); });
@@ -2252,6 +2253,19 @@
     }
     return html;
   }
+  function remotePlaceDetail(row){
+    return {
+      description: row.description,
+      descriptionSource: row.description_source,
+      categories: row.categories || [],
+      media: row.media || [],
+      hours: row.hours || [],
+      prices: row.prices,
+      contacts: row.contacts,
+      accessibility: row.accessibility,
+      sourceRefs: row.source_refs || [],
+    };
+  }
   function loadPlaceDetail(id){
     if(!id) return Promise.resolve(null);
     if(placeDetailCache[id]) return Promise.resolve(placeDetailCache[id]);
@@ -2265,7 +2279,26 @@
         })
         .catch(function(){ return false; });
     }
-    return placeDetailPromises[bucket].then(function(){ return placeDetailCache[id] || null; });
+    return placeDetailPromises[bucket].then(function(){
+      if(placeDetailCache[id]) return placeDetailCache[id];
+      // Les nouveaux lieux approuvés n'ont pas de shard statique : leur détail
+      // public est lu directement dans Supabase, sous les politiques RLS.
+      if(!supabaseClient || String(id).indexOf('place_imp_')!==0) return null;
+      if(!placeDetailRemotePromises[id]){
+        placeDetailRemotePromises[id]=supabaseClient.from('hilia_place_details')
+          .select('description,description_source,categories,media,hours,prices,contacts,accessibility,source_refs')
+          .eq('place_id',String(id))
+          .maybeSingle()
+          .then(function(result){
+            if(result.error || !result.data) return null;
+            var detail=remotePlaceDetail(result.data);
+            placeDetailCache[id]=detail;
+            return detail;
+          })
+          .catch(function(){ return null; });
+      }
+      return placeDetailRemotePromises[id];
+    });
   }
   function hydratePlaceDetail(di, row, token){
     var holder=document.getElementById('detailEnrichment');

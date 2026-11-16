@@ -35,6 +35,7 @@ par Vercel au déploiement (rien à lancer localement). Chaîne : **GitHub → V
 | `supabase/migrations/20261113_hilia_import.sql` | Staging, détails, événements, activités, itinéraires et médias. |
 | `supabase/migrations/20261114_hilia_review.sql` | Revue par lots, historique et rollback des fiches enrichies. |
 | `supabase/migrations/20261116_hilia_restore_public_read.sql` | Restaure l'exécution de `hilia_is_admin()` nécessaire aux politiques RLS publiques. |
+| `supabase/migrations/20261117_hilia_review_fixes.sql` | Correctif idempotent de l'approbation, du transfert des détails, des surfaces de publication et du rollback. |
 | `api/media.js` | Proxy d'images à liste blanche, pour ne pas ouvrir la CSP à tous les domaines. |
 | `docs/INTEGRATION_DONNEES_HILIA.md` | Procédure d'import, de migration et limites connues. |
 | `scripts/dev-server.mjs` | Serveur local qui rejoue les en-têtes, les réécritures et les fonctions de `vercel.json`. |
@@ -205,7 +206,7 @@ npm run import:build -- --source <HILIA_DONNEES.jsonl>
 npm run test:import
 ```
 
-Les nouvelles entités restent en staging. Voir `docs/INTEGRATION_DONNEES_HILIA.md` pour les deux migrations Supabase, la politique de revue par lots, le rollback, le proxy d'images et les limites connues.
+Les nouvelles entités restent en staging. Voir `docs/INTEGRATION_DONNEES_HILIA.md` pour les migrations Supabase, la politique de revue par lots, le rollback, le proxy d'images et les limites connues.
 
 ## Ce que fait l'application
 

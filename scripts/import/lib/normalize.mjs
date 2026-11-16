@@ -491,8 +491,7 @@ export function extractAccessibility(record) {
   return accessibilityOf(record);
 }
 
-export function buildPlaceDetail(record, snapshotIds, today = todayIso()) {
-  if (record.kind !== 'place' || !record.existing_hilia_id || (snapshotIds && !snapshotIds.has(String(record.existing_hilia_id)))) return null;
+function buildPlaceDetailFor(record, id, today) {
   const description = descriptionOf(record);
   const categories = categoriesOf(record);
   const media = extractMedia(record, 'place', today);
@@ -501,10 +500,10 @@ export function buildPlaceDetail(record, snapshotIds, today = todayIso()) {
   const contacts = extractContacts(record);
   const accessibility = accessibilityOf(record);
   const descriptionSource = record.description_source ? sourceInfo(record, record.description_source) : null;
-  const hasSomething = description || media.length || hours.length || prices.items.length || contacts.emails.length || contacts.phones.length || contacts.websites.length || categories.length > 1;
+  const hasSomething = description || media.length || hours.length || prices.items.length || contacts.emails.length || contacts.phones.length || contacts.websites.length || categories.length > 1 || accessibility.observations.length || accessibility.sources.length;
   if (!hasSomething) return null;
   return {
-    id: String(record.existing_hilia_id),
+    id: String(id),
     ...(description ? { description } : {}),
     ...(descriptionSource ? { descriptionSource } : {}),
     ...(categories.length ? { categories: categories.map((name) => ({ name, family: familyOf(name) })) } : {}),
@@ -512,9 +511,31 @@ export function buildPlaceDetail(record, snapshotIds, today = todayIso()) {
     ...(hours.length ? { hours } : {}),
     ...(prices.items.length ? { prices } : {}),
     ...((contacts.emails.length || contacts.phones.length || contacts.websites.length) ? { contacts } : {}),
-    ...(accessibility.observations.length || accessibility.sources.length ? { accessibility: { sources: accessibility.sources, observationCount: accessibility.observations.length } } : {}),
+    // Le détail conserve les valeurs et les sources, y compris les observations
+    // contradictoires. `_unknown` est explicite : aucune observation ne doit
+    // devenir une affirmation d'accessibilité.
+    accessibility: {
+      ...(accessibility.sources.length ? { sources: accessibility.sources } : {}),
+      ...(accessibility.observations.length ? { observations: accessibility.observations } : {}),
+      ...(accessibility.declared.length ? { declared: accessibility.declared } : {}),
+      ...(accessibility.reducedMobility != null ? { reducedMobility: accessibility.reducedMobility } : {}),
+      ...(accessibility.facilities.length ? { facilities: accessibility.facilities } : {}),
+      ...(accessibility.observations.length ? { observationCount: accessibility.observations.length } : {}),
+      _unknown: !accessibility.observations.length && !accessibility.declared.length,
+    },
     sourceRefs: sourceRefsOf(record).map((s) => ({ label: s.label, licence: s.licenceLabel, updatedAt: s.updatedAt, url: s.url })),
   };
+}
+
+export function buildPlaceDetail(record, snapshotIds, today = todayIso()) {
+  if (record.kind !== 'place' || !record.existing_hilia_id || (snapshotIds && !snapshotIds.has(String(record.existing_hilia_id)))) return null;
+  return buildPlaceDetailFor(record, record.existing_hilia_id, today);
+}
+
+/** Détail d'un nouveau lieu, indexé par l'identifiant public qui sera créé à l'approbation. */
+export function buildStagedPlaceDetail(record, placeId, today = todayIso()) {
+  if (record.kind !== 'place' || record.existing_hilia_id || !placeId) return null;
+  return buildPlaceDetailFor(record, placeId, today);
 }
 
 export function buildEventDetail(record, today = todayIso()) {

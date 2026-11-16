@@ -221,7 +221,7 @@ begin
         )
       end,
       is_public = coalesce((h.previous_row->>'is_public')::boolean, false),
-      import_run_id = case when h.previous_row is null then null else (h.previous_row->>'import_run_id') end,
+      import_run_id = case when h.previous_row is null then null else (h.previous_row->>'import_run_id')::uuid end,
       import_applied_at = coalesce((h.previous_row->>'import_applied_at')::timestamptz, now()),
       updated_at = now()
     from public.hilia_place_detail_history h
@@ -380,7 +380,7 @@ begin
   if p_decision not in ('approve', 'reject', 'needs_review') then
     raise exception 'Décision inconnue : %', p_decision;
   end if;
-  if p_ids is null or not array_length(p_ids, 1) then
+  if p_ids is null or coalesce(array_length(p_ids, 1), 0) = 0 then
     return jsonb_build_object('approved', 0, 'rejected', 0, 'needs_review', 0, 'published_places', 0);
   end if;
 

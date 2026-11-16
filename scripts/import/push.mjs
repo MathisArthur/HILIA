@@ -17,7 +17,7 @@
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { readHiliaJsonl } from './lib/read-jsonl.mjs';
-import { buildPlaceDetail, reviewStatusOf } from './lib/normalize.mjs';
+import { buildPlaceDetail, buildStagedPlaceDetail, extractContacts, reviewStatusOf } from './lib/normalize.mjs';
 import { assessCandidate } from './lib/publication.mjs';
 import { EXCLUDED_PLACE_IDS } from '../../lib/place-exclusions.js';
 
@@ -165,8 +165,98 @@ if (RESUME) {
 const counts = { records: 0, skipped: 0, staged: 0, details: 0, batches: 0 };
 let sourceIndex = 0;
 let stagingBatch = [];
+let stagingMeta = [];
 let detailBatch = [];
 let stopped = false;
+let persistedCursor = cursor;
+
+// Même identifiant que dans la fonction SQL d'approbation : le détail peut
+// être préparé avant la création de la fiche, puis devenir public avec elle.
+function publishedPlaceId(recordId) {
+  return 'place_imp_' + createHash('md5').update(String(recordId)).digest('hex').slice(0, 20);
+}
+
+// Correspondances directes entre les observations Acceslibre et les colonnes
+// d'accessibilité de hilia_places. On ne convertit que les booléens et les
+// nombres explicitement présents ; aucune valeur absente n'est inventée.
+const APPROVAL_ACCESS_FIELDS = {
+  transport_station_presence: 8,
+  stationnement_presence: 9,
+  stationnement_pmr: 10,
+  stationnement_ext_presence: 11,
+  stationnement_ext_pmr: 12,
+  entree_reperage: 20,
+  entree_plain_pied: 21,
+  entree_ascenseur: 22,
+  entree_marches: 23,
+  entree_rampe: 24,
+  entree_dispositif_appel: 25,
+  entree_balise_sonore: 26,
+  entree_aide_humaine: 27,
+  entree_largeur_mini: 28,
+  entree_pmr: 29,
+  accueil_audiodescription_presence: 31,
+  accueil_equipements_malentendants_presence: 32,
+  accueil_cheminement_plain_pied: 33,
+  accueil_signaletique: 34,
+  sanitaires_presence: 35,
+  sanitaires_pmr: 36,
+};
+
+function accessValue(key, value) {
+  if (key === 'entree_marches' || key === 'entree_largeur_mini') {
+    // 23 et 28 sont des nombres (marches, centimètres), pas des booléens.
+    return typeof value !== 'boolean' && value !== '' && Number.isFinite(Number(value)) ? Number(value) : null;
+  }
+  if (value === true || value === 1 || value === '1' || value === 'True') return 1;
+  if (value === false || value === 0 || value === '0' || value === 'False') return 0;
+  return null;
+}
+
+function accessForApproval(record) {
+  const access = {};
+  const conflicts = new Set();
+  let known = 0;
+  for (const observation of record.accessibility_observations || []) {
+    const values = observation && observation.values && typeof observation.values === 'object' ? observation.values : {};
+    for (const [key, field] of Object.entries(APPROVAL_ACCESS_FIELDS)) {
+      if (!Object.prototype.hasOwnProperty.call(values, key) || conflicts.has(field)) continue;
+      const value = accessValue(key, values[key]);
+      if (value == null) continue;
+      if (Object.prototype.hasOwnProperty.call(access, field)) {
+        // Deux sources se contredisent : aucune valeur ne doit être présentée
+        // comme certaine. Le détail conserve les deux observations brutes.
+        if (access[field] !== value) { delete access[field]; known -= 1; conflicts.add(field); }
+        continue;
+      }
+      access[field] = value;
+      known += 1;
+    }
+  }
+  access._unknown = known === 0;
+  return access;
+}
+
+function approvalOf(record, detail) {
+  const contacts = (detail && detail.contacts) || extractContacts(record);
+  const categories = (record.categories || []).filter((name) => typeof name === 'string' && name.trim());
+  const latitudeValue = record.coordinates?.latitude;
+  const longitudeValue = record.coordinates?.longitude;
+  const latitude = latitudeValue == null || latitudeValue === '' ? NaN : Number(latitudeValue);
+  const longitude = longitudeValue == null || longitudeValue === '' ? NaN : Number(longitudeValue);
+  return {
+    name: record.name || null,
+    activity: categories.length ? categories[0].trim() : null,
+    address: record.address || null,
+    postal_code: record.postal_code || null,
+    commune: record.commune || null,
+    site: contacts.websites?.[0] || null,
+    latitude: Number.isFinite(latitude) ? latitude : null,
+    longitude: Number.isFinite(longitude) ? longitude : null,
+    access: accessForApproval(record),
+    ...(detail ? { detail } : {}),
+  };
+}
 
 function rowOf(record) {
   const first = record.sources?.[0];
@@ -198,12 +288,24 @@ function licencePartition(record) {
 async function flushStaging() {
   if (!stagingBatch.length) return;
   const no = ++batchNo;
-  const checksum = createHash('sha256').update(JSON.stringify(stagingBatch)).digest('hex');
-  const result = await rpc('hilia_import_upsert', { p_run_id: runId, p_rows: stagingBatch });
-  counts.staged += stagingBatch.length;
+  const rows = stagingBatch;
+  const meta = stagingMeta;
+  const checksum = createHash('sha256').update(JSON.stringify(rows)).digest('hex');
+  const result = await rpc('hilia_import_upsert', { p_run_id: runId, p_rows: rows });
+  // Les détails font partie de la même unité de reprise : le curseur ne bouge
+  // qu'après la persistance des deux. Si le détail échoue, le lot sera rejoué.
+  await flushDetails();
+  counts.staged += rows.length;
   counts.batches += 1;
-  await batchJournal(runId, no, checksum, stagingBatch.length, Number(result?.inserted) || 0, Number(result?.updated) || 0);
+  await batchJournal(runId, no, checksum, rows.length, Number(result?.inserted) || 0, Number(result?.updated) || 0);
   stagingBatch = [];
+  stagingMeta = [];
+  const lastIndex = meta.length ? Math.max(...meta) : persistedCursor;
+  if (lastIndex > persistedCursor) {
+    persistedCursor = lastIndex;
+    cursor = persistedCursor;
+    await patchRun(runId, { cursor, counts });
+  }
 }
 
 async function flushDetails() {
@@ -221,9 +323,15 @@ for await (const { record } of readHiliaJsonl(SOURCE)) {
   if (!KINDS.has(record.kind)) { counts.skipped += 1; continue; }
   counts.records += 1;
   if (!record.id) { counts.skipped += 1; continue; }
-  stagingBatch.push(rowOf(record));
-  if (record.kind === 'place' && record.existing_hilia_id) {
-    const detail = buildPlaceDetail(record, snapshotIds, TODAY);
+  const row = rowOf(record);
+  if (record.kind === 'place') {
+    const placeId = record.existing_hilia_id ? String(record.existing_hilia_id) : publishedPlaceId(record.id);
+    const detail = record.existing_hilia_id
+      ? buildPlaceDetail(record, snapshotIds, TODAY)
+      : buildStagedPlaceDetail(record, placeId, TODAY);
+    if (!record.existing_hilia_id) {
+      row.approval = approvalOf(record, detail);
+    }
     if (detail) detailBatch.push({
       place_id: detail.id,
       description: detail.description || null,
@@ -236,27 +344,24 @@ for await (const { record } of readHiliaJsonl(SOURCE)) {
       accessibility: detail.accessibility || null,
       source_refs: detail.sourceRefs || [],
       licence_partition: licencePartition(record),
+      // Le détail d'un nouveau lieu reste privé jusqu'à l'approbation SQL.
+      is_public: false,
     });
   }
+  stagingBatch.push(row);
+  stagingMeta.push(sourceIndex);
   if (stagingBatch.length >= BATCH) {
     await flushStaging();
-    // Les détails doivent être persistés avant d'avancer le curseur : sinon
-    // une reprise sauterait des enrichissements dont le lot n'a pas été écrit.
-    if (detailBatch.length) await flushDetails();
   }
-  if (detailBatch.length >= BATCH) await flushDetails();
   if (sourceIndex % 50 === 0) {
-    // Le curseur ne représente que des lots déjà persistés. En cas de panne,
-    // le curseur courant (et non sourceIndex) doit être conservé pour rejouer
-    // le lot incomplet au lieu de le sauter.
-    cursor = sourceIndex;
+    // Battement de progression uniquement : le curseur reste celui du dernier
+    // lot entièrement persisté, détails compris.
     await patchRun(runId, { cursor, counts });
   }
   if (LIMIT && counts.records >= LIMIT) { stopped = true; break; }
 }
 
 await flushStaging();
-await flushDetails();
 cursor = sourceIndex;
 await patchRun(runId, { status: 'completed', cursor, counts, finished_at: new Date().toISOString() });
 console.log(JSON.stringify({ mode: 'execute', runId, stopped, cursor: sourceIndex, counts }, null, 2));

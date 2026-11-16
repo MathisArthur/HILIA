@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import test from 'node:test';
 import http from 'node:http';
 import { spawn } from 'node:child_process';
@@ -28,6 +29,7 @@ async function makeMock() {
     details: new Map(),
     history: new Map(),
     failOnce: true,
+    failDetails: false,
     failed: false,
   };
   state.details.set('1', {
@@ -80,6 +82,9 @@ async function makeMock() {
     }
 
     if (url.pathname === '/rest/v1/rpc/hilia_upsert_place_details') {
+      if (state.failDetails) {
+        return json(res, 500, { message: 'panne simulée des détails' });
+      }
       for (const row of body?.p_rows || []) {
         const historyKey = `${body.p_run_id}:${row.place_id}`;
         if (!state.history.has(historyKey)) {
@@ -196,8 +201,14 @@ async function sourceFile(count) {
       id: `ext:${i}`, kind: 'place', publication_status: 'review_accessibility',
       name: `Lieu ${i}`, address: '1 rue de Test', postal_code: '75001', commune: 'Paris',
       coordinates: { latitude: 48.86, longitude: 2.35 }, categories: ['Musée'],
+      websites: [`https://exemple.test/lieu/${i}`],
       sources: [{ source: 'datatourisme', source_id: `ext:${i}`, licence: 'etalab-open-licence' }],
-      media: [], accessibility_observations: [], details_by_source: {},
+      media: [],
+      accessibility_observations: i === 1 ? [{
+        source: 'acceslibre', source_id: `acceslibre:${i}`,
+        values: { entree_plain_pied: true, entree_marches: '2', entree_largeur_mini: '90.0' },
+      }] : [],
+      details_by_source: {},
     }));
   }
   await writeFile(file, lines.join('\n') + '\n');
@@ -226,6 +237,18 @@ test('push échoue proprement, reprend et rollback restaure le détail existant'
   assert.equal([...mock.state.runs.values()][0].status, 'completed');
   assert.equal(mock.state.records.size, 71);
   assert.equal(mock.state.details.get('1').description, 'Nouvelle description');
+  const newRecord = mock.state.records.get('ext:1');
+  assert.equal(newRecord.approval.activity, 'Musée', 'la catégorie est une chaîne JSONL');
+  assert.equal(newRecord.approval.site, 'https://exemple.test/lieu/1');
+  assert.equal(newRecord.approval.latitude, 48.86);
+  assert.equal(newRecord.approval.longitude, 2.35);
+  assert.equal(newRecord.approval.access['21'], 1);
+  assert.equal(newRecord.approval.access['23'], 2);
+  assert.equal(newRecord.approval.access['28'], 90);
+  assert.equal(newRecord.approval.access._unknown, false);
+  const futureId = 'place_imp_' + createHash('md5').update('ext:1').digest('hex').slice(0, 20);
+  assert.equal(mock.state.details.get(futureId).is_public, false);
+  assert.equal(mock.state.details.get(futureId).accessibility._unknown, false);
 
   const rolled = await runPush(['--execute', '--rollback', failedRun.id], mock.url, source.file);
   assert.equal(rolled.code, 0, rolled.stderr);
@@ -233,4 +256,49 @@ test('push échoue proprement, reprend et rollback restaure le détail existant'
   assert.equal(mock.state.details.get('1').import_run_id, null);
   assert.equal(mock.state.details.has('ext:1'), false);
   assert.equal([...mock.state.runs.values()][0].status, 'rolled_back');
+});
+
+test('un détail refusé ne fait pas avancer le curseur avant sa reprise', async (t) => {
+  const mock = await makeMock();
+  const source = await sourceFile(70);
+  t.after(async () => {
+    await new Promise((resolve) => mock.server.close(resolve));
+    await rm(source.dir, { recursive: true, force: true });
+  });
+  mock.state.failOnce = false;
+  mock.state.failDetails = true;
+
+  const first = await runPush(['--execute', '--batch=10'], mock.url, source.file);
+  assert.notEqual(first.code, 0, first.stderr);
+  const failedRun = [...mock.state.runs.values()][0];
+  assert.equal(failedRun.status, 'failed');
+  assert.equal(failedRun.cursor, 0, 'le lot ne doit pas être sauté après un échec des détails');
+  assert.equal(mock.state.records.size, 10, 'le staging du lot a bien été écrit, mais pas son curseur');
+
+  mock.state.failDetails = false;
+  const resumed = await runPush(['--execute', '--resume', '--run-id', failedRun.id, '--batch=10'], mock.url, source.file);
+  assert.equal(resumed.code, 0, resumed.stderr);
+  assert.equal(mock.state.records.size, 71);
+  assert.equal(mock.state.details.get('1').description, 'Nouvelle description');
+});
+
+test('reprise avec --batch=200 : le curseur ne saute pas le lot interrompu', async (t) => {
+  const mock = await makeMock();
+  const source = await sourceFile(70);
+  t.after(async () => {
+    await new Promise((resolve) => mock.server.close(resolve));
+    await rm(source.dir, { recursive: true, force: true });
+  });
+
+  const first = await runPush(['--execute', '--batch=200'], mock.url, source.file);
+  assert.notEqual(first.code, 0, first.stderr);
+  const failedRun = [...mock.state.runs.values()][0];
+  assert.equal(failedRun.status, 'failed');
+  assert.equal(failedRun.cursor, 0);
+  assert.equal(mock.state.records.size, 0);
+
+  mock.state.failOnce = false;
+  const resumed = await runPush(['--execute', '--resume', '--run-id', failedRun.id, '--batch=200'], mock.url, source.file);
+  assert.equal(resumed.code, 0, resumed.stderr);
+  assert.equal(mock.state.records.size, 71);
 });

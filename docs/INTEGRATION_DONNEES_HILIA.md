@@ -105,6 +105,7 @@ fantôme.
 | `supabase/migrations/20261113_hilia_import.sql` | Staging, détails, événements, activités, itinéraires, médias, RLS et fonctions. |
 | `supabase/migrations/20261114_hilia_review.sql` | Revue par lots, historique des détails et rollback exact. |
 | `supabase/migrations/20261116_hilia_restore_public_read.sql` | Restaure l'exécution de `hilia_is_admin()` nécessaire aux politiques RLS publiques. |
+| `supabase/migrations/20261117_hilia_review_fixes.sql` | Correctif idempotent : catégories, site/coordonnées, transfert d’enrichissement, publication réelle et cast du rollback. |
 | `scripts/import/lib/publication.mjs` | Politique de publication et motifs de revue. |
 | `scripts/import/*.mjs` | Audit, construction, import Supabase, tests. |
 | `api/media.js`, `lib/media-policy.js` | Proxy d'images à liste blanche, sans SSRF ouverte. |
@@ -158,6 +159,13 @@ pour les détails enrichis. `npm run pages` régénère les pages HTML.
    publiques l’appellent ; sans elle, les lectures de `hilia_places` et de
    `hilia_place_details` répondent 401. La fonction ne renvoie `true` qu’à un
    administrateur connecté.
+6. Exécuter ensuite **tout** `supabase/migrations/20261117_hilia_review_fixes.sql`.
+   Cette migration corrective est idempotente : elle doit être appliquée aussi
+   sur une base qui a déjà reçu les migrations précédentes. Elle corrige le
+   cast uuid du rollback, la lecture des catégories, le transfert de
+   l’enrichissement et l’état de publication des activités et itinéraires.
+   Pour une installation neuve, les fichiers 20261114 et 20261117 sont tous
+   deux exécutés ; le second reste la référence corrective.
 
 La migration crée :
 
@@ -204,6 +212,10 @@ $env:SUPABASE_SERVICE_ROLE_KEY="<clé service_role>"
 Sur Vercel, ne pas ajouter cette clé aux variables publiques. L'import est une
 opération d'administration exécutée localement ou dans un runner protégé.
 
+Pour régénérer le catalogue avec un projet de test, exporter aussi sa clé
+**publishable** : `SUPABASE_KEY` est utilisée par `npm run data`. Sans elle, le
+script interroge le projet HILIA par défaut, pas le projet de test.
+
 ### 4.3 Simuler puis exécuter
 
 ```bash
@@ -221,6 +233,11 @@ npm run import:push -- --rollback "<uuid>" --execute
 ```
 
 Options utiles : `--kinds=place,event`, `--limit=1000`, `--batch=200`.
+Le curseur de reprise n’est mis à jour qu’après l’écriture du staging **et**
+des détails du lot. Si l’une des deux écritures échoue, le curseur reste au
+dernier lot complet : relancer avec `--resume` rejoue le lot incomplet au lieu
+de le sauter. Une interruption pendant un lot peut donc réécrire ce lot, ce qui
+est sans effet grâce aux upserts idempotents.
 Le rollback ne supprime jamais une ligne antérieure au run ni une ligne qui a
 été mise à jour depuis ; il supprime les créations du run et marque le run
 `rolled_back`. Pour les fiches existantes enrichies, il restaure depuis
@@ -228,7 +245,77 @@ Le rollback ne supprime jamais une ligne antérieure au run ni une ligne qui a
 (description, catégories, médias, horaires, prix, contacts, accessibilité,
 sources, partition de licences, visibilité et provenance). Il supprime seulement
 les détails créés par ce run ; il ne supprime **jamais** une fiche
-`hilia_places`, un avis, une suggestion ou un contenu publié après le run.
+`hilia_places`, un avis, une suggestion ou un contenu publié après le run. En
+particulier, une fiche créée par une approbation reste publique après le
+rollback du run d’import : pour la retirer, il faut une décision éditoriale
+distincte sur `hilia_places`.
+
+#### 4.3.1 Petit import de validation
+
+Avant le volume complet, construire un échantillon avec quelques vrais
+enregistrements (un lieu existant enrichi, cinq nouveaux lieux, deux activités
+et deux itinéraires), sans copier tout le fichier :
+
+```bash
+node --input-type=module <<'NODE'
+import { createWriteStream } from 'node:fs';
+import { readHiliaJsonl } from './scripts/import/lib/read-jsonl.mjs';
+const source = 'D:/HILIA AHAHAHH/HILIA_Donnees_et_Prompt/HILIA_DONNEES.jsonl';
+const out = createWriteStream('data/import-preview/validation.jsonl');
+const wanted = { existing: 1, newPlace: 5, activity: 2, route: 2 };
+const seen = { existing: 0, newPlace: 0, activity: 0, route: 0 };
+for await (const { record } of readHiliaJsonl(source)) {
+  if (record.kind === 'manifest') { out.write(JSON.stringify(record) + '\n'); continue; }
+  if (record.kind === 'category' || record.kind === 'event') continue;
+  const key = record.kind === 'place' ? (record.existing_hilia_id ? 'existing' : 'newPlace') : record.kind;
+  if (seen[key] >= wanted[key]) continue;
+  out.write(JSON.stringify(record) + '\n');
+  seen[key] += 1;
+  if (Object.keys(wanted).every((k) => seen[k] >= wanted[k])) break;
+}
+await new Promise((resolve) => out.end(resolve));
+NODE
+
+npm run import:push -- --source data/import-preview/validation.jsonl --execute --batch=5
+```
+
+Contrôler ensuite, avant toute approbation :
+
+```sql
+select kind, count(*)
+from public.hilia_import_records
+group by kind order by kind;
+select count(*) from public.hilia_place_details where not is_public;
+```
+
+Dans **Administration → Nouveaux contenus importés**, approuver un seul nouveau
+lieu. Vérifier que `published_place_id` correspond à `place_imp_…` et que le
+détail est devenu lisible :
+
+```sql
+select r.id, r.published_place_id, r.publication_surface, d.is_public,
+       d.description, d.media, d.contacts, d.accessibility
+from public.hilia_import_records r
+left join public.hilia_place_details d on d.place_id = r.published_place_id
+where r.id = '<id du lieu approuvé>';
+```
+
+Pour voir la fiche et son enrichissement dans le site local, régénérer le
+catalogue statique puis démarrer le serveur :
+
+```bash
+npm run data
+npm run dev
+```
+
+Le nouveau lieu `place_imp_…` est ajouté à `data/places.json` ; son détail est
+lu depuis Supabase par `app.js`, car les shards `data/place-details/` ne
+contiennent que les identifiants du catalogue historique. Cette étape écrit
+`data/places.json` et les sitemaps : vérifier le diff et ne pas committer
+l’échantillon de validation.
+Le navigateur utilise l’URL et la clé publishable compilées dans `app.js` ; si
+le projet de test est distinct du projet configuré, pointer ces constantes vers
+le test avant de contrôler l’affichage, sans jamais y placer de clé service.
 
 ### 4.4 Vérifier
 
@@ -237,6 +324,9 @@ select count(*) as lignes from public.hilia_import_records;
 select count(*) as details from public.hilia_place_details where is_public;
 select kind, count(*) from public.hilia_import_records group by kind order by kind;
 select count(*) from public.hilia_import_created where run_id = '<uuid>';
+select id, kind, review_status, publication_surface, published_place_id
+from public.hilia_import_records
+where review_status = 'approved';
 ```
 
 Deux exécutions identiques doivent laisser les mêmes compteurs : l'upsert est
@@ -244,7 +334,7 @@ clé sur `id` et `(source, source_id)`. Les fichiers statiques peuvent être
 régénérés sans double emploi. Une décision humaine `approved` ou `rejected`
 n’est pas annulée par un réimport : le statut de revue est conservé.
 
-### 4.6 État vérifié au 16 novembre 2026
+### 4.5 État vérifié au 16 novembre 2026
 
 - Le site public statique fonctionne avec **54 349** fiches et **17 707**
   événements à venir. Ces contenus sont générés dans le dépôt et publiés par
@@ -257,7 +347,10 @@ n’est pas annulée par un réimport : le statut de revue est conservé.
   appliquer sur tout nouvel environnement.
 - Aucune clé `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN` ou
   `DATABASE_URL` n'est disponible dans l'environnement de développement, donc
-  aucun import ni rollback réel n'a pu être exécuté depuis cette machine.
+  aucun import ni rollback n'a pu être exécuté sur le projet Supabase réel
+  depuis cette machine. Les migrations, l’approbation et le rollback ont en
+  revanche été exécutés sur un PostgreSQL 18.6 local temporaire (voir section
+  7), sans projet Supabase ni clé.
 - `hilia_user_roles` n'a pas pu être auditée avec la clé service_role ; aucun
   compte administrateur applicatif n'a été confirmé. Les tests de connexion,
   avis, suggestions et modération n'ont donc pas pu être exécutés réellement.
@@ -272,7 +365,7 @@ coller tout le fichier
 `supabase/migrations/20261116_hilia_restore_public_read.sql`, puis vérifier
 avec les requêtes de la section 4.4.
 
-### 4.5 Politique de publication et revue par lots
+### 4.6 Politique de publication et revue par lots
 
 Aucun nouveau lieu, activité ou itinéraire n’est auto-publié. La décision est
 consignée dans `hilia_import_records` avec `review_level`, `review_reasons` et
@@ -281,9 +374,9 @@ les motifs, puis approuve, refuse ou laisse à revoir une sélection.
 
 | Candidat | Niveau | Publication après approbation |
 | --- | --- | --- |
-| Nouveau lieu avec nom, source et localisation | `batch` | Crée une fiche `hilia_places` approuvée, avec `access._unknown = true` ; visible seulement après `npm run data`. |
+| Nouveau lieu avec nom, source et localisation | `batch` | Crée une fiche `hilia_places` approuvée et transfère description, photos autorisées avec crédits, contacts, horaires, tarifs, sources et accessibilité. Une absence reste `_unknown = true` ; `publication_surface = 'hilia_places'`. Visible seulement après `npm run data`. |
 | Nouveau lieu sans nom, sans source, sans localisation, avec coordonnées invalides, doublon probable ou aucune surface publique | `manual` | Revue individuelle obligatoire. |
-| Activité ou itinéraire | `manual` | Reste préparé dans le staging : aucune surface publique active. |
+| Activité ou itinéraire | `manual` | `approved` signifie **validé en staging**, pas publié : `publication_surface = 'staging_only'`, `published_at = NULL`, aucune fiche publique. |
 | Enrichissement d’une fiche existante | automatique pour les détails | Les détails sont appliqués à `hilia_place_details` ; l’identité publique existante n’est pas recréée. |
 | Événement sans date ou `review_dates` | jamais publié dans l’agenda | Reste hors agenda tant que le calendrier n’est pas vérifié. |
 
@@ -291,7 +384,7 @@ Une accessibilité inconnue n’est jamais convertie en « accessible ». Elle e
 affichée « Accessibilité non renseignée » sur la carte et la fiche, et
 `_unknown` est conservé dans `access` et dans le catalogue statique.
 
-Contrôle en lecture (après les deux migrations) :
+Contrôle en lecture (après toutes les migrations) :
 
 ```sql
 -- File des lieux en attente, avec leurs motifs
@@ -299,6 +392,16 @@ select id, name, source, source_id, review_level, review_reasons
 from public.hilia_import_records
 where kind = 'place' and review_status not in ('approved','rejected')
 order by created_at desc
+limit 50;
+```
+
+Après une approbation, contrôler la surface réelle :
+
+```sql
+select id, kind, publication_surface, published_place_id, published_at
+from public.hilia_import_records
+where review_status = 'approved'
+order by reviewed_at desc
 limit 50;
 ```
 
@@ -339,7 +442,9 @@ réel.
 
 - **Fiche lieu** : description, galerie de photos avec crédit, horaires, tarifs,
   contacts, catégories fines et sources d'accessibilité. Les détails sont chargés
-  après l'ouverture de la fiche, depuis un shard de 256.
+  après l'ouverture de la fiche, depuis un shard de 256. Pour un nouveau lieu
+  approuvé (`place_imp_…`), qui n’a pas encore de shard, `app.js` lit le détail
+  public dans `hilia_place_details` via les politiques RLS.
 - **Agenda** : recherche, famille, dates, gratuité explicite. Les événements
   `review_dates` et les événements sans date sont absents. Le détail charge un
   shard de 128, affiche les dates, tarifs, contacts, accessibilité déclarée et un
@@ -355,11 +460,27 @@ réel.
 
 ```text
 npm run test:import
-26 tests : parser multi-lignes, vrai/faux/null, horaires expirés, prix
+34 tests : parser multi-lignes, vrai/faux/null, horaires expirés, prix
 gratuit/payant, droits des médias, affiches, observations contradictoires,
-dates d'événements, IDs existants, shards, séparation lieux/événements,
-allowlist du proxy, politique de revue, et un cycle push → reprise → rollback
-contre un faux PostgREST.
+dates d’événements, IDs existants, shards, séparation lieux/événements,
+allowlist du proxy, politique de revue, cycle push → échec du staging →
+reprise → rollback, échec des détails sans avance du curseur, et reprise
+`--batch=200`, le tout contre un faux PostgREST.
+
+PostgreSQL 18.6 réel, cluster temporaire local :
+
+```bash
+npm install --no-save --package-lock=false embedded-postgres
+node scripts/import/test/postgres-review.mjs
+```
+
+Ce test applique 20261113, 20261114, 20261116 et 20261117 (puis rejoue la
+dernière pour vérifier son idempotence), approuve deux nouveaux lieux, vérifie
+la catégorie chaîne, le site, les coordonnées, le transfert du détail, la
+partition de licences, l’accessibilité inconnue, les surfaces
+`hilia_places` / `staging_only`, `p_ids = NULL`, puis le rollback. Limite
+explicite : ce test utilise un `hilia_places` minimal, pas le schéma Supabase
+de production complet.
 ```
 
 La simulation et la génération ont été exécutées sur le fichier réel. Résultat :
@@ -370,10 +491,17 @@ et 5 501 itinéraires laissés en staging.
 
 ## 8. Ce qui reste à vérifier
 
-- Exécuter les trois migrations et l'import sur le projet Supabase réel : aucune
+- Exécuter les quatre migrations et l'import sur le projet Supabase réel : aucune
   clé service_role n'était disponible dans cette session, donc **aucune mutation
   de production n'a été faite**. Le test push/reprise/rollback a utilisé un faux
-  PostgREST local, pas le projet réel.
+  PostgREST local, et le test SQL un PostgreSQL temporaire, pas le projet réel.
+- Appliquer `20261117_hilia_review_fixes.sql` sur le projet Supabase existant
+  avant tout nouvel import : la correction du cast uuid du rollback et le
+  transfert d’enrichissement ne sont pas encore actifs en production.
+- Le repli de `app.js` qui lit le détail d’un nouveau lieu `place_imp_…` dans
+  Supabase n’a pas été exercé dans un navigateur : aucun compte de test ni
+  projet Supabase accessible n’était disponible. Le test PostgreSQL couvre la
+  donnée publique, pas la requête RLS du navigateur.
 - Tester les parcours authentifiés (avis, suggestions, administration) avec un
   compte de test : aucun compte de test n'était disponible.
 - Vérifier les politiques RLS et le type de `hilia_places.id` sur la base réelle.
