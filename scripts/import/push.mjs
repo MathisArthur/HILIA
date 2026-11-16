@@ -39,7 +39,17 @@ const BATCH = Math.max(1, Math.min(500, Number(arg('--batch', '200')) || 200));
 const KINDS = new Set(String(arg('--kinds', 'place,event,activity,route')).split(',').map((s) => s.trim()).filter(Boolean));
 const BASE = String(process.env.SUPABASE_URL || '').replace(/\/+$/, '');
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const TEST_REF = String(process.env.HILIA_TEST_PROJECT_REF || '').trim();
 const TODAY = new Date().toISOString().slice(0, 10);
+
+if (TEST_REF) {
+  let host = '';
+  try { host = new URL(BASE).hostname; } catch { /* la validation ci-dessous échoue */ }
+  if (host !== `${TEST_REF}.supabase.co`) {
+    console.error(`Cible refusée : HILIA_TEST_PROJECT_REF=${TEST_REF} mais SUPABASE_URL ne pointe pas sur ${TEST_REF}.supabase.co.`);
+    process.exit(2);
+  }
+}
 
 if (!BASE || !KEY) {
   console.error('SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY sont requis. Aucune clé service_role ne doit être exposée au navigateur.');

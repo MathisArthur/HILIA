@@ -18,6 +18,14 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://lokplzdkvzilsuuqflsk.supabase.co';
+const TEST_REF = String(process.env.HILIA_TEST_PROJECT_REF || '').trim();
+if (TEST_REF) {
+  let host = '';
+  try { host = new URL(SUPABASE_URL).hostname; } catch { /* refus ci-dessous */ }
+  if (host !== `${TEST_REF}.supabase.co`) {
+    throw new Error(`Cible refusée : HILIA_TEST_PROJECT_REF=${TEST_REF} mais SUPABASE_URL ne pointe pas sur ${TEST_REF}.supabase.co.`);
+  }
+}
 // Clé publique (publishable) : elle est déjà présente dans index.html, elle ne
 // donne accès qu'à ce que les politiques RLS autorisent à un visiteur anonyme.
 const SUPABASE_KEY = process.env.SUPABASE_KEY || 'sb_publishable_86IcrAhzRoOkZZn-KGKe6A_6-_FO0B0';

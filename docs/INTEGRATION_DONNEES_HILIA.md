@@ -313,9 +313,12 @@ lu depuis Supabase par `app.js`, car les shards `data/place-details/` ne
 contiennent que les identifiants du catalogue historique. Cette étape écrit
 `data/places.json` et les sitemaps : vérifier le diff et ne pas committer
 l’échantillon de validation.
-Le navigateur utilise l’URL et la clé publishable compilées dans `app.js` ; si
-le projet de test est distinct du projet configuré, pointer ces constantes vers
-le test avant de contrôler l’affichage, sans jamais y placer de clé service.
+Le serveur local injecte l’URL et la clé **publishable** du projet test dans
+`/app.js` à partir de `SUPABASE_URL` et `SUPABASE_KEY` (voir
+`docs/SUPABASE_TEST_ENVIRONMENT.md`). Sans ces variables, il retombe sur les
+constantes de production : vérifier la ligne `HILIA : Supabase local ciblé sur …`
+dans la console avant de contrôler l’affichage. Ne jamais y placer de clé
+`service_role`.
 
 ### 4.4 Vérifier
 

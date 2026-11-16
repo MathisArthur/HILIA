@@ -33,8 +33,17 @@
   // Supabase : clé publique uniquement. Les autorisations restent contrôlées par les politiques RLS.
   // Détecter le lien de récupération AVANT que le SDK Supabase ne nettoie l'URL.
   var initialPasswordRecoveryLink = /(?:[?&#])type=recovery(?:[&#]|$)/i.test(window.location.search + '&' + window.location.hash);
-  var SUPABASE_URL = 'https://lokplzdkvzilsuuqflsk.supabase.co';
-  var SUPABASE_ANON_KEY = 'sb_publishable_86IcrAhzRoOkZZn-KGKe6A_6-_FO0B0';
+  // Le site déployé garde ses valeurs par défaut. Le serveur de test local
+  // injecte window.HILIA_SUPABASE_CONFIG depuis SUPABASE_URL / SUPABASE_KEY
+  // pour cibler le projet Supabase de test, sans modifier la production.
+  var runtimeSupabase = window.HILIA_SUPABASE_CONFIG || null;
+  var runtimeUrl = runtimeSupabase && typeof runtimeSupabase.url === 'string'
+    ? runtimeSupabase.url.replace(/\/+$/, '') : '';
+  var SUPABASE_URL = /^https:\/\/[^/]+\.supabase\.co$/i.test(runtimeUrl)
+    ? runtimeUrl : 'https://lokplzdkvzilsuuqflsk.supabase.co';
+  var SUPABASE_ANON_KEY = runtimeSupabase && typeof runtimeSupabase.key === 'string' && runtimeSupabase.key
+    ? runtimeSupabase.key : 'sb_publishable_86IcrAhzRoOkZZn-KGKe6A_6-_FO0B0';
+  if(runtimeSupabase) console.info('HILIA : Supabase local ciblé sur ' + SUPABASE_URL);
   // Client Supabase (SDK v2 chargé dans <head>). Session persistée + rafraîchissement automatique du jeton.
   var supabaseClient = null;
   try{

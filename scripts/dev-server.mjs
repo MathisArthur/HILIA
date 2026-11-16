@@ -18,7 +18,9 @@ import path from 'node:path';
 
 const cfg = JSON.parse(readFileSync('vercel.json', 'utf8'));
 const root = process.cwd();
-const port = 8787;
+const port = Number(process.env.PORT) || 8787;
+const testSupabaseUrl = String(process.env.SUPABASE_URL || '').replace(/\/+$/, '');
+const testSupabaseKey = String(process.env.SUPABASE_KEY || '');
 
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -90,6 +92,16 @@ http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   const pathname = decodeURIComponent(url.pathname);
   const headers = headersFor(pathname);
+
+  // En local uniquement : cibler le projet Supabase de test sans modifier
+  // app.js ni les pages générées. La clé attendue est la clé publishable.
+  if (pathname === '/app.js' && testSupabaseUrl && testSupabaseKey) {
+    const source = await readFile(path.join(root, 'app.js'), 'utf8');
+    const runtime = JSON.stringify({ url: testSupabaseUrl, key: testSupabaseKey });
+    res.writeHead(200, { ...headers, 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-store' });
+    res.end('window.HILIA_SUPABASE_CONFIG=' + runtime + ';\n' + source);
+    return;
+  }
 
   let file = await fileFor(pathname);
   if (!file) {

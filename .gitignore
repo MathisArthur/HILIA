@@ -2,3 +2,5 @@ node_modules/
 .vercel/
 .DS_Store
 og-preview/
+.env*
+supabase/test/*.local.sql
