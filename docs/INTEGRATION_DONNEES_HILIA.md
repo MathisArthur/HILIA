@@ -239,14 +239,18 @@ n’est pas annulée par un réimport : le statut de revue est conservé.
 - Le site public statique fonctionne avec **54 349** fiches et **17 707**
   événements à venir. Ces contenus sont générés dans le dépôt et publiés par
   le déploiement Vercel ; ils ne dépendent pas de la lecture Supabase.
-- `hilia_places` et `hilia_place_details` répondent encore `401` avec
-  `42501 permission denied for function hilia_is_admin`. La migration
-  `20261116_hilia_restore_public_read.sql` n'a pas été appliquée : aucune clé
-  `SUPABASE_SERVICE_ROLE_KEY` ni `SUPABASE_ACCESS_TOKEN` n'est disponible dans
-  l'environnement de développement.
-- `hilia_user_roles` est vide ; aucun compte administrateur applicatif n'a été
-  confirmé. Les tests de connexion, avis, suggestions et modération n'ont donc
-  pas pu être exécutés réellement.
+- La lecture publique de `hilia_places`, `hilia_place_details` et
+  `hilia_reviews` a été vérifiée à `200` sur le site déployé le 16 novembre
+  2026, après avoir reproduit un `401` (`42501 permission denied for function
+  hilia_is_admin`) avant la correction. La migration
+  `20261116_hilia_restore_public_read.sql` reste le correctif versionné à
+  appliquer sur tout nouvel environnement.
+- Aucune clé `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN` ou
+  `DATABASE_URL` n'est disponible dans l'environnement de développement, donc
+  aucun import ni rollback réel n'a pu être exécuté depuis cette machine.
+- `hilia_user_roles` n'a pas pu être auditée avec la clé service_role ; aucun
+  compte administrateur applicatif n'a été confirmé. Les tests de connexion,
+  avis, suggestions et modération n'ont donc pas pu être exécutés réellement.
 - Aucune ligne des **112 381** nouveaux lieux, **8 803** activités et **5 501**
   itinéraires n'a été importée ou publiée. Le staging est construit, mais
   l'écriture Supabase exige la clé service_role ci-dessus.

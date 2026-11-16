@@ -1780,7 +1780,7 @@
     openSug.slice(0,50).forEach(function(s){ var rr=s.di>=0?DATA[s.di]:null; html+='<div class="admin-item"><div class="admin-item-main"><strong>'+escapeHtml(rr?rr[F.NOM]:'Lieu')+'</strong><p>'+escapeHtml(s.text)+'<br><small>'+escapeHtml(s.authorName||s.author||'Utilisateur')+' · '+formatDate(s.date)+'</small></p></div><div class="admin-item-actions"><button class="small-btn primary" type="button" aria-label="Marquer la suggestion sur « '+escapeAttr(rr?rr[F.NOM]:'Lieu')+' » comme traitée" data-done-suggestion="'+s.id+'">Marquer traitée</button>'+(s.di>=0?'<button class="small-btn" type="button" aria-label="Modifier la fiche « '+escapeAttr(rr?rr[F.NOM]:'Lieu')+' »" data-edit-from-suggestion="'+s.di+'">Modifier la fiche</button>':'')+'</div></div>'; });
     html+='</div>';
     html+='<h3>Qualifications prestataires</h3><div class="admin-list" id="provSubList"><div class="admin-item"><div class="admin-item-main"><p>Chargement…</p></div></div></div>';
-    html+='<h3>Familles d’activités</h3><div class="admin-item"><div class="admin-item-main"><strong>Ajouter une activité</strong><p>Une nouvelle famille sera disponible dans les filtres et dans les formulaires de contribution.</p><form id="newActivityForm" class="inline-form" style="margin-top:9px"><div class="field"><label for="newActivityName">Nom de l’activité</label><input id="newActivityName" name="name" required maxlength=80 placeholder="Ex. Escape game accessible"></div><button class="small-btn primary" type="submit">Ajouter l’activité</button><div class="auth-note" id="newActivityStatus"></div></form></div></div>';
+    html+='<h3>Catégories d’activités</h3><div class="admin-item"><div class="admin-item-main"><strong>Ajouter une activité</strong><p>Une nouvelle catégorie sera disponible dans les filtres et dans les formulaires de contribution.</p><form id="newActivityForm" class="inline-form" style="margin-top:9px"><div class="field"><label for="newActivityName">Nom de l’activité</label><input id="newActivityName" name="name" required maxlength=80 placeholder="Ex. Escape game accessible"></div><button class="small-btn primary" type="submit">Ajouter l’activité</button><div class="auth-note" id="newActivityStatus"></div></form></div></div>';
     html+='<h3>Nouveaux contenus importés</h3><p class="admin-review-intro">Aucun nouveau lieu, activité ou itinéraire n’est publié automatiquement. Les enrichissements de fiches déjà publiques sont automatiques. Cette file montre les candidats, leurs sources et les motifs de blocage. Une accessibilité absente reste explicitement inconnue.</p><div id="importReviewPanel" class="import-review-panel"><p class="admin-review-muted">Chargement de la file de revue…</p></div>';
     html+='</div></div>';
     box.innerHTML=html;
@@ -2630,7 +2630,7 @@
         '<p>'+escapeHtml(s.address)+'<br>'+escapeHtml(s.contact_name)+' · '+escapeHtml(s.contact_email)+(s.contact_phone?' · '+escapeHtml(s.contact_phone):'')+
         '<br><small>'+n+' critères cochés · '+(s.visuels||[]).length+' photo(s) · '+formatDate(s.created_at)+'</small>'+
         (s.remarques?'<br><small>Remarque : '+escapeHtml(s.remarques)+'</small>':'')+'</p>'+
-        '<div class="prov-extra"><label>Famille d’activité *<select data-ps-act="'+s.id+'">'+opts+'</select></label>'+
+        '<div class="prov-extra"><label>Catégorie d’activité *<select data-ps-act="'+s.id+'">'+opts+'</select></label>'+
         '<label>Code postal<input data-ps-cp="'+s.id+'" inputmode="numeric" value="'+escapeAttr(m?m[1]:'')+'"></label>'+
         '<label>Commune<input data-ps-com="'+s.id+'" value="'+escapeAttr(m?m[2].trim():'')+'"></label></div>'+
         '<div class="prov-photos" id="psph_'+s.id+'" aria-live="polite"></div><div class="pf-err" id="psmsg_'+s.id+'" role="alert" style="color:#A31515;font-weight:650;margin-top:6px"></div></div>'+
@@ -2654,7 +2654,7 @@
     list.querySelectorAll('[data-ps-ok]').forEach(function(b){ b.addEventListener('click',async function(){
       var id=b.dataset.psOk, s=PROV_SUBS[id];
       var act=list.querySelector('[data-ps-act="'+id+'"]').value;
-      if(!act){ announce('Choisissez une famille d’activité avant de publier.',0); list.querySelector('[data-ps-act="'+id+'"]').focus(); return; }
+      if(!act){ announce('Choisissez une catégorie d’activité avant de publier.',0); list.querySelector('[data-ps-act="'+id+'"]').focus(); return; }
       var cp=list.querySelector('[data-ps-cp="'+id+'"]').value.trim(), com=list.querySelector('[data-ps-com="'+id+'"]').value.trim();
       b.disabled=true;
       var geo=await provGeocode(s.address);
