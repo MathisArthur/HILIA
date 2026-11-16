@@ -4,3 +4,4 @@ node_modules/
 og-preview/
 .env*
 supabase/test/*.local.sql
+.tools/

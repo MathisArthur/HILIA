@@ -35,17 +35,25 @@ les données de production.
 
 ## 1. Outils PostgreSQL
 
-`pg_dump` et `psql` sont nécessaires. Ils ne sont pas installés sur cette
-machine. Installer les **outils clients PostgreSQL** (par exemple l'installeur
-EDB en décochant le serveur), puis vérifier dans Git Bash :
+`pg_dump` et `psql` sont nécessaires. Une version portable de PostgreSQL 18.6
+est installée dans le projet, dans `.tools/postgresql/pgsql/bin` (dossier ignoré
+par Git). Le fichier `.env.hilia-test.local` ajoute ce dossier au `PATH`.
+
+Charger l'environnement puis vérifier :
 
 ```bash
+set -a
+. ./.env.hilia-test.local
+set +a
 pg_dump --version
 psql --version
 ```
 
 La version de `pg_dump` doit être au moins égale à celle du serveur Supabase.
-Docker et la CLI Supabase ne sont pas nécessaires pour cette étape.
+Docker et la CLI Supabase ne sont pas nécessaires pour cette étape. Si les
+outils portables ont été supprimés, réinstaller les outils clients PostgreSQL
+(par exemple l'installeur EDB en décochant le serveur) et remettre leur dossier
+`bin` dans le `PATH`.
 
 ## 2. Capturer le schéma réel de production
 
