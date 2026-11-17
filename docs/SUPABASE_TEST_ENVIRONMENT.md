@@ -520,22 +520,8 @@ la section suivante.
 
 ## 11. Retrait de publication distinct
 
-Ne pas supposer que `hilia_places` possède une colonne `is_public` : ce n'est
-pas garanti par les migrations d'import. Vérifier les colonnes réelles avant
-toute écriture :
-
-```bash
-psql "$HILIA_TEST_DB_URL" -c "\d+ public.hilia_places"
-psql "$HILIA_TEST_DB_URL" -Atc \
-  "select column_name from information_schema.columns where table_schema='public' and table_name='hilia_places' order by ordinal_position;"
-
-psql "$HILIA_TEST_DB_URL" -c "\d+ public.hilia_place_details"
-psql "$HILIA_TEST_DB_URL" -Atc \
-  "select column_name from information_schema.columns where table_schema='public' and table_name='hilia_place_details' order by ordinal_position;"
-```
-
-Utiliser exactement l'`APPROVED_ID` vérifié à la section 8.5. Retirer la fiche
-du catalogue par son statut, sans supprimer la ligne :
+Le retrait se fait toujours par le statut de la fiche et la visibilité du
+détail, sans supprimer la ligne et sans utiliser `hilia_places.is_public` :
 
 ```sql
 begin;
@@ -543,25 +529,16 @@ update public.hilia_places
 set status = 'rejected'
 where id = '<APPROVED_ID>'
 returning id, status;
-commit;
-```
-
-Si et seulement si la colonne `is_public` existe réellement dans
-`hilia_places`, la mettre aussi à `false` dans la même transaction. Si elle
-n'existe pas, ne pas l'inventer : `status = 'rejected'` est la décision de
-retrait à utiliser, et les politiques RLS doivent déjà filtrer sur le statut.
-
-Pour le détail, `is_public` est créé par les migrations d'import ; vérifier
-tout de même sa présence avant de l'utiliser :
-
-```sql
 update public.hilia_place_details
 set is_public = false
 where place_id = '<APPROVED_ID>';
+commit;
 ```
 
-Si la colonne de détail n'existe pas, s'arrêter et relever le schéma réel au
-lieu de supprimer la ligne.
+Utiliser exactement l'`APPROVED_ID` vérifié à la section 8.5. `status =
+'rejected'` retire la fiche du catalogue ; `is_public = false` masque son
+détail enrichi. Ne pas supprimer la ligne : elle conserve la trace de l'import
+et de la décision.
 
 Puis régénérer le catalogue statique **sur l'environnement de test** :
 
@@ -587,6 +564,6 @@ locale. La ligne reste dans la table pour la traçabilité.
 - affichage visiteur sans session : OK / échec ;
 - reprise : curseur et comptes cohérents ;
 - rollback : staging et détails nettoyés, fiche approuvée conservée ;
-- colonnes de retrait vérifiées avant écriture ;
-- retrait : fiche absente du catalogue et détail masqué ;
+- retrait : `status='rejected'` dans `hilia_places` et `is_public=false` dans
+  `hilia_place_details` ; fiche absente du catalogue et détail masqué ;
 - aucune écriture en production.
