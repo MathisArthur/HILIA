@@ -6,13 +6,13 @@
  * chemin utilise uniquement la connexion d'administration HILIA_PROD_DB_URL et
  * les fonctions SQL déjà déployées.
  *
- *   npm run import:push-postgres -- --source <jsonl>
- *   HILIA_IMPORT_DB_URL=... npm run import:push-postgres -- --source <jsonl> --execute
- *   npm run import:push-postgres -- --run-id <uuid> --execute --resume
- *   npm run import:push-postgres -- --rollback <uuid> --execute
+ *   npm run import:push-postgres -- --target production --source <jsonl>
+ *   npm run import:push-postgres -- --target production --source <jsonl> --execute
+ *   npm run import:push-postgres -- --target production --run-id <uuid> --execute --resume
+ *   npm run import:push-postgres -- --target production --rollback <uuid> --execute
  *
  * Pour le projet de test uniquement :
- *   HILIA_IMPORT_DB_URL="$HILIA_TEST_DB_URL" HILIA_IMPORT_ALLOW_TEST=1 npm run import:push-postgres -- --execute
+ *   HILIA_IMPORT_DB_URL="$HILIA_TEST_DB_URL" HILIA_IMPORT_ALLOW_TEST=1 npm run import:push-postgres -- --target test --execute
  *
  * Sans --execute, aucune connexion ni écriture n'est faite.
  */
@@ -46,7 +46,11 @@ const ROLLBACK = arg('--rollback', null);
 const LIMIT = Number(arg('--limit', '0')) || 0;
 const MAX_BATCHES = Number(arg('--max-batches', '0')) || 0;
 const BATCH = Math.max(1, Math.min(500, Number(arg('--batch', '200')) || 200));
-const DATABASE_URL = process.env.HILIA_IMPORT_DB_URL || process.env.HILIA_PROD_DB_URL || '';
+const TARGET = String(arg('--target', 'production')).toLowerCase();
+const PRODUCTION_DB_URL = process.env.HILIA_PROD_DB_URL || '';
+const TEST_DB_URL = process.env.HILIA_IMPORT_DB_URL || '';
+// Aucun repli : la production ne peut utiliser que HILIA_PROD_DB_URL.
+const DATABASE_URL = TARGET === 'production' ? PRODUCTION_DB_URL : TARGET === 'test' ? TEST_DB_URL : '';
 const ALLOW_TEST = process.env.HILIA_IMPORT_ALLOW_TEST === '1';
 const TEST_REF = String(process.env.HILIA_TEST_PROJECT_REF || '').trim();
 const TODAY = new Date().toISOString().slice(0, 10);
@@ -161,14 +165,30 @@ function publishedPlaceId(recordId) {
   return 'place_imp_' + createHash('md5').update(String(recordId)).digest('hex').slice(0, 20);
 }
 
+function projectIdOf(url) {
+  try {
+    const username = decodeURIComponent(new URL(url).username);
+    return username.includes('.') ? username.slice(username.lastIndexOf('.') + 1) : username;
+  } catch { return null; }
+}
+
 function validateTarget() {
-  if (!DATABASE_URL) throw new Error('HILIA_IMPORT_DB_URL ou HILIA_PROD_DB_URL absent');
+  if (TARGET !== 'production' && TARGET !== 'test') throw new Error('--target doit être production ou test');
+  if (!DATABASE_URL) throw new Error(TARGET === 'production' ? 'HILIA_PROD_DB_URL absent' : 'HILIA_IMPORT_DB_URL absent pour --target test');
   let u;
   try { u = new URL(DATABASE_URL); } catch { throw new Error('URL de connexion invalide'); }
-  const prod = u.hostname === 'aws-0-eu-west-1.pooler.supabase.com' && u.username.includes('lokplzdkvzilsuuqflsk');
-  const test = ALLOW_TEST && u.hostname === 'aws-1-eu-central-1.pooler.supabase.com' && TEST_REF && u.username.includes(TEST_REF);
-  if (!prod && !test) throw new Error('cible refusée : la connexion ne pointe pas vers la production HILIA ou, avec HILIA_IMPORT_ALLOW_TEST=1, vers le projet de test déclaré');
-  return prod ? 'production' : 'test';
+  const projectId = projectIdOf(DATABASE_URL);
+  if (TARGET === 'production') {
+    if (u.hostname !== 'aws-0-eu-west-1.pooler.supabase.com' || projectId !== 'lokplzdkvzilsuuqflsk') {
+      throw new Error('cible refusée : HILIA_PROD_DB_URL ne pointe pas vers le projet de production HILIA');
+    }
+    return { environment: 'production', projectId };
+  }
+  if (!ALLOW_TEST) throw new Error('--target test exige HILIA_IMPORT_ALLOW_TEST=1');
+  if (u.hostname !== 'aws-1-eu-central-1.pooler.supabase.com' || !TEST_REF || projectId !== TEST_REF) {
+    throw new Error('cible refusée : HILIA_IMPORT_DB_URL ne pointe pas vers le projet de test déclaré');
+  }
+  return { environment: 'test', projectId };
 }
 
 function makeDetail(record) {
@@ -269,13 +289,13 @@ async function flushBatch(client, runId, batchNo, rows, details, meta, cursor, c
 }
 
 if (ROLLBACK) {
-  if (!EXECUTE) { console.log(JSON.stringify({ mode: 'plan', action: 'rollback', runId: ROLLBACK }, null, 2)); process.exit(0); }
   const target = validateTarget();
+  if (!EXECUTE) { console.log(JSON.stringify({ mode: 'plan', action: 'rollback', project_id: target.projectId, runId: ROLLBACK }, null, 2)); process.exit(0); }
   const client = new pg.Client({ connectionString: DATABASE_URL });
   try {
     await client.connect();
     const result = await client.query('select public.hilia_import_rollback($1) as result', [ROLLBACK]);
-    console.log(JSON.stringify({ mode: 'rollback', target, result: result.rows[0]?.result }, null, 2));
+    console.log(JSON.stringify({ mode: 'rollback', project_id: target.projectId, result: result.rows[0]?.result }, null, 2));
   } finally { await client.end().catch(() => {}); }
   process.exit(0);
 }
@@ -287,12 +307,12 @@ let batchNo = 0;
 let counts = { records: 0, staged: 0, details: 0, batches: 0 };
 let client;
 try {
+  const target = validateTarget();
   if (!EXECUTE) {
-    const summary = { mode: 'plan', target: DATABASE_URL ? 'configured' : 'absent', source: path.basename(SOURCE), manifest: manifest.schema_version || null, batch: BATCH, limit: LIMIT || null, max_batches: MAX_BATCHES || null };
+    const summary = { mode: 'plan', project_id: target.projectId, source: path.basename(SOURCE), manifest: manifest.schema_version || null, batch: BATCH, limit: LIMIT || null, max_batches: MAX_BATCHES || null };
     console.log(JSON.stringify(summary, null, 2));
     process.exit(0);
   }
-  const target = validateTarget();
   client = new pg.Client({ connectionString: DATABASE_URL });
   await client.connect();
   if (RESUME) {
@@ -304,10 +324,10 @@ try {
     counts = { records: 0, staged: 0, details: 0, batches: 0, ...(run.counts || {}) };
     const last = await client.query('select coalesce(max(batch_no), 0)::int as n from public.hilia_import_batches where run_id = $1', [runId]);
     batchNo = last.rows[0]?.n || 0;
-    console.log(JSON.stringify({ mode: 'resume', runId, cursor, batchNo, target }, null, 2));
+    console.log(JSON.stringify({ mode: 'resume', runId, cursor, batchNo, project_id: target.projectId }, null, 2));
   } else {
     runId = await createRun(client, manifest);
-    console.log(JSON.stringify({ mode: 'execute', runId, target, source: path.basename(SOURCE) }, null, 2));
+    console.log(JSON.stringify({ mode: 'execute', runId, project_id: target.projectId, source: path.basename(SOURCE) }, null, 2));
   }
 
   let sourceIndex = 0;
@@ -357,7 +377,7 @@ try {
   } else if (staging.length) {
     await flush();
   }
-  console.log(JSON.stringify({ mode: EXECUTE ? 'execute' : 'plan', runId, target, completed, stopped, cursor, counts }, null, 2));
+  console.log(JSON.stringify({ mode: EXECUTE ? 'execute' : 'plan', runId, project_id: target.projectId, completed, stopped, cursor, counts }, null, 2));
 } catch (error) {
   if (client) {
     await client.query('rollback').catch(() => {});

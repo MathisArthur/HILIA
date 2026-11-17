@@ -392,7 +392,7 @@ un 400, tandis qu'une récupération distante impossible produit un 502.
 ### 7.1 Avant approbation
 
 ```bash
-npm run import:push-postgres -- --rollback "<run_id>" --execute
+npm run import:push-postgres -- --target production --rollback "<run_id>" --execute
 ```
 
 Le rollback supprime les détails et enregistrements créés par ce run et
@@ -462,8 +462,8 @@ le curseur qu'après le commit transactionnel du staging et des détails, et
 expose :
 
 ```bash
-npm run import:push-postgres -- --run-id <uuid> --execute --resume
-npm run import:push-postgres -- --rollback <uuid> --execute
+npm run import:push-postgres -- --target production --run-id <uuid> --execute --resume
+npm run import:push-postgres -- --target production --rollback <uuid> --execute
 ```
 
 Commande complète de lancement, une fois `HILIA_PROD_DB_URL` chargée depuis
@@ -471,7 +471,7 @@ l'environnement local (aucun secret dans le dépôt) :
 
 ```bash
 set -a; . ./.env.hilia-test.local; set +a
-npm run import:push-postgres -- --source "D:/HILIA AHAHAHH/HILIA_Donnees_et_Prompt/HILIA_DONNEES.jsonl" --execute
+npm run import:push-postgres -- --target production --source "D:/HILIA AHAHAHH/HILIA_Donnees_et_Prompt/HILIA_DONNEES.jsonl" --execute
 ```
 
 Le chemin a été testé sur le projet de test, pas en production : reprise après
