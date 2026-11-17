@@ -39,10 +39,13 @@
   var runtimeSupabase = window.HILIA_SUPABASE_CONFIG || null;
   var runtimeUrl = runtimeSupabase && typeof runtimeSupabase.url === 'string'
     ? runtimeSupabase.url.replace(/\/+$/, '') : '';
-  var SUPABASE_URL = /^https:\/\/[^/]+\.supabase\.co$/i.test(runtimeUrl)
-    ? runtimeUrl : 'https://lokplzdkvzilsuuqflsk.supabase.co';
+  // Le runtime local du serveur de test peut être un loopback HTTP ; les
+  // déploiements normaux restent limités au domaine Supabase.
+  var runtimeIsLocal = /^http:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?$/i.test(runtimeUrl);
+  var SUPABASE_URL = (/^https:\/\/[^/]+\.supabase\.co$/i.test(runtimeUrl) || runtimeIsLocal)
+    ? runtimeUrl : 'https://ipnlyxirkerrgzmhzjjl.supabase.co';
   var SUPABASE_ANON_KEY = runtimeSupabase && typeof runtimeSupabase.key === 'string' && runtimeSupabase.key
-    ? runtimeSupabase.key : 'sb_publishable_86IcrAhzRoOkZZn-KGKe6A_6-_FO0B0';
+    ? runtimeSupabase.key : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlwbmx5eGlya2Vycmd6bWh6ampsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ5MjE2NDgsImV4cCI6MjExMDQ5NzY0OH0.pv0hWzxXjZehoXWT3yKbpPuMA94aj7hpY9omkYwtEUY';
   if(runtimeSupabase) console.info('HILIA : Supabase local ciblé sur ' + SUPABASE_URL);
   // Client Supabase (SDK v2 chargé dans <head>). Session persistée + rafraîchissement automatique du jeton.
   var supabaseClient = null;
@@ -1865,7 +1868,7 @@
     var items=payload.items||[], counts=payload.counts||{};
     var html='<div class="admin-review-toolbar"><div class="field"><label for="reviewKind">Type</label><select id="reviewKind"><option value="">Tous</option><option value="place"'+(importReviewState.kind==='place'?' selected':'')+'>Lieux</option><option value="activity"'+(importReviewState.kind==='activity'?' selected':'')+'>Activités</option><option value="route"'+(importReviewState.kind==='route'?' selected':'')+'>Itinéraires</option></select></div><div class="field"><label for="reviewLevel">Niveau</label><select id="reviewLevel"><option value="">Tous</option><option value="batch"'+(importReviewState.level==='batch'?' selected':'')+'>Lot rapide</option><option value="manual"'+(importReviewState.level==='manual'?' selected':'')+'>Revue individuelle</option></select></div><button class="small-btn" type="button" id="reviewReload">Actualiser</button></div>';
     html+='<p class="admin-review-summary"><strong>'+Number(payload.total||0).toLocaleString('fr-FR')+'</strong> candidat(s) · '+(counts.place||0)+' lieu(x) · '+(counts.activity||0)+' activité(s) · '+(counts.route||0)+' itinéraire(s)</p>';
-    html+='<p class="admin-review-note">Les lieux approuvés créent une fiche <code>hilia_places</code> et y transfèrent l’enrichissement préparé ; une accessibilité absente reste explicitement inconnue. Ils ne sont visibles qu’après <code>npm run data</code>. Les activités et itinéraires approuvés restent uniquement validés en staging (<code>publication_surface = staging_only</code>), sans fiche publique.</p>';
+    html+='<p class="admin-review-note">Les lieux approuvés créent une fiche <code>hilia_places</code>, transfèrent une seule fois l’enrichissement dans <code>hilia_place_details</code>, puis suppriment sa copie de staging ; une accessibilité absente reste explicitement inconnue. Le détail et les médias sont visibles immédiatement sur la fiche publique ; le catalogue statique est régénéré ensuite avec <code>npm run data</code>. Les activités et itinéraires approuvés restent uniquement validés en staging (<code>publication_surface = staging_only</code>), sans fiche publique.</p>';
     if(!items.length){
       html+='<div class="admin-item"><div class="admin-item-main"><strong>Aucun candidat dans ce filtre</strong><p>La file est vide ou la migration 20261114 n’a pas encore été appliquée.</p></div></div>';
     } else {
@@ -1899,7 +1902,7 @@
       importReviewState.data=result.data||{total:0,counts:{},items:[]};
       renderImportReview(panel,importReviewState.data);
     }catch(err){
-      panel.innerHTML='<p class="admin-review-error">File de revue indisponible : '+escapeHtml(err && err.message || 'erreur inconnue')+'</p><p class="admin-review-muted">Vérifiez que la migration <code>20261114_hilia_review.sql</code> est appliquée et que votre compte a le rôle admin.</p>';
+      panel.innerHTML='<p class="admin-review-error">File de revue indisponible : '+escapeHtml(err && err.message || 'erreur inconnue')+'</p><p class="admin-review-muted">Vérifiez que la migration <code>20261120_hilia_compact_review.sql</code> est appliquée et que votre compte a le rôle admin.</p>';
     }
   }
   async function decideImportReview(panel,decision,button){
@@ -3332,27 +3335,32 @@
     renderRatingOptions();
     if(ok && (state.minRating > 0 || state.sort === 'rating')) refresh();
   });
-  restoreSupabaseSession();
-  var bootSlug=slugFromPath(location.pathname), bootPage=pageFromPath(location.pathname), bootHash=location.hash||'';
-  if(bootSlug){
-    // Fiche demandée par son URL : elle s’ouvre dès que les données sont là.
-    setTimeout(function(){
+  function openBootLocation(){
+    var bootSlug=slugFromPath(location.pathname), bootPage=pageFromPath(location.pathname), bootHash=location.hash||'';
+    if(bootSlug){
+      // Fiche demandée par son URL : elle s’ouvre après la synchronisation
+      // distante, sinon un lien direct vers une nouvelle fiche serait remplacé
+      // par l’accueil avant le chargement des lieux approuvés.
       if(openPlaceFromSlug(bootSlug)) return;
       history.replaceState({page:'explore'},'',pagePath('explore')); syncPageMeta('explore');
       announce('Cette fiche de lieu n’est plus disponible.',200);
-    },0);
-  } else if(bootHash.indexOf('#lieu/')===0){
-    // Ancien lien partagé (#lieu/…) : on l’ouvre et l’URL est nettoyée par openDetail.
-    var legacySlug=decodeURIComponent(bootHash.slice(6));
-    setTimeout(function(){
+      return;
+    }
+    if(bootHash.indexOf('#lieu/')===0){
+      // Ancien lien partagé (#lieu/…) : on l’ouvre et l’URL est nettoyée par openDetail.
+      var legacySlug=decodeURIComponent(bootHash.slice(6));
       if(openPlaceFromSlug(legacySlug)) return;
       history.replaceState({page:'explore'},'',pagePath('explore')); syncPageMeta('explore');
-    },0);
-  } else {
+      return;
+    }
     var hashPage=bootHash.replace('#','');
     var bootTarget=bootPage || (PAGE_PATHS[hashPage] ? hashPage : 'explore');
     if(bootTarget!=='explore') navigatePage(bootTarget,false);
     if(bootTarget!==bootPage || bootHash) history.replaceState({page:bootTarget},'',pagePath(bootTarget));
   }
+  // Attendre la synchronisation distante avant de résoudre une URL de fiche :
+  // une session vierge n’a encore ni cache ni entrée de catalogue pour un lieu
+  // approuvé récemment. Sans cela, le routeur renvoie immédiatement à l’accueil.
+  Promise.resolve(restoreSupabaseSession()).then(openBootLocation, openBootLocation);
 })();
 

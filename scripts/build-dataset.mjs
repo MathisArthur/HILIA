@@ -18,7 +18,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { gzipSync } from 'node:zlib';
 import { supabaseHeaders } from '../lib/supabase-key.js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://lokplzdkvzilsuuqflsk.supabase.co';
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ipnlyxirkerrgzmhzjjl.supabase.co';
 const TEST_REF = String(process.env.HILIA_TEST_PROJECT_REF || '').trim();
 if (TEST_REF) {
   let host = '';
@@ -29,7 +29,7 @@ if (TEST_REF) {
 }
 // Clé publique (publishable) : elle est déjà présente dans index.html, elle ne
 // donne accès qu'à ce que les politiques RLS autorisent à un visiteur anonyme.
-const SUPABASE_KEY = process.env.SUPABASE_KEY || 'sb_publishable_86IcrAhzRoOkZZn-KGKe6A_6-_FO0B0';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlwbmx5eGlya2Vycmd6bWh6ampsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ5MjE2NDgsImV4cCI6MjExMDQ5NzY0OH0.pv0hWzxXjZehoXWT3yKbpPuMA94aj7hpY9omkYwtEUY';
 const PAGE = 1000; // max-rows par défaut de PostgREST
 const ROOT = new URL('../', import.meta.url);
 const exclusions = JSON.parse(await readFile(new URL('data/place-exclusions.json', ROOT), 'utf8'));
