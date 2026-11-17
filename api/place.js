@@ -15,6 +15,7 @@
  * est traité comme un handler Node, où l'URL reçue est relative : d'où l'objet
  * `fetch` ci-dessous.
  */
+import { readFile } from 'node:fs/promises';
 import { SITE_ORIGIN, fetchPlace, idFromSlug, injectMeta } from '../lib/place.js';
 
 const HTML_HEADERS = {
@@ -34,8 +35,7 @@ export default {
     try {
       // Le socle de l'application, pris à la racine : depuis cleanUrls,
       // /index.html redirige vers / et coûterait un aller-retour de plus.
-      const res = await fetch(new URL('/', url), { headers: { 'user-agent': 'HILIA-meta' } });
-      if (res.ok) html = await res.text();
+      html = await readFile(process.cwd() + '/index.html', 'utf8');
     } catch (err) {
       html = null;
     }

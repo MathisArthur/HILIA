@@ -1,9 +1,19 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "regions": ["cdg1"],
+  "regions": [
+    "cdg1"
+  ],
+  "functions": {
+    "api/place.js": {
+      "includeFiles": "index.html"
+    }
+  },
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/lieu/:slug", "destination": "/api/place?slug=:slug" }
+    {
+      "source": "/lieu/:slug",
+      "destination": "/api/place?slug=:slug"
+    }
   ],
   "headers": [
     {
@@ -13,10 +23,22 @@
           "key": "Content-Security-Policy",
           "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://unpkg.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://cdnjs.cloudflare.com https://unpkg.com; connect-src 'self' https://ipnlyxirkerrgzmhzjjl.supabase.co wss://ipnlyxirkerrgzmhzjjl.supabase.co https://tiles.openfreemap.org https://api-adresse.data.gouv.fr; worker-src 'self' blob:; child-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
         },
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin-allow-popups" },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        },
         {
           "key": "Permissions-Policy",
           "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
@@ -35,19 +57,28 @@
     {
       "source": "/(.*)\\.(png|ico|svg|webp|jpg|jpeg)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=604800" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800"
+        }
       ]
     },
     {
       "source": "/(.*)\\.(css|js)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
       ]
     },
     {
       "source": "/site.webmanifest",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=86400" }
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400"
+        }
       ]
     }
   ]
