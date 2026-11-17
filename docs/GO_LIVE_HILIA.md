@@ -9,9 +9,14 @@ remplace pas une sauvegarde récente : aucune migration ni aucun import ne doit
 Contrôles effectués en lecture seule sur le projet de production, et sur le
 projet `hilia-test` pour les essais :
 
-- Production : **54 350** fiches `hilia_places`, toutes `approved`, et
-  **0** ligne dans `hilia_place_details`.
-- Production : **0** run, **0** enregistrement et **0** lot d'import. La base
+- État initial du 16 novembre : **54 350** fiches `hilia_places`, toutes
+  `approved`, et **0** ligne dans `hilia_place_details`.
+- Après le premier lot, au 17 novembre : **54 351** fiches `hilia_places`, toutes
+  `approved`, **4** détails dont **2** publics (Le Klube et Ecozonia). L'écart
+  avec le catalogue de 54 350 vient de `29088`, approuvée en base mais exclue du
+  catalogue et des détails ; Ecozonia est déjà approuvée. Les **8**
+  enregistrements d'import sont présents.
+- État initial : **0** run, **0** enregistrement et **0** lot d'import. La base
   complète pèse environ **38 Mo**.
 - Le catalogue national versionné contient **54 349** fiches. L'écart d'une
   fiche correspond au retrait qualité `29088`, déjà tracé dans
@@ -387,13 +392,19 @@ un 400, tandis qu'une récupération distante impossible produit un 502.
 ### 7.1 Avant approbation
 
 ```bash
-npm run import:push -- --rollback "<run_id>" --execute
+npm run import:push-postgres -- --rollback "<run_id>" --execute
 ```
 
-Le rollback supprime les détails et enregistrements créés par ce run, restaure
-les détails préexistants depuis `hilia_place_detail_history` et remet
-`import_applied_at` exactement à sa valeur antérieure. Il ne supprime **jamais**
-une fiche `hilia_places`.
+Le rollback supprime les détails et enregistrements créés par ce run et
+restaure les détails préexistants depuis `hilia_place_detail_history`, y compris
+`import_applied_at`. Il ne supprime **jamais** une fiche `hilia_places`.
+
+Il ne restaure **pas** les valeurs antérieures des enregistrements de staging
+qui existaient déjà : les huit contenus du premier lot resteraient dans leur
+état réimporté, avec `last_seen_run` pointant vers le nouveau run. Seules les
+lignes `hilia_place_details` correspondantes sont restaurées. Les décisions
+`approved` et `rejected` ne sont pas écrasées par le réimport, mais cela ne
+constitue pas une restauration du staging.
 
 ### 7.2 Après approbation
 
@@ -424,6 +435,9 @@ de l'import et de la décision.
   ancien peut les rétablir. Rejouer les contrôles ACL après toute restauration.
 - Le rollback ne supprime ni les fiches `hilia_places`, ni les avis, ni les
   suggestions, ni les contenus publiés après le run.
+- Le rollback ne restaure pas les anciennes valeurs des enregistrements de
+  staging déjà existants : il les laisse dans leur état réimporté. Il ne faut
+  donc pas le présenter comme une restauration complète du staging.
 - Le test média ne couvre que les quatre photos d'Ecozonia et le proxy local ;
   il ne prouve pas la disponibilité des 149 637 URLs du paquet complet.
 - La restauration du dump n'a pas été exécutée sur la production : seul
@@ -439,16 +453,25 @@ de l'import et de la décision.
 La clé `service_role` disponible localement appartient au projet Supabase de
 **test** (`HILIA_TEST_PROJECT_REF`), pas à la production. `push.mjs` ne peut donc
 pas écrire en production via l'API REST. Le chemin utilisable est PostgreSQL
-direct avec `HILIA_PROD_DB_URL`, l'outil local `.tools/prod-import-full.mjs` et
-les fonctions SQL déjà déployées.
+direct avec `HILIA_PROD_DB_URL`, l'outil versionné
+`scripts/import/push-postgres.mjs` et les fonctions SQL déjà déployées. La
+dépendance `pg` est déclarée dans `devDependencies`.
 
 L'outil découpe en lots de 200 (maximum 500), journalise chaque lot, ne déplace
 le curseur qu'après le commit transactionnel du staging et des détails, et
 expose :
 
 ```bash
-node .tools/prod-import-full.mjs --run-id <uuid> --execute --resume
-node .tools/prod-import-full.mjs --rollback <uuid> --execute
+npm run import:push-postgres -- --run-id <uuid> --execute --resume
+npm run import:push-postgres -- --rollback <uuid> --execute
+```
+
+Commande complète de lancement, une fois `HILIA_PROD_DB_URL` chargée depuis
+l'environnement local (aucun secret dans le dépôt) :
+
+```bash
+set -a; . ./.env.hilia-test.local; set +a
+npm run import:push-postgres -- --source "D:/HILIA AHAHAHH/HILIA_Donnees_et_Prompt/HILIA_DONNEES.jsonl" --execute
 ```
 
 Le chemin a été testé sur le projet de test, pas en production : reprise après
@@ -460,8 +483,10 @@ restera `is_public=true`.
 
 Volumes calculés : **239 314** enregistrements importables, dont **239 306
 créations et 8 mises à jour**. Les détails représentent **166 730** lignes :
-**166 726 créations et 4 mises à jour**. `hilia_places` n'est pas modifiée par
-l'import complet (aucune création, aucune mise à jour).
+**166 726 créations et 4 mises à jour**. Après import, **54 350** détails sont
+publics : **54 349** fiches existantes + **Ecozonia**, déjà approuvée. Les
+**112 380** autres nouveaux lieux restent privés. `hilia_places` n'est pas
+modifiée par l'import complet (aucune création, aucune mise à jour).
 
 ### 8.2 Delta des fichiers publics avec la production
 
@@ -485,8 +510,8 @@ terminée, durée inférieure ou égale à 90 jours, début dans les cinq ans ; 
 `review_dates`, événements sans date et occurrences expirées sont exclus.
 
 **Ne pas déployer les 137,81 Mo de données générées avant validation de ce
-delta.** L'import complet ne publie pas les 112 381 nouveaux lieux : leurs
-détails restent privés jusqu'à approbation.
+delta.** Sur les **112 381** nouveaux lieux bruts, Ecozonia est déjà publiée ;
+les **112 380** autres détails restent privés jusqu'à approbation.
 
 ### 8.3 Sauvegarde fraîche
 

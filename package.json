@@ -14,10 +14,15 @@
     "import:push": "node scripts/import/push.mjs",
     "test:import": "node --test scripts/import/test/*.test.mjs",
     "cards": "node scripts/preview-card.mjs",
-    "check:cards": "node scripts/check-card.mjs"
+    "check:cards": "node scripts/check-card.mjs",
+    "import:push-postgres": "node scripts/import/push-postgres.mjs"
   },
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2",
     "satori": "0.32.0"
+  },
+  "devDependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "pg": "^8.23.1"
   }
 }
