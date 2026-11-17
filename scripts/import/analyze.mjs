@@ -47,7 +47,7 @@ const stats = {
   },
   accessibility: { records: 0, observations: 0, scopes: counts(), withHilia: 0, withAcceslibre: 0 },
   events: { records: 0, withDates: 0, withoutDates: 0, past: 0, current: 0, future: 0, invalidRange: 0, reviewDates: 0, examples: [] },
-  identity: { ids: 0, duplicateIds: 0, duplicateExamples: [], existingHiliaId: 0, existingSnapshotMatched: 0, existingSnapshotMissing: 0, existingSnapshotNameDiff: 0, existingSnapshotNameDiffExamples: [] },
+  identity: { ids: 0, duplicateIds: 0, duplicateExamples: [], existingHiliaId: 0, existingSnapshotMatched: 0, existingSnapshotMissing: 0, missingExamples: [], existingSnapshotNameDiff: 0, existingSnapshotNameDiffExamples: [] },
   duplicates: { candidatesRecords: 0, candidates: 0, examples: [] },
   keys: { details: {}, sourceDetails: {} },
   manifest: null,

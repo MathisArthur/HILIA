@@ -5,12 +5,16 @@ import { readFile, readdir } from 'node:fs/promises';
 const ROOT = new URL('../../../', import.meta.url);
 const snapshot = JSON.parse(await readFile(new URL('data/places.json', ROOT), 'utf8'));
 const snapshotIds = new Set(snapshot.rows.map((row) => String(row[0])));
+// Le snapshot contient aussi les fiches déjà approuvées par la revue, comme
+// Ecozonia. Elles ne sont pas des « existing_hilia_id » du fichier source :
+// le rapport les compte donc séparément des 54 349 fiches historiques.
+const legacySnapshotIds = new Set([...snapshotIds].filter((id) => !id.startsWith('place_imp_')));
 const report = JSON.parse(await readFile(new URL('data/import-preview/build-report.json', ROOT), 'utf8'));
 const events = JSON.parse(await readFile(new URL('data/events.json', ROOT), 'utf8'));
 
 test('tous les identifiants existants sont retrouvés', () => {
-  assert.equal(report.existingPlaces, snapshotIds.size);
-  assert.equal(report.existingMatched, snapshotIds.size);
+  assert.equal(report.existingPlaces, legacySnapshotIds.size);
+  assert.equal(report.existingMatched, legacySnapshotIds.size);
   assert.equal(report.newPlacesStaged, 112381);
 });
 

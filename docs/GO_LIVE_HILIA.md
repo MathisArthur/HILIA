@@ -361,6 +361,27 @@ Pour un lieu approuvé `place_imp_…`, vérifier sans session :
 - chaque légende affiche le crédit, la source et la licence ;
 - le staging et l'approbation anonyme répondent `401/403`.
 
+### 6.1 Erreur 400 du proxy média
+
+Le proxy `/api/media` lit le paramètre **`u`**, pas `url` :
+`/api/media?u=https%3A%2F%2F…`. Un contrôle manuel qui utilisait
+`/api/media?url=…` recevait donc `400 Média non autorisé`, alors que le client
+du site construisait déjà ses URLs avec `u`.
+
+Ne pas changer le proxy pour accepter `url` : cette différence est volontaire
+et évite d'élargir la surface du relais. Le contrôle ciblé vérifie que le client
+et le proxy restent alignés :
+
+```bash
+npm run test:import
+# test « le client et le proxy partagent le paramètre média u »
+```
+
+Le test `scripts/import/test/media-proxy.test.mjs` échoue si `app.js` utilise
+`?url=` ou si le proxy ne lit plus `u`. En cas de 400, vérifier d'abord le nom du
+paramètre, puis l'hôte dans `lib/media-hosts.js` ; un hôte absent produit aussi
+un 400, tandis qu'une récupération distante impossible produit un 502.
+
 ## 7. Retour arrière et limites
 
 ### 7.1 Avant approbation
@@ -410,3 +431,67 @@ de l'import et de la décision.
   projet jetable reste à faire avant le go-live.
 - Aucun import massif, aucune approbation et aucune écriture n'ont été faits en
   production pendant cette préparation.
+
+## 8. Préparation de l'import complet : chemin direct et delta public
+
+### 8.1 Chemin réellement utilisable
+
+La clé `service_role` disponible localement appartient au projet Supabase de
+**test** (`HILIA_TEST_PROJECT_REF`), pas à la production. `push.mjs` ne peut donc
+pas écrire en production via l'API REST. Le chemin utilisable est PostgreSQL
+direct avec `HILIA_PROD_DB_URL`, l'outil local `.tools/prod-import-full.mjs` et
+les fonctions SQL déjà déployées.
+
+L'outil découpe en lots de 200 (maximum 500), journalise chaque lot, ne déplace
+le curseur qu'après le commit transactionnel du staging et des détails, et
+expose :
+
+```bash
+node .tools/prod-import-full.mjs --run-id <uuid> --execute --resume
+node .tools/prod-import-full.mjs --rollback <uuid> --execute
+```
+
+Le chemin a été testé sur le projet de test, pas en production : reprise après
+un arrêt au premier lot, puis rollback. Le rollback a restauré les quatre
+détails préexistants, supprimé zéro fiche et conservé les approbations du
+projet de test. En production, les huit enregistrements du premier lot seront
+mis à jour, jamais recréés ; Ecozonia restera `approved` et son détail public
+restera `is_public=true`.
+
+Volumes calculés : **239 314** enregistrements importables, dont **239 306
+créations et 8 mises à jour**. Les détails représentent **166 730** lignes :
+**166 726 créations et 4 mises à jour**. `hilia_places` n'est pas modifiée par
+l'import complet (aucune création, aucune mise à jour).
+
+### 8.2 Delta des fichiers publics avec la production
+
+Comparaison effectuée le 17 novembre 2026 entre le build local et les fichiers
+actuellement servis :
+
+- catalogue : **54 350** lignes des deux côtés, hash identique ;
+- détails de lieux : **54 349** localement contre **26 650** en production, soit
+  **27 700** identifiants locaux seulement et **1** identifiant seulement en
+  production (`29088`, exclusion qualité) ; les 256 shards changent ;
+- événements : **17 634** localement contre **17 707** en production ; **0**
+  événement ajouté, **73** supprimés car terminés le 16 novembre ; aucun nouvel
+  événement ne devient visible ;
+- détails d'événements : 17 634 contre 17 707 ; 7 669 médias contre 7 700 ;
+- médias de lieux : 2 327 dans les deux builds ;
+- hôtes média autorisés : les **22** mêmes hôtes dans le build local et le code
+déployé.
+
+Règle d'un événement public : `candidate_event`, dates explicites, occurrence non
+terminée, durée inférieure ou égale à 90 jours, début dans les cinq ans ; les
+`review_dates`, événements sans date et occurrences expirées sont exclus.
+
+**Ne pas déployer les 137,81 Mo de données générées avant validation de ce
+delta.** L'import complet ne publie pas les 112 381 nouveaux lieux : leurs
+détails restent privés jusqu'à approbation.
+
+### 8.3 Sauvegarde fraîche
+
+Une sauvegarde a été créée le 17 novembre 2026 à 10:46 UTC dans
+`.tools/prod-backup/hilia-prod-20261117T104625.dump` et copiée dans
+`OneDrive/HILIA-BACKUPS/20261117T104625/`. L'archive contient 786 entrées TOC,
+les hashes locaux et ceux de la copie OneDrive concordent. La présence effective
+dans OneDrive web reste à confirmer humainement.
